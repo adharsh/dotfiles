@@ -1,0 +1,35 @@
+#!/bin/bash
+exec >~/log_xsessionrc.txt 2>&1
+echo "~/.xsessionrc is run"
+echo $(whoami)
+
+# https://github.com/maxwell-bland/i3-natural-scrolling-and-tap/blob/master/inverse-scroll.sh
+# Get id of touchpad and the id of the field corresponding to natural scrolling
+id=`xinput list | grep -i "Touchpad" | cut -d'=' -f2 | cut -d'[' -f1`
+natural_scrolling_id=`xinput list-props $id | \
+                      grep -i "Natural Scrolling Enabled (" \
+                      | cut -d'(' -f2 | cut -d')' -f1`
+
+# Set the property to true
+xinput --set-prop $id $natural_scrolling_id 1
+# gsettings set org.gnome.desktop.peripherals.mouse natural-scroll true
+
+# Bind capslock to ctrl when chorded and toggle capslock by hitting both shift keys simulatenously
+setxkbmap us -option ctrl:nocaps &
+xcape -e "Control_L=Escape;Caps_Lock=Escape" -t 170 &
+
+# https://github.com/alols/xcape
+xcape -t 170 &
+
+/usr/bin/gnome-keyring-daemon --start --components=secrets &
+# tood chain with ampersand
+
+caffeine &
+
+rfkill block bluetooth &
+
+#synclient TapButton2=3
+
+echo "~/.xsessionrc completed."
+exec i3
+
