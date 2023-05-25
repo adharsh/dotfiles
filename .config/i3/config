@@ -205,4 +205,6 @@ bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
 # Chrome
 bindsym $mod+g exec --no-startup-id google-chrome-stable
 
+# Select area for screenshot and copy to clipboard
+bindsym Print exec --no-startup-id "maim -s | xclip -selection clipboard -t image/png"
 
