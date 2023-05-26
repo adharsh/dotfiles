@@ -16,7 +16,7 @@ xinput --set-prop $id $natural_scrolling_id 1
 # Low battery popup notifications
 source i3-battery-popup.sh -n -D -L 15 -l 10 &
 
-# Bind capslock to ctrl when chorded and toggle capslock by hitting both shift keys simulatenously
+# Bind capslock to ctrl when chorded and tap ctrl or capslock for escape
 # https://github.com/alols/xcape
 setxkbmap us -option ctrl:nocaps &
 xcape -e "Control_L=Escape;Caps_Lock=Escape" -t 170 &
