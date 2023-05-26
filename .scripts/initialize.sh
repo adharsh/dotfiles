@@ -3,6 +3,7 @@
 # Stop script if any command fails
 set -e
 
+# Add $USER to video group so you don't need sudo to run brightnessctl
 sudo apt install -y brightnessctl
 sudo usermod -aG video $USER
 
