@@ -14,7 +14,7 @@ xinput --set-prop $id $natural_scrolling_id 1
 # gsettings set org.gnome.desktop.peripherals.mouse natural-scroll true
 
 # Low battery popup notifications
-source i3-battery-popup.sh -n -D -L 15 -l 10 &
+source ~/.scripts/i3-battery-popup.sh -n -D -L 15 -l 10 &
 
 # Bind capslock to ctrl when chorded and tap ctrl or capslock for escape
 # https://github.com/alols/xcape
