@@ -209,3 +209,8 @@ bindsym $mod+g exec --no-startup-id google-chrome-stable
 bindsym Print exec --no-startup-id "maim -s | xclip -selection clipboard -t image/png"
 # Delayed screenshot, ex: if you want to screenshot right click context menus
 bindsym Shift+Print exec --no-startup-id "maim -s -d 5 | xclip -selection clipboard -t image/png && notify-send 'Screenshot captured' 'A screenshot has been captured and saved to the clipboard.' -t 5000"
+
+# font pango:DejaVu Sans Mono 30
+# exec --no-startup-id xrandr --dpi 220
+# export GDK_SCALE=2
+ 
