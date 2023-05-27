@@ -23,6 +23,6 @@ sudo apt install -y caffeine
 ~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
 # Other installs
-sudo apt install -y silversearcher-ag maim xclip stow
+sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie
 
 echo "Reboot to see changes."
