@@ -1,5 +1,7 @@
 #!/bin/bash
 
+sudo apt update
+
 # Stop script if any command fails
 set -e
 
@@ -18,9 +20,9 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 
 # caffeine, activate on start
 sudo apt install -y caffeine
-~/.scripts/caffeine-indicator-fix.sh
+~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
 # Other installs
-sudo apt install -y ag maim xclip stow
+sudo apt install -y silversearcher-ag maim xclip stow
 
 echo "Reboot to see changes."
