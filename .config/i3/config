@@ -202,8 +202,8 @@ bindsym Mod4+l exec --no-startup-id "i3lock --color 000000 --show-failed-attempt
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set 10%+
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
 
-# Chrome
-bindsym $mod+g exec --no-startup-id google-chrome-stable
+# Chrome: https://superuser.com/a/377195
+bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default
 
 # Select area for screenshot and copy to clipboard
 bindsym Print exec --no-startup-id "maim -s | xclip -selection clipboard -t image/png"
