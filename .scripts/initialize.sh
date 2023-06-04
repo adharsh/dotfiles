@@ -23,7 +23,10 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 sudo apt install -y caffeine
 ~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
+# Install nvm: package manager for node.js
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+
 # Other installs
-sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep
+sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl
 
 echo "Reboot to see changes."
