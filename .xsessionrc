@@ -36,11 +36,6 @@ udiskie &
 # Two finger tap right click
 # synclient TapButton2=3
 
-
-# Scaling if too small
-# xrandr --dpi 220
-# export GDK_SCALE=2
-
 echo "~/.xsessionrc completed."
 exec i3
 
