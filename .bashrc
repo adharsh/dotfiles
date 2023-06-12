@@ -120,3 +120,6 @@ export PATH=$PATH:~/.local/bin/
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 . "$HOME/.cargo/env"
+
+
+alias t=tree
