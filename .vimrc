@@ -12,6 +12,3 @@ nnoremap <C-b> <C-b>zz
 
 nnoremap n nzzzv
 nnoremap N Nzzzv
-
-noremap G gg
-noremap gg G
