@@ -27,6 +27,6 @@ sudo apt install -y caffeine
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 
 # Other installs
-sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl
+sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr
 
 echo "Reboot to see changes."
