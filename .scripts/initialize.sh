@@ -37,6 +37,6 @@ mamba install xeus-cling -c conda-forge
 mamba install jupyterlab matplotlib pandas
 
 # Other installs
-sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr
+sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
 
 echo "Reboot to see changes."
