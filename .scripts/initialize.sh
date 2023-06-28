@@ -26,6 +26,16 @@ sudo apt install -y caffeine
 # Install nvm: package manager for node.js
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 
+# Installing mamba
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh
+
+# Installing cling: C++ jupyter kernel
+mamba create -n cling
+mamba activate cling
+mamba install xeus-cling -c conda-forge
+mamba install jupyterlab matplotlib pandas
+
 # Other installs
 sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr
 
