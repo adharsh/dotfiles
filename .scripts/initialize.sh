@@ -32,13 +32,15 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 # Installing mamba
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
 bash Mambaforge-Linux-x86_64.sh
+source ~/.bashrc
+mamba config --set auto_activate_base false
 rm Mambaforge-Linux-x86_64.sh
 
 # Installing cling: C++ jupyter kernel
 mamba create -n cling
 mamba activate cling
-mamba install xeus-cling -c conda-forge
-mamba install jupyterlab matplotlib pandas
+mamba install -y xeus-cling -c conda-forge
+mamba install -y jupyterlab matplotlib pandas
 
 # Other installs
 sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
