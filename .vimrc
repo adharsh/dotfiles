@@ -20,6 +20,7 @@ set clipboard=unnamed,unnamedplus
 set ignorecase
 set smartcase
 set hlsearch
+
 " Hit enter to clear highlighting
 nnoremap <CR> :noh<CR><CR>
 
@@ -28,6 +29,8 @@ nnoremap <c-h> <c-w>h
 nnoremap <c-l> <c-w>l
 nnoremap <c-j> <c-w>j
 nnoremap <c-k> <c-w>k
+" Similar to i3 split horizontal
+nnoremap <C-w>b <C-w>s
 
 " Purpose: deleting after yanking outside of vim without overrwriting buffer
 " blackhole register
