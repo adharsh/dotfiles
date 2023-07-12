@@ -1,4 +1,4 @@
 # High resolution screen change:
 # https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
-Xft.dpi: 220
-Xcursor.size: 50
+# Xft.dpi: 220
+# Xcursor.size: 50
