@@ -13,8 +13,21 @@ nnoremap <C-b> <C-b>zz
 nnoremap n nzzzv
 nnoremap N Nzzzv
 
+" Copy to clipboard
 set clipboard=unnamed,unnamedplus
+
+" Only way to set smartcase
+set ignorecase
 set smartcase
+set hlsearch
+" Hit enter to clear highlighting
+nnoremap <CR> :noh<CR><CR>
+
+" Better window moving
+nnoremap <c-h> <c-w>h
+nnoremap <c-l> <c-w>l
+nnoremap <c-j> <c-w>j
+nnoremap <c-k> <c-w>k
 
 " Purpose: deleting after yanking outside of vim without overrwriting buffer
 " blackhole register

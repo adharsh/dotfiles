@@ -8,11 +8,12 @@ source ~/.vimrc
 
 set clipboard+=ideaput
 
+" Install VSCode Dark Theme plugin
 
-
-
-
-
+" Change tab motions:
+" https://intellij-support.jetbrains.com/hc/en-us/community/posts/360010521080-phpstorm-How-do-I-change-Ctrl-tab-to-work-like-it-should-change-to-the-next-tab-
+" Other -> Switcher; Remove Ctrl+Tab, Remove Ctrl+Shift+Tab
+" Main Menu -> Window -> EditorTabs -> Select Next Tab, Select Previous Tab
 
 "" -- Suggested options --
 " Show a few lines of context around the cursor. Note that this makes the
