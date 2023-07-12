@@ -7,8 +7,14 @@
 source ~/.vimrc
 
 set clipboard+=ideaput
+nnoremap <c-m> :action MoveEditorToOppositeTabGroup<CR>
 
 " Install VSCode Dark Theme plugin
+
+" Ctrl+w to remove active tab
+" Ctrl+Alt+s to open settings
+" Keymap, Main menu -> Window -> Editor Tabs -> Close
+" Similarily for Reopen Closed tab
 
 " Change tab motions:
 " https://intellij-support.jetbrains.com/hc/en-us/community/posts/360010521080-phpstorm-How-do-I-change-Ctrl-tab-to-work-like-it-should-change-to-the-next-tab-
