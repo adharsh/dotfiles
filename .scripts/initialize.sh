@@ -52,6 +52,6 @@ stow .
 # Dynamic script
 mkdir -p ~/bin
 export PATH=$PATH:~/bin/
-ln -s ~/dotfiles/.scripts/dynamic_monitor.sh ~/bin/dynamic_monitor.sh
+ln -s ~/dotfiles/.scripts/dynamic_monitors.sh ~/bin/dynamic_monitors.sh
 
 echo "Reboot to see changes."
