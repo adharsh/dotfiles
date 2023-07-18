@@ -31,7 +31,7 @@ caffeine-indicator &
 rfkill block bluetooth &
 
 # Front end for removable media: automounting, tray icon, notifications, etc.
-udiskie &
+udiskie --no-notify --smart-tray &
 
 # Two finger tap right click
 # synclient TapButton2=3
