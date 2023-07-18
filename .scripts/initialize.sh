@@ -42,7 +42,16 @@ mamba activate cling
 mamba install -y xeus-cling -c conda-forge
 mamba install -y jupyterlab matplotlib pandas
 
-# Other installs
+# Other installs  
 sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
+
+# Install configurations
+cd ~/dotfiles
+stow .
+
+# Dynamic script
+mkdir -p ~/bin
+export PATH=$PATH:~/bin/
+ln -s ~/dotfiles/.scripts/dynamic_monitor.sh ~/bin/dynamic_monitor.sh
 
 echo "Reboot to see changes."
