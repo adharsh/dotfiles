@@ -49,9 +49,4 @@ sudo apt install -y i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep
 cd ~/dotfiles
 stow .
 
-# Dynamic script
-mkdir -p ~/bin
-export PATH=$PATH:~/bin/
-ln -s ~/dotfiles/.scripts/dynamic_monitors.sh ~/bin/dynamic_monitors.sh
-
 echo "Reboot to see changes."
