@@ -33,7 +33,7 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
 bash Mambaforge-Linux-x86_64.sh
 source ~/.bashrc
-mamba config --set auto_activate_base false
+conda config --set auto_activate_base false
 rm Mambaforge-Linux-x86_64.sh
 
 # Installing cling: C++ jupyter kernel
