@@ -43,7 +43,7 @@ mamba install -y xeus-cling -c conda-forge
 mamba install -y jupyterlab matplotlib pandas
 
 # Other installs  
-sudo apt install -y vim i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
+sudo apt install -y vim vim-gtk3 i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
 
 # Install configurations
 cd ~/dotfiles
