@@ -200,7 +200,7 @@ bindsym $mod+minus scratchpad show
 bindsym Mod4+l exec --no-startup-id "i3lock --color 000000 --show-failed-attempts"
 
 # Suspend
-bindsym Mod4+Shift+l exec --no-startup-id "systemctl suspend"
+bindsym Mod4+Shift+l exec --no-startup-id "i3lock --color 000000 --show-failed-attempts && systemctl suspend"
 
 # Brightness
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set 10%+
@@ -219,4 +219,4 @@ bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 
 # High resolution screen change:
 # https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
-# exec --no-startup-id xrandr --output eDP-1 --scale '1.14x1.14'
+exec --no-startup-id xrandr --output eDP-1 --scale '1.28x1.28'

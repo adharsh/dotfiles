@@ -33,8 +33,15 @@ rfkill block bluetooth &
 # Front end for removable media: automounting, tray icon, notifications, etc.
 udiskie --no-notify --smart-tray &
 
-# Two finger tap right click
-# synclient TapButton2=3
+# Two finger tap right click - Huawei
+xinput set-prop 14 349 1
+
+# Set mouse sensitivity to twice as fast - Huawei
+xinput --set-prop 'SYNA1D31:00 06CB:CD48 Touchpad' 'Coordinate Transformation Matrix' 2 0 0 0 2 0 0 0 1
+
+# Gestures
+# libinput-gestures-setup start
+# fusuma
 
 echo "~/.xsessionrc completed."
 exec i3
