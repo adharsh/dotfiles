@@ -49,8 +49,8 @@ floating_modifier $mod
 bindsym $mod+Return exec i3-sensible-terminal
 
 # kill focused window
-# bindsym $mod+Shift+q kill
-bindsym $mod+q kill
+bindsym $mod+Shift+q kill
+# bindsym $mod+q kill
 
 # start dmenu (a program launcher)
 bindsym $mod+d exec --no-startup-id dmenu_run
@@ -208,6 +208,7 @@ bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
 
 # Chrome: https://superuser.com/a/377195
 bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default --password-store=gnome
+bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directory=Default --incognito
 
 # Select area for screenshot and copy to clipboard
 bindsym Print exec --no-startup-id "maim -s | xclip -selection clipboard -t image/png"
