@@ -1,25 +1,33 @@
 " https://github.com/ThePrimeagen/vim-be-good
 " docker run -it --rm brandoncc/vim-be-good:latest
 
+" Options
 set number
 set relativenumber
-
-nnoremap <C-d> <C-d>zz
-nnoremap <C-u> <C-u>zz
-
-nnoremap <C-f> <C-f>zz
-nnoremap <C-b> <C-b>zz
-
-nnoremap n nzzzv
-nnoremap N Nzzzv
-
-" Copy to clipboard
-set clipboard=unnamed,unnamedplus
-
-" Only way to set smartcase
+set clipboard=unnamed,unnamedplus " Copy to clipboard
 set ignorecase
 set smartcase
 set hlsearch
+
+" Experimental Options
+set nocompatible                  " disable compatibility to old-time vi
+set showmatch                     " show matching brackets.
+set mouse=v                       " middle-click paste with mouse
+set autoindent                    " indent a new line the same amount as the line just typed
+set wildmode=longest,list         " get bash-like tab completions
+" set cc=88                       " set colour columns for good coding style
+filetype plugin indent on         " allows auto-indenting depending on file type
+set tabstop=4                     " number of columns occupied by a tab character
+set expandtab                     " convert tabs to white space
+set shiftwidth=4                  " width for autoindents
+set softtabstop=4                 " see multiple spaces as tabstops so <BS> does the right thing
+
+nnoremap <C-d> <C-d>zz
+nnoremap <C-u> <C-u>zz
+nnoremap <C-f> <C-f>zz
+nnoremap <C-b> <C-b>zz
+nnoremap n nzzzv
+nnoremap N Nzzzv
 
 " Hit enter to clear highlighting
 nnoremap <CR> :noh<CR><CR>
