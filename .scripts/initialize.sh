@@ -29,19 +29,6 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 # nvm use 19
 # npm install --global yarn
 
-# Installing mamba
-wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
-bash Mambaforge-Linux-x86_64.sh
-source ~/.bashrc
-conda config --set auto_activate_base false
-rm Mambaforge-Linux-x86_64.sh
-
-# Installing cling: C++ jupyter kernel
-mamba create -n cling
-mamba activate cling
-mamba install -y xeus-cling -c conda-forge
-mamba install -y jupyterlab matplotlib pandas
-
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
 sudo apt install -y vim vim-gtk3 i3 silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree
@@ -51,3 +38,17 @@ cd ~/dotfiles
 stow .
 
 echo "Reboot to see changes."
+
+
+# Install timer
+sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
+sudo apt update
+sudo apt install alarm-clock-applet
+
+# Post installation steps:
+# # Installing mamba from miniforge
+# # Installing cling: C++ jupyter kernel
+# mamba create -n cling
+# mamba activate cling
+# mamba install -y xeus-cling -c conda-forge
+# mamba install -y jupyterlab matplotlib pandas
