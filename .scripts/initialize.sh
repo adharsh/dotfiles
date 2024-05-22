@@ -45,6 +45,12 @@ sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
 sudo apt update
 sudo apt install alarm-clock-applet
 
+# Install copyq clipboard manager
+sudo add-apt-repository ppa:hluk/copyq
+sudo apt update
+sudo apt install copyq
+# Set show preview
+
 # Post installation steps:
 # # Installing mamba from miniforge
 # # Installing cling: C++ jupyter kernel

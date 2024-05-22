@@ -218,6 +218,8 @@ bindsym Shift+Print exec --no-startup-id "maim -s -d 5 | xclip -selection clipbo
 # Process ID notification
 bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdotool getwindowfocus) _NET_WM_PID | sed 's/_NET_WM_PID(CARDINAL) = //')"
 
+# Clipboard
+bindsym $mod+c exec --no-startup-id copyq show
 
 # Dynamic monitors binding
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
