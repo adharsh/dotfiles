@@ -33,6 +33,9 @@ rfkill block bluetooth &
 # Front end for removable media: automounting, tray icon, notifications, etc.
 udiskie --no-notify --smart-tray &
 
+# Start CopyQ clipboard manager
+copyq &
+
 # Two finger tap right click - Huawei
 xinput set-prop "SYNA1D31:00 06CB:CD48 Touchpad"  349 1
 
