@@ -36,6 +36,9 @@ udiskie --no-notify --smart-tray &
 # Start CopyQ clipboard manager
 copyq &
 
+# Tap to click enabled - Huawei
+xinput set-prop "SYNA1D31:00 06CB:CD48 Touchpad" "libinput Tapping Enabled" 1
+
 # Two finger tap right click - Huawei
 xinput set-prop "SYNA1D31:00 06CB:CD48 Touchpad"  349 1
 
