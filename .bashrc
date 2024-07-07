@@ -152,7 +152,9 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 # Others
 alias t=tree
 alias m=mamba
-export PATH="$HOME/bin:$PATH"
+alias ma="m activate"
+alias md="m deactivate"
+export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
 
 # shell_gpt
@@ -178,5 +180,6 @@ slc() {
 sr() {
     sgpt --repl $*
 }
-
-m activate sgpt
+srt() {
+    sgpt --repl temp $*
+}
