@@ -52,9 +52,26 @@ sudo apt install copyq
 # Set show preview
 
 # Post installation steps:
-# # Installing mamba from miniforge
-# # Installing cling: C++ jupyter kernel
-# mamba create -n cling
-# mamba activate cling
-# mamba install -y xeus-cling -c conda-forge
-# mamba install -y jupyterlab matplotlib pandas
+read -p "Make sure to step through install steps correctly. Preferred to Ctrl+C now and run commands one at a time."
+
+## Installing mamba from miniforge
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+./Miniforge3-Linux-x86_64.sh
+
+## Basic
+mamba create -n basic
+mamba install -y jupyterlab matplotlib pandas
+
+## Installing cling: C++ jupyter kernel
+mamba create -n cling
+mamba activate cling
+mamba install -y xeus-cling -c conda-forge
+mamba install -y jupyterlab matplotlib pandas
+
+## Installing sgpt
+## https://www.youtube.com/watch?v=Vxsx7Il-KMA&ab_channel=AICodeKing
+mamba create -n sgpt
+mamba activate sgpt
+mamba install pip
+pip install shell-gpt litellm
+mamba install -y matplotlib pandas
