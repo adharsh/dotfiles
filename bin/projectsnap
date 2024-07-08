@@ -9,40 +9,44 @@ Example usage:
     Basic usage:
     $ projectsnap
 
-    Assume yes for all prompts:
-    $ projectsnap -y
+    Include only Python files, ignore test files, and output to a file:
+    $ projectsnap --include "*.py" --ignore "*_test.py" -o output.txt
 
-    Specify custom directory and output file:
-    $ projectsnap -d /path/to/project -o output.txt
+    Specify custom directory, include patterns, and assume yes for all prompts:
+    $ projectsnap -d /path/to/project --include "*.py" "*.txt" -y
+
+    Include all files except those in 'build' directory:
+    $ projectsnap --include "*" --ignore "build/*"
 
     Pipe output and count characters:
-    $ projectsnap -y | wc -c
-
-    Pipe output of only directory structur and count characters:
-    $ echo -e "y\nn" | projectsnap | wc -c
+    $ projectsnap --include "*.md" | wc -c
 
 For more information, use the --help option:
     $ python projectsnap.py --help
 """
 
-import fnmatch
+import re
 import argparse
 import sys
 from pathlib import Path
-from typing import List, Set, TextIO
+from typing import List, TextIO
+
 
 class ProjectSnapshotConfig:
     def __init__(
         self,
         root_dir: Path,
+        include_patterns: List[str],
+        ignore_patterns: List[str],
         output_file: TextIO,
-        ignore_files: Set[str],
         assume_yes: bool,
     ):
         self.root_dir = root_dir
+        self.include_patterns = include_patterns
+        self.ignore_patterns = ignore_patterns
         self.output_file = output_file
-        self.ignore_files = ignore_files
         self.assume_yes = assume_yes
+
 
 class ProjectSnapshot:
     def __init__(self, config: ProjectSnapshotConfig):
@@ -60,33 +64,62 @@ class ProjectSnapshot:
                 ]
         return []
 
-    def is_ignored(self, file_path: Path) -> bool:
+    def is_included(self, file_path: Path) -> bool:
         relative_path = file_path.relative_to(self.config.root_dir)
+        path_str = str(relative_path).replace("\\", "/")  # Normalize path separators
 
-        if any(part in self.config.ignore_files for part in relative_path.parts):
-            return True
+        # Check if the file matches any ignore patterns
+        for pattern in self.config.ignore_patterns + self.gitignore_patterns:
+            if self._matches_pattern(path_str, pattern, file_path.is_dir()):
+                return False
 
-        return any(
-            fnmatch.fnmatch(str(relative_path), pattern)
-            for pattern in self.gitignore_patterns
+        # Check if the file matches any include patterns
+        if self.config.include_patterns and not any(
+            self._matches_pattern(path_str, pattern, file_path.is_dir())
+            for pattern in self.config.include_patterns
+        ):
+            return False
+
+        return True
+
+    def _matches_pattern(self, path: str, pattern: str, is_dir: bool) -> bool:
+        # Remove leading slash if present
+        if pattern.startswith("/"):
+            pattern = pattern[1:]
+
+        # Handle directory-specific patterns
+        if pattern.endswith("/"):
+            if not is_dir:
+                return False
+            pattern = pattern[:-1]
+
+        # Convert gitignore pattern to regex
+        regex = (
+            re.escape(pattern)
+            .replace(r"\*\*", ".*")
+            .replace(r"\*", "[^/]*")
+            .replace(r"\?", ".")
         )
+        regex = f"^{regex}$|^{regex}/"
+
+        return re.match(regex, path) is not None
 
     def generate_directory_tree(self, dir_path: Path, prefix: str = "") -> str:
         tree = ""
         entries = sorted(dir_path.iterdir(), key=lambda e: e.name)
 
         for i, entry in enumerate(entries):
-            if self.is_ignored(entry):
-                continue
-
             is_last = i == len(entries) - 1
             marker = "└── " if is_last else "├── "
             new_prefix = prefix + ("    " if is_last else "│   ")
 
-            tree += f"{prefix}{marker}{entry.name}\n"
-
             if entry.is_dir():
-                tree += self.generate_directory_tree(entry, new_prefix)
+                subtree = self.generate_directory_tree(entry, new_prefix)
+                if subtree:  # If subtree is not empty, include this directory
+                    tree += f"{prefix}{marker}{entry.name}\n"
+                    tree += subtree
+            elif self.is_included(entry):
+                tree += f"{prefix}{marker}{entry.name}\n"
 
         return tree
 
@@ -106,7 +139,7 @@ class ProjectSnapshot:
 
     def _write_file_contents(self, dir_path: Path):
         for file_path in dir_path.rglob("*"):
-            if self.is_ignored(file_path):
+            if not self.is_included(file_path):
                 continue
 
             if file_path.is_file():
@@ -115,9 +148,12 @@ class ProjectSnapshot:
                         content = f.read()
 
                     self.config.output_file.write(
-                        f"\n\n--- File: {file_path.relative_to(self.config.root_dir)} ---\n\n"
+                        f"\n\n--- BEGIN FILE: {file_path.relative_to(self.config.root_dir)} ---\n\n"
                     )
                     self.config.output_file.write(content)
+                    self.config.output_file.write(
+                        f"\n\n--- END FILE: {file_path.relative_to(self.config.root_dir)} ---\n\n"
+                    )
                 except Exception as e:
                     print(f"Error reading file {file_path}: {str(e)}", file=sys.stderr)
 
@@ -125,7 +161,7 @@ class ProjectSnapshot:
 def prompt_user(question: str, assume_yes: bool) -> bool:
     if assume_yes:
         return True
-    
+
     while True:
         response = input(question).lower()
         if response in {"y", "yes"}:
@@ -135,10 +171,11 @@ def prompt_user(question: str, assume_yes: bool) -> bool:
         else:
             print("Please answer with 'y' or 'n'.")
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Generate a snapshot of your project.",
-        epilog="For more examples and usage, refer to the script's docstring."
+        epilog="For more information and usage examples, refer to the script's docstring.",
     )
     parser.add_argument(
         "-d",
@@ -148,18 +185,24 @@ def parse_arguments():
         help="Root directory of the project",
     )
     parser.add_argument(
+        "-i",
+        "--include",
+        nargs="+",
+        default=[],
+        help="Gitignore-style patterns to include (overrides ignore patterns)",
+    )
+    parser.add_argument(
+        "--ignore",
+        nargs="+",
+        default=["node_modules", "package.json", "package-lock.json", ".git"],
+        help="Additional gitignore-style patterns to ignore",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file path (default: stdout)",
-    )
-    parser.add_argument(
-        "-i",
-        "--ignore",
-        nargs="+",
-        default=["node_modules", "package.json", "package-lock.json", ".git"],
-        help="Files and directories to ignore",
     )
     parser.add_argument(
         "-y",
@@ -169,18 +212,19 @@ def parse_arguments():
     )
     return parser.parse_args()
 
+
 def main():
     args = parse_arguments()
 
     config = ProjectSnapshotConfig(
         root_dir=args.directory,
+        include_patterns=args.include,
+        ignore_patterns=args.ignore,
         output_file=args.output,
-        ignore_files=set(args.ignore),
         assume_yes=args.yes,
     )
 
     snapshot = ProjectSnapshot(config)
-
     try:
         snapshot.compile_project()
         if args.output != sys.stdout:
@@ -190,6 +234,7 @@ def main():
     finally:
         if args.output != sys.stdout:
             args.output.close()
+
 
 if __name__ == "__main__":
     main()
