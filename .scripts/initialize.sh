@@ -24,14 +24,14 @@ sudo apt install -y caffeine
 ~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
 # Install nvm: package manager for node.js
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 # nvm install 19
 # nvm use 19
 # npm install --global yarn
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 
 # Install configurations
 cd ~/dotfiles
