@@ -48,7 +48,7 @@ sudo apt install alarm-clock-applet
 # Install copyq clipboard manager
 sudo add-apt-repository ppa:hluk/copyq
 sudo apt update
-sudo apt install copyq
+sudo apt install -y copyq
 # Set show preview
 
 # Post installation steps:
@@ -72,6 +72,6 @@ mamba install -y jupyterlab matplotlib pandas
 ## https://www.youtube.com/watch?v=Vxsx7Il-KMA&ab_channel=AICodeKing
 mamba create -n sgpt
 mamba activate sgpt
-mamba install pip
+mamba install -y pip
 pip install shell-gpt litellm
 mamba install -y matplotlib pandas
