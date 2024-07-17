@@ -27,21 +27,21 @@ if [ "$second_monitor" != "eDP-1" ]; then
     xrandr --output eDP-1 --primary --scale 1.28x1.28 --pos 0x2160 --rotate normal --output $second_monitor --scale 2x2
 
     # Move workspaces to the second monitor
-    i3-msg "workspace 1, move workspace to output $first_monitor"
+    # i3-msg "workspace 1, move workspace to output $first_monitor"
 
     i3-msg "workspace 2, move workspace to output $second_monitor"
-    i3-msg "workspace 3, move workspace to output $first_monitor"
+    # i3-msg "workspace 3, move workspace to output $first_monitor"
 
     i3-msg "workspace 4, move workspace to output $second_monitor"
-    i3-msg "workspace 5, move workspace to output $first_monitor"
+    # i3-msg "workspace 5, move workspace to output $first_monitor"
 
     i3-msg "workspace 6, move workspace to output $second_monitor"
-    i3-msg "workspace 7, move workspace to output $first_monitor"
+    # i3-msg "workspace 7, move workspace to output $first_monitor"
 
     i3-msg "workspace 8, move workspace to output $second_monitor"
-    i3-msg "workspace 9, move workspace to output $first_monitor"
+    # i3-msg "workspace 9, move workspace to output $first_monitor"
 
-    i3-msg "workspace 10, move workspace to output $first_monitor"
+    # i3-msg "workspace 10, move workspace to output $first_monitor"
 
     # Set focus back to workspace 2 and then 3
     i3-msg "workspace 2"
