@@ -1,2 +1,2 @@
 #!/bin/bash                                                                                                                                                                                 
-/home/adharsh/miniforge3/envs/sgpt/bin/sgpt "$@" 
+/home/adharsh/miniforge3/envs/aider/bin/aider "$@" 
