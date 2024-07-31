@@ -59,19 +59,30 @@ wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge
 ./Miniforge3-Linux-x86_64.sh
 
 ## Basic
-mamba create -n basic
-mamba install -y jupyterlab matplotlib pandas
+mamba create -n basic python -y
+mamba activate basic
+mamba install -y pip
+pip install -y jupyterlab matplotlib pandas mypy
+mambda deactivate
 
 ## Installing cling: C++ jupyter kernel
-mamba create -n cling
+mamba create -n cling -y
 mamba activate cling
 mamba install -y xeus-cling -c conda-forge
-mamba install -y jupyterlab matplotlib pandas
+mamba install -y jupyterlab
+mambda deactivate
 
 ## Installing sgpt
 ## https://www.youtube.com/watch?v=Vxsx7Il-KMA&ab_channel=AICodeKing
-mamba create -n sgpt
+mamba create -n sgpt python -y
 mamba activate sgpt
 mamba install -y pip
-pip install shell-gpt litellm
-mamba install -y matplotlib pandas
+pip install -y shell-gpt litellm
+pip install -y matplotlib pandas
+mambda deactivate
+
+## Installing aider
+mamba create -n aider python -y
+mamba activate aider
+pip install -y aider-chat
+mambda deactivate
