@@ -58,6 +58,23 @@ read -p "Make sure to step through install steps correctly. Preferred to Ctrl+C 
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 ./Miniforge3-Linux-x86_64.sh
 
+# Install VSCode
+wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+sudo apt install ./vscode.deb
+rm vscode.deb
+# Custom CSS and JS Loader for pretty-ts-errors-hack.css
+# Follow more details here: 
+# - https://github.com/yoavbls/pretty-ts-errors/blob/HEAD/docs/hide-original-errors.md
+# - https://marketplace.visualstudio.com/items?itemName=yoavbls.pretty-ts-errors
+# - https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css
+# Custom CSS and JS
+# SPECIAL NOTE: If Visual Studio Code complains about that it is corrupted, simply click “Don't show again”.
+# NOTE: Every time after Visual Studio Code is updated, please re-enable Custom CSS.
+# NOTE: Every time you change the configuration, please re-enable Custom CSS.
+sudo chown -R $(whoami) "$(which code)"
+sudo chown -R $(whoami) /usr/share/code
+# Activate command in VSCode: Reload Custom CSS and JS
+
 ## Basic
 mamba create -n basic python -y
 mamba activate basic
