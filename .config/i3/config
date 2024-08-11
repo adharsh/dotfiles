@@ -228,14 +228,19 @@ bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 # https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
 exec --no-startup-id xrandr --output eDP-1 --scale '1.28x1.28'
 
-# Spawn terminals in each desktop
-exec --no-startup-id i3-msg 'workspace 1; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 2; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 3; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 4; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 5; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 6; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 7; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 8; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 9; i3-sensible-terminal'
-exec --no-startup-id i3-msg 'workspace 10; i3-sensible-terminal'
+# Chrome for development
+bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
+  --disable-background-networking \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-breakpad \
+  --disable-client-side-phishing-detection \
+  --disable-default-apps \
+  --disable-dev-shm-usage \
+  --disable-renderer-backgrounding \
+  --disable-sync \
+  --metrics-recording-only \
+  --no-first-run \
+  --no-default-browser-check \
+  --user-data-dir=/tmp/chrome-dev-profile \
+  --remote-debugging-port=9222
