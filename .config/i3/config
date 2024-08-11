@@ -187,8 +187,9 @@ bar {
         status_command i3status
 }
 
-# New, sticky window
-bindsym $mod+Shift+s sticky toggle
+# TODO(adharsh): Other keybinding should map to $mod+Print
+# # New, sticky window
+# bindsym $mod+Shift+s sticky toggle
 
 # Scratchpad
 # Make the currently focused window a scratchpad
@@ -212,8 +213,13 @@ bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directo
 
 # Select area for screenshot and copy to clipboard
 bindsym Print exec --no-startup-id "maim -s | xclip -selection clipboard -t image/png"
+# Select area for screenshot and copy to clipboard, save to file with GUI
+# TODO(adharsh): Change to $mod+Print
+bindsym $mod+Shift+s exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_image.sh
 # Delayed screenshot, ex: if you want to screenshot right click context menus
 bindsym Shift+Print exec --no-startup-id "maim -s -d 5 | xclip -selection clipboard -t image/png && notify-send 'Screenshot captured' 'A screenshot has been captured and saved to the clipboard.' -t 5000"
+# Delayed screenshot, ex: if you want to screenshot right click context menus, save to file with GUI
+# TODO(adharsh) bind $mod+Shift+Print 
 
 # Process ID notification
 bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdotool getwindowfocus) _NET_WM_PID | sed 's/_NET_WM_PID(CARDINAL) = //')"
