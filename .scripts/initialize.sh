@@ -31,7 +31,7 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils
 
 # Git config
 git config --global user.email "adharsh.babu@gmail.com"
@@ -60,7 +60,10 @@ read -p "Make sure to step through install steps correctly. Preferred to Ctrl+C 
 
 ## Installing mamba from miniforge
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-./Miniforge3-Linux-x86_64.sh
+chmod +x Miniforge3-Linux-x86_64.sh
+./Miniforge3-Linux-x86_64.sh # Say yes for final option
+conda config --set auto_activate_base false
+rm Miniforge3-Linux-x86_64.sh
 
 # Install VSCode
 wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
@@ -84,14 +87,14 @@ mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
 yes | pip install jupyterlab matplotlib pandas mypy
-mambda deactivate
+mamba deactivate
 
 ## Installing cling: C++ jupyter kernel
 mamba create -n cling -y
 mamba activate cling
 mamba install -y xeus-cling -c conda-forge
 mamba install -y jupyterlab
-mambda deactivate
+mamba deactivate
 
 ## Installing sgpt
 ## https://www.youtube.com/watch?v=Vxsx7Il-KMA&ab_channel=AICodeKing
@@ -99,10 +102,10 @@ mamba create -n sgpt python -y
 mamba activate sgpt
 mamba install -y pip
 yes | pip install shell-gpt litellm matplotlib pandas
-mambda deactivate
+mamba deactivate
 
 ## Installing aider
 mamba create -n aider python -y
 mamba activate aider
 yes | pip install aider-chat
-mambda deactivate
+mamba deactivate
