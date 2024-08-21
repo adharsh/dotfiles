@@ -83,7 +83,7 @@ sudo chown -R $(whoami) /usr/share/code
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-pip install -y jupyterlab matplotlib pandas mypy
+yes | pip install jupyterlab matplotlib pandas mypy
 mambda deactivate
 
 ## Installing cling: C++ jupyter kernel
@@ -98,12 +98,11 @@ mambda deactivate
 mamba create -n sgpt python -y
 mamba activate sgpt
 mamba install -y pip
-pip install -y shell-gpt litellm
-pip install -y matplotlib pandas
+yes | pip install shell-gpt litellm matplotlib pandas
 mambda deactivate
 
 ## Installing aider
 mamba create -n aider python -y
 mamba activate aider
-pip install -y aider-chat
+yes | pip install aider-chat
 mambda deactivate
