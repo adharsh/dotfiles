@@ -208,6 +208,7 @@ bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set 10%+
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
 
 # Chrome: https://superuser.com/a/377195
+exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets
 bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default --password-store=gnome
 bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directory=Default --incognito
 
