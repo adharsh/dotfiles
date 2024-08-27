@@ -1,9 +1,14 @@
 #!/bin/bash
 
-sudo apt update
-
 # Stop script if any command fails
 set -e
+
+# Update apt repos
+sudo apt update
+
+# Git config
+git config --global user.email "adharsh.babu@gmail.com"
+git config --global user.name "Adharsh Babu"
 
 # Add $USER to video group so you don't need sudo to run brightnessctl
 sudo apt install -y brightnessctl
@@ -33,13 +38,12 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 # Installing vim-gtk3 so yanks go into clipboard
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils
 
-# Git config
-git config --global user.email "adharsh.babu@gmail.com"
-git config --global user.name "Adharsh Babu"
-
 # Install configurations
 cd ~/dotfiles
 stow .
+
+# Make bin files executable
+chmod +x ~/bin/*
 
 echo "Reboot to see changes."
 
