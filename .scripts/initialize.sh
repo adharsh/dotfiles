@@ -22,7 +22,7 @@ git clone https://github.com/alols/xcape.git ~/.xcape
 
 # https://github.com/junegunn/fzf#using-git
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 
-~/.fzf/install
+yes | ~/.fzf/install
 
 # caffeine, activate on start
 sudo apt install -y caffeine
