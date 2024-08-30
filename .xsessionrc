@@ -35,6 +35,10 @@ udiskie --no-notify --smart-tray &
 # Start CopyQ clipboard manager
 copyq &
 
+# High resolution screen change:
+# https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
+exec --no-startup-id xrandr --output eDP-1 --scale '1.0x1.0'
+
 echo "~/.xsessionrc completed."
 exec i3
 
