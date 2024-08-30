@@ -231,10 +231,6 @@ bindsym $mod+c exec --no-startup-id copyq show
 # Dynamic monitors binding
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 
-# High resolution screen change:
-# https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
-exec --no-startup-id xrandr --output eDP-1 --scale '1.28x1.28'
-
 # Chrome for development
 bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
   --disable-background-networking \
