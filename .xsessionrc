@@ -3,6 +3,11 @@ exec >~/log_xsessionrc.txt 2>&1
 echo "~/.xsessionrc is run by user: $(whoami)"
 echo "Log stored at: ~/log_xsessionrc.txt" 
 
+# High resolution screen change:
+# https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
+# Note: Modify this line on a new laptop
+xrandr --output eDP-1 --scale '1.0x1.0'
+
 # Enable tap, drag by tap, and natural scrolling
 # https://github.com/maxwell-bland/i3-natural-scrolling-and-tap/blob/master/inverse-scroll.sh
 # Get id of touchpad and the id of the field corresponding to natural scrolling
@@ -35,10 +40,5 @@ udiskie --no-notify --smart-tray &
 # Start CopyQ clipboard manager
 copyq &
 
-# High resolution screen change:
-# https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
-exec --no-startup-id xrandr --output eDP-1 --scale '1.0x1.0'
-
 echo "~/.xsessionrc completed."
 exec i3
-
