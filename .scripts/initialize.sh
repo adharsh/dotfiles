@@ -46,9 +46,6 @@ stow .
 # Make bin files executable
 chmod +x ~/bin/*
 
-echo "Reboot to see changes."
-
-
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
 sudo apt update
@@ -60,13 +57,10 @@ sudo apt update
 sudo apt install -y copyq
 # Set show preview
 
-# Post installation steps:
-read -p "Make sure to step through install steps correctly. Preferred to Ctrl+C now and run commands one at a time."
-
-## Installing mamba from miniforge
+# Installing mamba from miniforge
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 chmod +x Miniforge3-Linux-x86_64.sh
-./Miniforge3-Linux-x86_64.sh # Say yes for final option
+./Miniforge3-Linux-x86_64.sh -b
 conda config --set auto_activate_base false
 rm Miniforge3-Linux-x86_64.sh
 
@@ -114,3 +108,30 @@ mamba create -n aider python -y
 mamba activate aider
 yes | pip install aider-chat
 mamba deactivate
+
+# Install docker
+# Add Docker's official GPG key:
+sudo apt update
+sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+# Install latest
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# Linux post install
+sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist
+sudo usermod -aG docker $USER
+newgrp docker
+# Installation verification
+docker run hello-world | grep -q "Hello from Docker!"
+# Start docker (Done automatically default in Ubuntu)
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
+
+echo "Reboot to see changes."
