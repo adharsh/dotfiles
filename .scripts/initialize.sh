@@ -7,6 +7,7 @@ set -e
 sudo apt update
 
 # Git config
+sudo apt install -y git
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 
@@ -16,7 +17,7 @@ sudo usermod -aG video $USER
 
 # Linux: https://github.com/alols/xcape
 # Windows: https://gist.github.com/tanyuan/55bca522bf50363ae4573d4bdcf06e2e
-sudo apt install -y git gcc make pkg-config libx11-dev libxtst-dev libxi-dev
+sudo apt install -y gcc make pkg-config libx11-dev libxtst-dev libxi-dev
 git clone https://github.com/alols/xcape.git ~/.xcape
 (cd ~/.xcape && make && sudo make install)
 
@@ -36,7 +37,7 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils dunst
 
 # Install configurations
 cd ~/dotfiles
