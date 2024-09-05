@@ -42,10 +42,8 @@ sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim x
 
 # Install configurations
 cd ~/dotfiles
+chmod +x ~/dotfiles/bin/*
 stow .
-
-# Make bin files executable
-chmod +x ~/bin/*
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
