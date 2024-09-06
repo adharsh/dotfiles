@@ -34,7 +34,7 @@ wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 nvm install node
 # nvm install 19
 # nvm use 19
-# npm install --global yarn
+npm install --global yarn
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
