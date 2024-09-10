@@ -32,6 +32,7 @@ sudo apt install -y caffeine
 # Install nvm: package manager for node.js
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 nvm install node
+nvm alias default node 
 # nvm install 19
 # nvm use 19
 npm install --global yarn
