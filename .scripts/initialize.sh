@@ -46,6 +46,11 @@ cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
 stow .
 
+# Install mdanki
+npm install -g mdanki
+MDANKI_SQL_PATH="$HOME/.nvm/versions/node/$(node --version)/lib/node_modules/mdanki/node_modules/sql.js/js"
+cp $MDANKI_SQL_PATH/sql-memory-growth.js $MDANKI_SQL_PATH/sql.js
+
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
 sudo apt update
