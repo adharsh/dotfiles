@@ -39,7 +39,7 @@ npm install --global yarn
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils dunst
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad pulseaudio-utils dunst p7zip-full 
 
 # Install configurations
 cd ~/dotfiles
