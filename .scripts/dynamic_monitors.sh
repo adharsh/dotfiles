@@ -22,10 +22,17 @@ first_monitor="eDP-1"
 second_monitor=$(xrandr --query | rg ' connected ' | tail -1 | awk '{print $1}')
 
 if [ "$second_monitor" != "eDP-1" ]; then
-    # Change monitor outputs with xrandr
-    xrandr --output eDP-1 --primary --mode 3000x2000 --pos 0x1080 --rotate normal --output DP-1 --off --output DP-2 --mode 1920x1080 --pos 0x0 --rotate normal --output HDMI-1 --off
-    xrandr --output eDP-1 --primary --scale 1.28x1.28 --pos 0x2160 --rotate normal --output $second_monitor --scale 2x2
+    # Get the dimensions of the second monitor from the line below its name
+    second_monitor_res=$(xrandr --query | awk "/$second_monitor/{getline; print \$1}")
+    second_monitor_width=$(echo $second_monitor_res | cut -d'x' -f1)
+    second_monitor_height=$(echo $second_monitor_res | cut -d'x' -f2)
 
+    # Get the dimensions of the first monitor (eDP-1)
+    first_monitor_res=$(xrandr --query | grep "^$first_monitor" | grep -oP '\d+x\d+' | head -1)
+ 
+    # Change monitor outputs with xrandr
+    xrandr --output $first_monitor --primary --mode $first_monitor_res --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
+ 
     # Move workspaces to the second monitor
     # i3-msg "workspace 1, move workspace to output $first_monitor"
 
