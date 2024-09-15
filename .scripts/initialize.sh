@@ -56,6 +56,10 @@ cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
 # Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
 
+#Make sure to install AnkiConnect 
+read -p "Make sure to install AnkiConnect"
+# https://foosoft.net/projects/anki-connect/
+
 # Install mdanki
 npm install -g mdanki
 MDANKI_SQL_PATH="$HOME/.nvm/versions/node/$(node --version)/lib/node_modules/mdanki/node_modules/sql.js/js"
