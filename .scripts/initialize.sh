@@ -39,7 +39,9 @@ npm install --global yarn
 
 # Other installs  
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
+sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
+sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 
 # Install configurations
 cd ~/dotfiles
@@ -57,8 +59,7 @@ rm anki-24.06.3-linux-qt6.tar.zst
 # Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
 
 #Make sure to install AnkiConnect 
-read -p "Make sure to install AnkiConnect"
-# https://foosoft.net/projects/anki-connect/
+read -p "Make sure to install AnkiConnect: https://foosoft.net/projects/anki-connect/"
 
 # Install mdanki
 npm install -g mdanki
