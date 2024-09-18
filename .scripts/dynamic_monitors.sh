@@ -31,8 +31,10 @@ if [ "$second_monitor" != "eDP-1" ]; then
     first_monitor_res=$(xrandr --query | grep "^$first_monitor" | grep -oP '\d+x\d+' | head -1)
  
     # Change monitor outputs with xrandr
-    xrandr --output $first_monitor --primary --mode $first_monitor_res --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
- 
+    xrandr --output $first_monitor --primary  --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
+    # Setting resolution of primary display is not necessary, but leaving below as a substitue in case above doesn't work
+    # xrandr --output $first_monitor --primary --mode $first_monitor_res --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
+
     # Move workspaces to the second monitor
     # i3-msg "workspace 1, move workspace to output $first_monitor"
 
