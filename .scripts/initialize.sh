@@ -6,6 +6,9 @@ set -e
 # Update apt repos
 sudo apt update
 
+# Assume's Chrome is installed
+read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled."
+
 # Git config
 sudo apt install -y git
 git config --global user.email "adharsh.babu@gmail.com"
@@ -58,7 +61,7 @@ cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
 # Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
 
-#Make sure to install AnkiConnect 
+# Make sure to install AnkiConnect 
 read -p "Make sure to install AnkiConnect: https://foosoft.net/projects/anki-connect/"
 
 # Install mdanki
