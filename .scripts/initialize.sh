@@ -9,6 +9,11 @@ sudo apt update
 # Assume's Chrome is installed
 read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled."
 
+# Install configurations
+cd ~/dotfiles
+chmod +x ~/dotfiles/bin/*
+stow .
+
 # Git config
 sudo apt install -y git
 git config --global user.email "adharsh.babu@gmail.com"
@@ -30,7 +35,7 @@ yes | ~/.fzf/install
 
 # caffeine, activate on start
 sudo apt install -y caffeine
-~/dotfiles/.scripts/caffeine-indicator-fix.sh
+bash ~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
 # Install nvm: package manager for node.js
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
@@ -45,11 +50,6 @@ npm install --global yarn
 sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
-
-# Install configurations
-cd ~/dotfiles
-chmod +x ~/dotfiles/bin/*
-stow .
 
 # Install anki
 wget https://github.com/ankitects/anki/releases/download/24.06.3/anki-24.06.3-linux-qt6.tar.zst
@@ -78,7 +78,6 @@ sudo apt install alarm-clock-applet
 sudo add-apt-repository ppa:hluk/copyq
 sudo apt update
 sudo apt install -y copyq
-# Set show preview
 
 # Installing mamba from miniforge
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
@@ -102,7 +101,7 @@ rm vscode.deb
 # NOTE: Every time you change the configuration, please re-enable Custom CSS.
 sudo chown -R $(whoami) "$(which code)"
 sudo chown -R $(whoami) /usr/share/code
-# Activate command in VSCode: Reload Custom CSS and JS
+read -p "Activate command in VSCode: Reload Custom CSS and JS"
 
 ## Basic
 mamba create -n basic python -y
