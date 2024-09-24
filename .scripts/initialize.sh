@@ -52,6 +52,8 @@ sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim x
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 
 # Install anki
+pushd .
+cd ~/Downloads
 wget https://github.com/ankitects/anki/releases/download/24.06.3/anki-24.06.3-linux-qt6.tar.zst
 tar --use-compress-program=unzstd -xvf anki-24.06.3-linux-qt6.tar.zst
 cd anki-24.06.3-linux-qt6/
@@ -59,6 +61,7 @@ read -p "Please check anki-24.06.3-linux-qt6/install.sh script before running wi
 sudo ./install.sh
 cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
+popd 
 # Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
 
 # Make sure to install AnkiConnect 
