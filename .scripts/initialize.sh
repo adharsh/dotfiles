@@ -110,14 +110,15 @@ read -p "Activate command in VSCode: Reload Custom CSS and JS"
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-yes | pip install jupyterlab matplotlib pandas mypy
+yes | pip install jupyterlab matplotlib pandas mypy shortuuid
 mamba deactivate
 
 ## Installing cling: C++ jupyter kernel
 mamba create -n cling -y
 mamba activate cling
 mamba install -y xeus-cling -c conda-forge
-mamba install -y jupyterlab
+mamba install -y pip
+yes | pip install jupyterlab
 mamba deactivate
 
 ## Installing sgpt
@@ -131,6 +132,7 @@ mamba deactivate
 ## Installing aider
 mamba create -n aider python -y
 mamba activate aider
+mamba install -y pip
 yes | pip install aider-chat
 mamba deactivate
 
