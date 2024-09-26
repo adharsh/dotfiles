@@ -52,14 +52,14 @@ if [ "$second_monitor" != "eDP-1" ]; then
 
     # i3-msg "workspace 10, move workspace to output $first_monitor"
 
-    # Set focus back to workspace 2 and then 3
-    i3-msg "workspace 2"
-    i3-msg "workspace 3"
+    # # Set focus back to workspace 2 and then 3
+    # i3-msg "workspace 2"
+    # i3-msg "workspace 3"
 
 else
     # If single monitor, reset the monitor settings
     xrandr --auto
 
-    # Set focus back to workspace 3
-    i3-msg "workspace 3"
+    # # Set focus back to workspace 3
+    # i3-msg "workspace 3"
 fi
