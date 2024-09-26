@@ -14,8 +14,12 @@ cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
 stow .
 
+# Installing vim-gtk3 so yanks go into clipboard
+sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
+sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
+sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
+
 # Git config
-sudo apt install -y git
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 
@@ -23,12 +27,14 @@ git config --global user.name "Adharsh Babu"
 sudo apt install -y brightnessctl
 sudo usermod -aG video $USER
 
+# xcape
 # Linux: https://github.com/alols/xcape
 # Windows: https://gist.github.com/tanyuan/55bca522bf50363ae4573d4bdcf06e2e
 sudo apt install -y gcc make pkg-config libx11-dev libxtst-dev libxi-dev
 git clone https://github.com/alols/xcape.git ~/.xcape
 (cd ~/.xcape && make && sudo make install)
 
+# fzf
 # https://github.com/junegunn/fzf#using-git
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 
 yes | ~/.fzf/install
@@ -45,12 +51,6 @@ nvm alias default node
 # nvm use 19
 npm install --global yarn
 
-# Other installs  
-# Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
-sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
-
 # Install anki
 pushd .
 cd ~/Downloads
@@ -65,12 +65,12 @@ popd
 # Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
 
 # Make sure to install AnkiConnect 
-read -p "Make sure to install AnkiConnect: https://foosoft.net/projects/anki-connect/"
+read -p "Make sure to install addon AnkiConnect in Anki: https://foosoft.net/projects/anki-connect/"
 
-# Install mdanki
-npm install -g mdanki
-MDANKI_SQL_PATH="$HOME/.nvm/versions/node/$(node --version)/lib/node_modules/mdanki/node_modules/sql.js/js"
-cp $MDANKI_SQL_PATH/sql-memory-growth.js $MDANKI_SQL_PATH/sql.js
+# # Install mdanki
+# npm install -g mdanki
+# MDANKI_SQL_PATH="$HOME/.nvm/versions/node/$(node --version)/lib/node_modules/mdanki/node_modules/sql.js/js"
+# cp $MDANKI_SQL_PATH/sql-memory-growth.js $MDANKI_SQL_PATH/sql.js
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
@@ -81,13 +81,6 @@ sudo apt install alarm-clock-applet
 sudo add-apt-repository ppa:hluk/copyq
 sudo apt update
 sudo apt install -y copyq
-
-# Installing mamba from miniforge
-wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-chmod +x Miniforge3-Linux-x86_64.sh
-./Miniforge3-Linux-x86_64.sh -b
-conda config --set auto_activate_base false
-rm Miniforge3-Linux-x86_64.sh
 
 # Install VSCode
 wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
@@ -106,11 +99,18 @@ sudo chown -R $(whoami) "$(which code)"
 sudo chown -R $(whoami) /usr/share/code
 read -p "Activate command in VSCode: Reload Custom CSS and JS"
 
+# Installing mamba from miniforge
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+chmod +x Miniforge3-Linux-x86_64.sh
+./Miniforge3-Linux-x86_64.sh -b
+conda config --set auto_activate_base false
+rm Miniforge3-Linux-x86_64.sh
+
 ## Basic
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-yes | pip install jupyterlab matplotlib pandas mypy shortuuid
+yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki Markdown types-Markdown loguru types-Pygments markdown_katex
 mamba deactivate
 
 ## Installing cling: C++ jupyter kernel
@@ -137,32 +137,32 @@ yes | pip install aider-chat
 mamba deactivate
 
 # Install docker
-# Add Docker's official GPG key:
+## Add Docker's official GPG key:
 sudo apt update
 sudo apt install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
-# Add the repository to Apt sources:
+## Add the repository to Apt sources:
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt update
-# Install latest
+## Install latest
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-# Linux post install
+## Linux post install
 sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist
 sudo usermod -aG docker $USER
 newgrp docker
-# Installation verification
+## Installation verification
 docker run hello-world | grep -q "Hello from Docker!"
-# Start docker (Done automatically default in Ubuntu)
+## Start docker (Done automatically default in Ubuntu)
 sudo systemctl enable docker.service
 sudo systemctl enable containerd.service
-
-echo "Reboot to see changes."
 
 # Install Bazel
 wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
 chmod +x ~/bin/bazel
+
+read -p "Reboot to see changes."

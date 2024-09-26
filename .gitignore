@@ -1,0 +1,6 @@
+# Ignore all files in the bin directory
+bin/*
+
+# But don't ignore these specific files
+!bin/aider
+!bin/sgpt
