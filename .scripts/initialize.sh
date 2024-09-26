@@ -162,3 +162,7 @@ sudo systemctl enable docker.service
 sudo systemctl enable containerd.service
 
 echo "Reboot to see changes."
+
+# Install Bazel
+wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+chmod +x ~/bin/bazel
