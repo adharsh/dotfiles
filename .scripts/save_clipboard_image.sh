@@ -1,18 +1,60 @@
 #!/bin/bash
 
+# Configuration file to store the last used directory
+CONFIG_FILE="$HOME/.screenshot_save_config"
+
+# Function to get the last used directory
+get_last_directory() {
+    if [ -f "$CONFIG_FILE" ]; then
+        cat "$CONFIG_FILE"
+    else
+        echo "$HOME"
+    fi
+}
+
+# Function to save the last used directory
+save_last_directory() {
+    dirname "$1" > "$CONFIG_FILE"
+}
+
 # Capture screenshot to clipboard
 maim -s | xclip -selection clipboard -t image/png
 
-# Use zenity to open a file selection dialog
-save_path=$(zenity --file-selection --save --filename="clipboard_image.png" --title="Select where to save the image")
+# Get the last used directory
+last_dir=$(get_last_directory)
+
+# Use zenity to open a file selection dialog, starting in the last used directory
+save_path=$(zenity --file-selection --save --filename="$last_dir/clipboard_image.png" --title="Select where to save the image")
 
 # Check if a file was selected
 if [ -n "$save_path" ]; then
     # Use xclip to get the image from clipboard and convert it to PNG
     xclip -selection clipboard -t image/png -o > "$save_path"
     
-    # Check if the save failed
-    if [ $? -ne 0 ]; then
+    # Check if the save was successful
+    if [ $? -eq 0 ]; then
+        # Save the directory of the successful save
+        save_last_directory "$save_path"
+        
+        # Get the filename and parent directory from the full path
+        filename=$(basename "$save_path")
+        parent_dir=$(basename "$(dirname "$save_path")")
+        
+        # Create the Markdown image syntax based on the parent directory
+        if [ "$parent_dir" = "imgs" ]; then
+            # Use relative path if parent directory is "imgs"
+            markdown_path="imgs/$filename"
+        else
+            # # Save to absolute path
+            # markdown_path="$save_path"
+
+            # Save to current working directory
+            markdown_path="$filename"
+        fi
+         
+        # Create the Markdown image syntax and copy it to clipboard
+        echo -n "![${filename}](${markdown_path})" | xclip -selection clipboard
+    else
         zenity --error --text="Failed to save the image"
     fi
 else
