@@ -42,7 +42,7 @@ yes | ~/.fzf/install
 
 # caffeine, activate on start
 sudo apt install -y caffeine
-bash ~/dotfiles/.scripts/caffeine-indicator-fix.sh
+bash .scripts/caffeine-indicator-fix.sh
 
 # Web Dev - fnm, node, pnpm
 curl -fsSL https://fnm.vercel.app/install | bash
@@ -74,6 +74,10 @@ read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninst
 
 # Make sure to install AnkiConnect 
 read -p "Make sure to install addon AnkiConnect in Anki: https://foosoft.net/projects/anki-connect/"
+
+# Install Anki Plugins
+# Ex: bash install_anki_plugins.sh 1234567890 9876543210 1122334455
+bash .scripts/install_anki_plugins.sh 
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
