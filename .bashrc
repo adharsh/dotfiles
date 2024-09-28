@@ -163,6 +163,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 
 # Others
 alias t=tree
+alias c='tee >(xclip -selection clipboard)'
 alias m=mamba
 alias ma="m activate"
 alias md="m deactivate"
