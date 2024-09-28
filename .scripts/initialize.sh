@@ -18,6 +18,7 @@ stow .
 sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
+sudo apt install -y stress-ng
 
 # Git config
 git config --global user.email "adharsh.babu@gmail.com"
@@ -43,13 +44,20 @@ yes | ~/.fzf/install
 sudo apt install -y caffeine
 bash ~/dotfiles/.scripts/caffeine-indicator-fix.sh
 
-# Install nvm: package manager for node.js
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
-nvm install node
-nvm alias default node 
-# nvm install 19
-# nvm use 19
-npm install --global yarn
+# Web Dev - fnm, node, pnpm
+curl -fsSL https://fnm.vercel.app/install | bash
+read -p "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag"
+fnm install --lts
+fnm default $(fnm list | grep lts | tail -n1)
+corepack enable pnpm
+command -v fnm >/dev/null 2>&1 || { echo "Error: fnm is NOT installed"; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "Error: Node.js is NOT installed"; exit 1; }
+command -v pnpm >/dev/null 2>&1 || { echo "Error: pnpm is NOT installed"; exit 1; }
+pnpm setup
+
+# pnpm global packages 
+## Anki
+pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
 
 # Install anki
 pushd .
@@ -62,15 +70,10 @@ sudo ./install.sh
 cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
 popd 
-# Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled
+read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled."
 
 # Make sure to install AnkiConnect 
 read -p "Make sure to install addon AnkiConnect in Anki: https://foosoft.net/projects/anki-connect/"
-
-# # Install mdanki
-# npm install -g mdanki
-# MDANKI_SQL_PATH="$HOME/.nvm/versions/node/$(node --version)/lib/node_modules/mdanki/node_modules/sql.js/js"
-# cp $MDANKI_SQL_PATH/sql-memory-growth.js $MDANKI_SQL_PATH/sql.js
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
@@ -110,7 +113,8 @@ rm Miniforge3-Linux-x86_64.sh
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki Markdown types-Markdown loguru types-Pygments markdown_katex
+yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime
+nbdime config-git --enable --global
 mamba deactivate
 
 ## Installing cling: C++ jupyter kernel
