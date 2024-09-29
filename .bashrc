@@ -162,11 +162,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 # export CUDA_HOME=/usr/local/cuda
 
 # Others
-alias t=tree
-alias c='tee >(xclip -selection clipboard)'
+alias c='tee >(xclip -selection clipboard)' # Ex: echo "test" | c
 alias m=mamba
 alias ma="m activate"
 alias md="m deactivate"
+alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
 
@@ -202,7 +202,7 @@ srt() {
     sgpt --repl temp $*
 }
 
-# Disable ctrl+s (which freezes output) to allow shellgpt integration
+# Disable ctrl+s (which freezes output) to allow Shell-GPT integration
 stty -ixon
 # To revert: stty ixon
 
