@@ -162,10 +162,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 # export CUDA_HOME=/usr/local/cuda
 
 # Others
+alias gsm='gnome-system-monitor & exit'
 alias c='tee >(xclip -selection clipboard)' # Ex: echo "test" | c
-alias m=mamba
-alias ma="m activate"
 alias md="m deactivate"
+alias ma="m activate"
+alias m=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
@@ -216,4 +217,3 @@ fi
 }
 bind -x '"\C-s": _sgpt_bash'
 # Shell-GPT integration BASH v0.2
-
