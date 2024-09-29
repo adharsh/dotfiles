@@ -54,6 +54,7 @@ command -v fnm >/dev/null 2>&1 || { echo "Error: fnm is NOT installed"; exit 1; 
 command -v node >/dev/null 2>&1 || { echo "Error: Node.js is NOT installed"; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo "Error: pnpm is NOT installed"; exit 1; }
 pnpm setup
+read -p "New pnpm script is appended to .bashrc, merge with existing one."
 
 # pnpm global packages 
 ## Anki
@@ -72,12 +73,14 @@ rm anki-24.06.3-linux-qt6.tar.zst
 popd 
 read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled."
 
-# Make sure to install AnkiConnect 
-read -p "Make sure to install addon AnkiConnect in Anki: https://foosoft.net/projects/anki-connect/"
-
-# Install Anki Plugins
-# Ex: bash install_anki_plugins.sh 1234567890 9876543210 1122334455
-bash .scripts/install_anki_plugins.sh 
+# Make sure to install Anki plugins, descriptions in order below
+read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 "
+# Anki Connect: for connecting to Anki via an API
+# Advanced browser: In browse, add Time (Total) and Lapses, sort by either column
+# Review Heatmap: Heatmap similar to contribution activity on Github
+## Useful when starting fresh: Fine Tuning -> Ignore data before date
+# True Retention: Shift+Click Stats button
+## Adjust interval so retention is 80-90%: https://youtu.be/A56wVF9Fr0Q?si=ibnpMcC4nsgdksZu&t=564
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
