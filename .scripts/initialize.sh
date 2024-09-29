@@ -134,7 +134,9 @@ mamba deactivate
 mamba create -n sgpt python -y
 mamba activate sgpt
 mamba install -y pip
-yes | pip install shell-gpt litellm matplotlib pandas
+yes | pip install shell-gpt litellm
+sgpt --install-integration
+read -p "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing."
 mamba deactivate
 
 ## Installing aider
