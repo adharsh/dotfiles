@@ -201,3 +201,19 @@ sr() {
 srt() {
     sgpt --repl temp $*
 }
+
+# Disable ctrl+s (which freezes output) to allow shellgpt integration
+stty -ixon
+# To revert: stty ixon
+
+# Shell-GPT integration BASH v0.2
+_sgpt_bash() {
+if [[ -n "$READLINE_LINE" ]]; then
+    READLINE_LINE=$(sgpt --shell <<< "$READLINE_LINE" --no-interaction)
+    history -s "$READLINE_LINE" # Custom: Add to shell history
+    READLINE_POINT=${#READLINE_LINE}
+fi
+}
+bind -x '"\C-s": _sgpt_bash'
+# Shell-GPT integration BASH v0.2
+
