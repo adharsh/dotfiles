@@ -176,33 +176,6 @@ export OPENAI_API_KEY=sk-ant-api03-6s_PkmMQVbMsG5JJl0b_qqe19d3KuZVunE1KUq_E_J2w6
 export ANTHROPIC_API_KEY=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
 export TAVILY_API_KEY=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
 
-# shell_gpt
-s() {
-    # Better than alias since no quotations needed
-    sgpt "$*"
-}
-sh() {
-    sgpt --help
-}
-ss() {
-    sgpt --shell "$*"
-}
-sni() {
-    sgpt -s "$*" --no-interaction
-}
-sc() {
-    sgpt --code "$*"
-}
-slc() {
-    sgpt --list-chats
-}
-sr() {
-    sgpt --repl $*
-}
-srt() {
-    sgpt --repl temp $*
-}
-
 # Disable ctrl+s (which freezes output) to allow Shell-GPT integration
 stty -ixon
 # To revert: stty ixon
@@ -217,3 +190,34 @@ fi
 }
 bind -x '"\C-s": _sgpt_bash'
 # Shell-GPT integration BASH v0.2
+
+# Shell-GPT 
+## Usage: <command> | s
+s() {
+    # Check if input is coming from a pipe or as arguments
+    if [ -p /dev/stdin ]; then
+        # Input is coming from a pipe
+        input=$(cat)
+    else
+        # Input is coming as arguments
+        return 1
+    fi
+
+    # Echo the input
+    echo "$input"
+
+    # Generate a unique identifier for this chat session
+    chat_id="sgpt_$(date +%s)"
+
+    # Start the non-interactive explanation in the background
+    sgpt --no-interaction --chat "$chat_id" "$input" &
+    explanation_pid=$!
+
+    # Start the interactive REPL session immediately
+    sleep 0.1
+    sgpt --repl "$chat_id"
+    # repl_pid=$!
+
+    # Wait for both processes to finish
+    wait $explanation_pid
+}
