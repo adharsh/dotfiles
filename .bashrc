@@ -193,6 +193,7 @@ bind -x '"\C-s": _sgpt_bash'
 
 # Shell-GPT 
 ## Usage: <command> | s
+## Usage: s your prompt here
 s() {
     # Check if input is coming from a pipe or as arguments
     if [ -p /dev/stdin ]; then
@@ -200,7 +201,8 @@ s() {
         input=$(cat)
     else
         # Input is coming as arguments
-        return 1
+        sgpt "$*"
+        return 0
     fi
 
     # Echo the input
