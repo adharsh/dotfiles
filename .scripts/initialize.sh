@@ -81,6 +81,8 @@ read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 "
 ## Useful when starting fresh: Fine Tuning -> Ignore data before date
 # True Retention: Shift+Click Stats button
 ## Adjust interval so retention is 80-90%: https://youtu.be/A56wVF9Fr0Q?si=ibnpMcC4nsgdksZu&t=564
+read -p "Adjust Display Order->New card gather order = Random cards"
+read -p "Adjust Display Order->New card sort order = Order gathered"
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
