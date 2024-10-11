@@ -17,8 +17,21 @@ save_last_directory() {
     dirname "$1" > "$CONFIG_FILE"
 }
 
-# Capture screenshot to clipboard
-maim -s | xclip -selection clipboard -t image/png
+# Create a temporary file for the screenshot
+TEMP_IMAGE=$(mktemp --suffix=.png)
+
+# Capture the screenshot directly to the file
+maim -s "$TEMP_IMAGE"
+
+# Check the exit status of maim and the file size
+if [ $? -ne 0 ] || [ ! -s "$TEMP_IMAGE" ]; then
+    echo "Failed to capture screenshot or screenshot was cancelled. Exiting."
+    rm -f "$TEMP_IMAGE"
+    exit 1
+fi
+
+# If we get here, we have a valid screenshot. Now copy it to clipboard
+xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
 
 # Get the last used directory
 last_dir=$(get_last_directory)
@@ -28,8 +41,8 @@ save_path=$(zenity --file-selection --save --filename="$last_dir/clipboard_image
 
 # Check if a file was selected
 if [ -n "$save_path" ]; then
-    # Use xclip to get the image from clipboard and convert it to PNG
-    xclip -selection clipboard -t image/png -o > "$save_path"
+    # Move the temporary image file to the selected save path
+    mv "$TEMP_IMAGE" "$save_path"
     
     # Check if the save was successful
     if [ $? -eq 0 ]; then
@@ -59,4 +72,8 @@ if [ -n "$save_path" ]; then
     fi
 else
     echo "No file selected. Exiting."
+    rm -f "$TEMP_IMAGE"
 fi
+
+# Clean up temporary file if it still exists
+rm -f "$TEMP_IMAGE"
