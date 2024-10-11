@@ -30,16 +30,6 @@ Where:
 - The term under the square root ($b^2 - 4ac$) is called the discriminant
 EOM
 
-# Take a screenshot of selected area and copy to clipboard
-echo "Select the area you want to capture..."
-maim -s | xclip -selection clipboard -t image/png
-
-# Check if the screenshot was taken successfully
-if [ $? -ne 0 ]; then
-    echo "Failed to capture screenshot. Aborting."
-    exit 1
-fi
-
 # Create temporary files
 TEMP_IMAGE=$(mktemp)
 TEMP_BASE64=$(mktemp)
@@ -50,8 +40,19 @@ echo "Image: $TEMP_IMAGE"
 echo "Base64: $TEMP_BASE64"
 echo "JSON: $TEMP_JSON"
 
-# Save the image from clipboard to the temporary file
-xclip -selection clipboard -t image/png -o > "$TEMP_IMAGE"
+# Take a screenshot of selected area and copy to clipboard
+echo "Select the area you want to capture..."
+maim -s "$TEMP_IMAGE"
+
+# Check the exit status of maim and the file size
+if [ $? -ne 0 ] || [ ! -s "$TEMP_IMAGE" ]; then
+    echo "Failed to capture screenshot or screenshot was cancelled. Aborting."
+    rm -f "$TEMP_IMAGE"
+    exit 1
+fi
+
+# If we get here, we have a valid screenshot. Now copy it to clipboard
+xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
 
 # Encode the image to base64 and save to a file
 base64 "$TEMP_IMAGE" > "$TEMP_BASE64"
