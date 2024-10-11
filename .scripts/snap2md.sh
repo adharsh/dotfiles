@@ -95,4 +95,4 @@ echo "$RESPONSE"
 echo -e "\nExtracted Markdown:"
 echo "$MARKDOWN" | tee >(xclip -selection clipboard)
 
-echo -e "\nMarkdown text has been copied to your clipboard and printed above!"
+notify-send 'Image snapshot has been transcribed to Markdown to your clipboard!' -t 1000
