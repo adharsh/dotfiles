@@ -163,13 +163,24 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 
 # Others
 alias gsm='gnome-system-monitor & exit'
-alias c='tee >(xclip -selection clipboard)' # Ex: echo "test" | c
 alias md="m deactivate"
 alias ma="m activate"
 alias m=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
+
+# Usage: c                 - Copies the last run command to clipboard
+# Usage: echo "text" | c   - Copies piped input to clipboard
+c() {
+    if [ -t 0 ] && [ $# -eq 0 ]; then
+        # If nothing is piped in and no arguments are provided
+        fc -ln -1 | sed 's/^\s*//' | tee >(xclip -selection clipboard)
+    else
+        # Copy piped input to clipboard
+        tee >(xclip -selection clipboard)
+    fi
+}
 
 # Load api keys (openai key same as anthropic key for sgpt)
 export OPENAI_API_KEY=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
