@@ -222,6 +222,9 @@ bindsym Mod4+Shift+s exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_ima
 # Delayed screenshot, ex: if you want to screenshot right click context menus, save to file with GUI
 # TODO(adharsh) bind $mod+Shift+Print 
 
+# Convert snapshot to markdown with katex
+bindsym $mod+Shift+m exec --no-startup-id ~/dotfiles/.scripts/snap2md.sh
+
 # Process ID notification
 bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdotool getwindowfocus) _NET_WM_PID | sed 's/_NET_WM_PID(CARDINAL) = //')"
 
