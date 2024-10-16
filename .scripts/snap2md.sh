@@ -15,7 +15,7 @@ Transcribe the text in the provided image to markdown format, with the following
 - Never use \[ or \]
 - Utilize KaTeX syntax for all mathematical notations
 - Only use \dfrac and never \frac
-- Output only the transcribed markdown text, without any additional explanations, comments, or enclosing ticks
+- Output only the transcribed markdown text AS IS, without any additional modifications or explanations, comments, or enclosing ticks
 Examples of markdown with KaTeX:
 1. Inline math: The equation $E = mc^2$ represents Einstein's mass-energy equivalence.
 2. Centered math:
