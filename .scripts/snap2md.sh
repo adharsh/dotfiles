@@ -12,6 +12,13 @@ Transcribe the text in the provided image to markdown format, with the following
 - Use standard markdown syntax for headings, lists, bold, italics, etc.
 - For inline (non-centered) mathematical expressions, use single dollar signs: $...$
 - For block (centered) mathematical expressions, use double dollar signs: $$...$$
+- When using dollar signs, place entire expression into a single line, examples:
+  - $$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
+  - $\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$
+  - NOT like:
+    $$
+    \text{This is a bad example: }\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+    $$
 - Never use \[ or \]
 - Utilize KaTeX syntax for all mathematical notations
 - Only use \dfrac and never \frac
@@ -19,15 +26,11 @@ Transcribe the text in the provided image to markdown format, with the following
 Examples of markdown with KaTeX:
 1. Inline math: The equation $E = mc^2$ represents Einstein's mass-energy equivalence.
 2. Centered math:
-$$
-\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
-$$
+$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
 3. Mixed markdown and KaTeX:
 # Quadratic Formula
 The solutions to a quadratic equation $ax^2 + bx + c = 0$ are given by:
-$$
-x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
-$$
+$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
 Where:
 - $a \neq 0$
 - The term under the square root ($b^2 - 4ac$) is called the discriminant
