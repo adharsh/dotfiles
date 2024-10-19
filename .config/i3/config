@@ -218,7 +218,7 @@ bindsym Shift+Print exec --no-startup-id "maim -s -d 5 | xclip -selection clipbo
 
 # Select area for screenshot and copy to clipboard, save to file with GUI
 # TODO(adharsh): Change to $mod+Print
-bindsym Mod4+Shift+s exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_image.sh
+bindsym $mod+Shift+s exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_image.sh
 # Delayed screenshot, ex: if you want to screenshot right click context menus, save to file with GUI
 # TODO(adharsh) bind $mod+Shift+Print 
 
