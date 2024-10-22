@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
 import requests
 from datetime import datetime, timedelta
 import pytz
@@ -244,20 +245,30 @@ def main():
     
     args = parser.parse_args()
     
-    
     try:
         entries = get_project_tasks(CLOCKIFY_API_KEY, args.date)
         
-        print(args.date.strftime("%m-%d-%Y"))
-        total_time_spent = timedelta(0)
-        focus_list = []
-        
+        print(f"=== Daily Time Report: {args.date.strftime('%B %d, %Y')} ===")
+ 
+        project_totals = defaultdict(timedelta)
+        total_time = timedelta(0)
+
         for entry in entries:
-            if "Feeling alive" in entry["project"]:
-                total_time_spent += entry["duration"]
-                focus_list.append(entry["duration_formatted"])
-                
-        print(f"Total: {ClockifyAPI.format_duration(total_time_spent)}")
+            project_totals[entry["project"]] += entry["duration"]
+            total_time += entry["duration"]       
+
+        # Convert to list and sort by duration
+        sorted_projects = sorted(project_totals.items(), key=lambda x: x[1], reverse=True)
+  
+        # Find the longest project name for padding
+        max_project_length = max(len(project) for project, _ in sorted_projects) if sorted_projects else 0
+        
+        # Print each project with aligned columns
+        for project, duration in sorted_projects:
+            percentage = (duration.total_seconds() / total_time.total_seconds() * 100)
+            print(f"{project:<{max_project_length}}    {ClockifyAPI.format_duration(duration):<12} {percentage:>5.1f}%")
+        
+        print("\nTotal tracked time:", ClockifyAPI.format_duration(total_time))
         
     except requests.exceptions.RequestException as e:
         print(f"API Error: {e}")
