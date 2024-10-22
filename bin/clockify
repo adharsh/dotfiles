@@ -6,6 +6,7 @@ import pytz
 from typing import List, Dict, Optional
 import re
 import argparse
+from dateutil import parser as date_parser
 
 class ClockifyAPI:
     def __init__(self, api_key: str):
@@ -160,12 +161,49 @@ def get_time_window(date: datetime) -> tuple[datetime, datetime]:
     
     return start_time, end_time
 
+def parse_keyword_date(keyword: str) -> Optional[datetime]:
+    """Parse common date keywords into datetime objects"""
+    keyword = keyword.lower().strip()
+    today = datetime.now(pytz.UTC)
+    
+    keywords = {
+        'yesterday': today - timedelta(days=1),
+        'today': today,
+        'tomorrow': today + timedelta(days=1)
+    }
+    
+    return keywords.get(keyword)
+
 def parse_date(date_str: str) -> datetime:
-    """Parse date string in MM/DD/YYYY format"""
+    """
+    Parse date string using multiple methods:
+    1. Check for keywords (yesterday, today, tomorrow)
+    2. Try MM/DD/YYYY format
+    3. Fall back to dateutil parser
+    """
+    # Check for keywords first
+    keyword_date = parse_keyword_date(date_str)
+    if keyword_date:
+        return keyword_date
+
+    # Try MM/DD/YYYY format
     try:
         return datetime.strptime(date_str, '%m/%d/%Y')
     except ValueError:
-        raise argparse.ArgumentTypeError("Invalid date format. Please use MM/DD/YYYY (e.g., 03/20/2024)")
+        # Try dateutil parser as last resort
+        try:
+            parsed_date = date_parser.parse(date_str)
+            # Ensure timezone awareness
+            if parsed_date.tzinfo is None:
+                parsed_date = pytz.UTC.localize(parsed_date)
+            return parsed_date
+        except (ValueError, TypeError):
+            raise argparse.ArgumentTypeError(
+                "Invalid date format. Accepted formats:\n"
+                "- Keywords: yesterday, today, tomorrow\n"
+                "- MM/DD/YYYY (e.g., 03/20/2024)\n"
+                "- Common date formats (e.g., 'last friday', 'March 20')"
+            )
 
 def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
     """
@@ -196,9 +234,10 @@ def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
 
 def main():
     parser = argparse.ArgumentParser(description='Fetch Clockify time entries for a specific date')
-    parser.add_argument('--date', type=parse_date, 
+    parser.add_argument('date', type=parse_date, nargs='?',
                       default=(datetime.now(pytz.UTC)),
-                      help='Date in MM/DD/YYYY format (default: yesterday)')
+                      help='Date to fetch entries for. Accepts keywords (yesterday, today), '
+                           'MM/DD/YYYY format, or common date formats (default: yesterday)')
     
     args = parser.parse_args()
     
