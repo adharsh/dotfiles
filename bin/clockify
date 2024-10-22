@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+
+import requests
+from datetime import datetime, timedelta
+import pytz
+from typing import List, Dict, Optional
+import re
+import argparse
+
+class ClockifyAPI:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.clockify.me/api/v1"
+        self.headers = {
+            "X-Api-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+        self.projects_cache = {}
+
+    def get_user_id(self) -> str:
+        """Get the current user's ID."""
+        response = requests.get(
+            f"{self.base_url}/user",
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()["id"]
+
+    def get_workspaces(self) -> List[Dict]:
+        """Get all workspaces for the user."""
+        response = requests.get(
+            f"{self.base_url}/workspaces",
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_projects(self, workspace_id: str) -> List[Dict]:
+        """Get all projects in a workspace."""
+        response = requests.get(
+            f"{self.base_url}/workspaces/{workspace_id}/projects",
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_project_name(self, workspace_id: str, project_id: Optional[str]) -> str:
+        """
+        Get project name from project ID using cache.
+        Returns 'No Project' if project_id is None or not found.
+        """
+        if not project_id:
+            return "No Project"
+
+        # Initialize cache for workspace if not exists
+        if workspace_id not in self.projects_cache:
+            projects = self.get_projects(workspace_id)
+            self.projects_cache[workspace_id] = {
+                project['id']: project['name'] 
+                for project in projects
+            }
+
+        return self.projects_cache[workspace_id].get(project_id, "Unknown Project")
+
+    def get_time_entries(self, workspace_id: str, start_time: str, end_time: str) -> List[Dict]:
+        """
+        Get all time entries between start_time and end_time.
+        Times should be in ISO 8601 format with timezone (e.g., '2024-03-15T00:00:00Z')
+        """
+        user_id = self.get_user_id()
+        
+        response = requests.get(
+            f"{self.base_url}/workspaces/{workspace_id}/user/{user_id}/time-entries",
+            headers=self.headers,
+            params={
+                "start": start_time,
+                "end": end_time
+            }
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def parse_duration(self, duration_str: str) -> timedelta:
+        """
+        Parse ISO 8601 duration string into timedelta object.
+        Handles formats like 'PT15M49S', 'PT2H30M', 'PT1H30M45S', etc.
+        """
+        if not duration_str or duration_str == "ongoing":
+            return timedelta(0)
+        
+        pattern = r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?'
+        match = re.match(pattern, duration_str)
+        
+        if not match:
+            return timedelta(0)
+            
+        hours = int(match.group(1) or 0)
+        minutes = int(match.group(2) or 0)
+        seconds = int(match.group(3) or 0)
+        
+        return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
+    @staticmethod
+    def format_duration(td: timedelta) -> str:
+        """
+        Format timedelta into a readable string (e.g., "2h 30m 45s").
+        """
+        total_seconds = int(td.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        
+        parts = []
+        if hours > 0:
+            parts.append(f"{hours}h")
+        if minutes > 0:
+            parts.append(f"{minutes}m")
+        if seconds > 0:
+            parts.append(f"{seconds}s")
+            
+        return " ".join(parts) if parts else "0s"
+
+    def format_time_entries(self, workspace_id: str, entries: List[Dict]) -> List[Dict]:
+        """Format time entries for better readability."""
+        formatted_entries = []
+        for entry in entries:
+            project_id = entry.get("projectId")
+            project_name = self.get_project_name(workspace_id, project_id)
+            
+            duration_str = entry.get("timeInterval", {}).get("duration", "ongoing")
+            duration_td = self.parse_duration(duration_str)
+            
+            formatted_entry = {
+                "project": project_name,
+                "project_id": project_id,
+                "task": entry.get("taskName", "No Task"),
+                "description": entry.get("description", "No Description"),
+                "start_time": entry["timeInterval"]["start"],
+                "end_time": entry["timeInterval"]["end"],
+                "duration_str": duration_str,
+                "duration": duration_td,
+                "duration_formatted": self.format_duration(duration_td)
+            }
+            formatted_entries.append(formatted_entry)
+        return formatted_entries
+
+def get_time_window(date: datetime) -> tuple[datetime, datetime]:
+    """
+    Calculate the start (6 AM) and end (3 AM next day) times for a given date.
+    """
+    if date.tzinfo is None:
+        date = pytz.UTC.localize(date)
+    
+    # Set start time to 6 AM on the given date
+    start_time = date.replace(hour=6, minute=0, second=0, microsecond=0)
+    
+    # Set end time to 3 AM the next day
+    end_time = (date + timedelta(days=1)).replace(hour=3, minute=0, second=0, microsecond=0)
+    
+    return start_time, end_time
+
+def parse_date(date_str: str) -> datetime:
+    """Parse date string in MM/DD/YYYY format"""
+    try:
+        return datetime.strptime(date_str, '%m/%d/%Y')
+    except ValueError:
+        raise argparse.ArgumentTypeError("Invalid date format. Please use MM/DD/YYYY (e.g., 03/20/2024)")
+
+def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
+    """
+    Main function to get all projects and tasks between 6 AM on the given date
+    and 3 AM the next day.
+    """
+    # Get start and end times
+    start_time, end_time = get_time_window(date)
+    
+    # Convert times to ISO 8601 format
+    start_iso = start_time.isoformat()
+    end_iso = end_time.isoformat()
+    
+    api = ClockifyAPI(api_key)
+    
+    # Get first workspace (modify if you need a specific workspace)
+    workspaces = api.get_workspaces()
+    if not workspaces:
+        raise ValueError("No workspaces found")
+    
+    workspace_id = workspaces[0]["id"]
+    
+    # Get time entries
+    entries = api.get_time_entries(workspace_id, start_iso, end_iso)
+    
+    # Format entries with project names
+    return api.format_time_entries(workspace_id, entries)
+
+def main():
+    parser = argparse.ArgumentParser(description='Fetch Clockify time entries for a specific date')
+    parser.add_argument('--date', type=parse_date, 
+                      default=(datetime.now(pytz.UTC)),
+                      help='Date in MM/DD/YYYY format (default: yesterday)')
+    
+    args = parser.parse_args()
+    
+    api_key = "MGJiNmRlMTMtMmE2My00OWZlLTg5M2EtNGI5MWY5M2U0ZTkz"
+    
+    try:
+        entries = get_project_tasks(api_key, args.date)
+        
+        print(args.date.strftime("%m-%d-%Y"))
+        total_time_spent = timedelta(0)
+        focus_list = []
+        
+        for entry in entries:
+            if "Feeling alive" in entry["project"]:
+                total_time_spent += entry["duration"]
+                focus_list.append(entry["duration_formatted"])
+                
+        print(f"Total: {ClockifyAPI.format_duration(total_time_spent)}")
+        
+    except requests.exceptions.RequestException as e:
+        print(f"API Error: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
