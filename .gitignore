@@ -3,5 +3,5 @@ bin/*
 
 # But don't ignore these specific files
 !bin/aider
-!bin/clockify
+!bin/cl
 !bin/sgpt
