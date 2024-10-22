@@ -10,7 +10,7 @@ import pytz
 import requests
 from dateutil import parser as date_parser
 
-CLOCKIFY_API_KEY = "ZTZhNjBiMjctMmJlOS00MzI2LWFjMGUtNmU5ZDBjZTY3MmM5"
+CLOCKIFY_API_KEY = "ZGY0ZmVkM2MtMzIxMy00ZDQzLTgyZjctZDAwZjI4YzNiOTk4"
 
 
 class ClockifyAPI:
