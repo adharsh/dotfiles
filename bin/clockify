@@ -8,6 +8,9 @@ import re
 import argparse
 from dateutil import parser as date_parser
 
+
+CLOCKIFY_API_KEY = "ZTZhNjBiMjctMmJlOS00MzI2LWFjMGUtNmU5ZDBjZTY3MmM5"
+
 class ClockifyAPI:
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -241,10 +244,9 @@ def main():
     
     args = parser.parse_args()
     
-    api_key = "MGJiNmRlMTMtMmE2My00OWZlLTg5M2EtNGI5MWY5M2U0ZTkz"
     
     try:
-        entries = get_project_tasks(api_key, args.date)
+        entries = get_project_tasks(CLOCKIFY_API_KEY, args.date)
         
         print(args.date.strftime("%m-%d-%Y"))
         total_time_spent = timedelta(0)
