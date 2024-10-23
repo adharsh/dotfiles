@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-import pytz
 import requests
 from dateutil import parser as date_parser
 
@@ -143,8 +142,9 @@ def get_time_window(date: datetime) -> tuple[datetime, datetime]:
     """
     Calculate the start (6 AM) and end (3 AM next day) times for a given date.
     """
+    local_tz = datetime.now().astimezone().tzinfo
     if date.tzinfo is None:
-        date = pytz.UTC.localize(date)
+        date = date.replace(tzinfo=local_tz)
 
     # Set start time to 6 AM on the given date
     start_time = date.replace(hour=6, minute=0, second=0, microsecond=0)
@@ -160,7 +160,8 @@ def get_time_window(date: datetime) -> tuple[datetime, datetime]:
 def parse_keyword_date(keyword: str) -> Optional[datetime]:
     """Parse common date keywords into datetime objects"""
     keyword = keyword.lower().strip()
-    today = datetime.now(pytz.UTC)
+    local_tz = datetime.now().astimezone().tzinfo
+    today = datetime.now(local_tz)
 
     keywords = {
         "yesterday": today - timedelta(days=1),
@@ -183,16 +184,19 @@ def parse_date(date_str: str) -> datetime:
     if keyword_date:
         return keyword_date
 
+    local_tz = datetime.now().astimezone().tzinfo
+
     # Try MM/DD/YYYY format
     try:
-        return datetime.strptime(date_str, "%m/%d/%Y")
+        parsed_date = datetime.strptime(date_str, "%m/%d/%Y")
+        return parsed_date.replace(tzinfo=local_tz)
     except ValueError:
         # Try dateutil parser as last resort
         try:
             parsed_date = date_parser.parse(date_str)
             # Ensure timezone awareness
             if parsed_date.tzinfo is None:
-                parsed_date = pytz.UTC.localize(parsed_date)
+                parsed_date = parsed_date.replace(tzinfo=local_tz)
             return parsed_date
         except (ValueError, TypeError):
             raise argparse.ArgumentTypeError(
@@ -232,6 +236,7 @@ def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
 
 
 def main():
+    local_tz = datetime.now().astimezone().tzinfo
     parser = argparse.ArgumentParser(
         description="Fetch Clockify time entries for a specific date"
     )
@@ -239,7 +244,7 @@ def main():
         "date",
         type=parse_date,
         nargs="?",
-        default=(datetime.now(pytz.UTC)),
+        default=datetime.now(local_tz),
         help="Date to fetch entries for. Accepts keywords (yesterday, today), "
         "MM/DD/YYYY format, or common date formats (default: yesterday)",
     )
