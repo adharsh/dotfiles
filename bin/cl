@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 import requests
 from dateutil import parser as date_parser
 
-CLOCKIFY_API_KEY = "ZGY0ZmVkM2MtMzIxMy00ZDQzLTgyZjctZDAwZjI4YzNiOTk4"
+CLOCKIFY_API_KEY = "NDk1ZGI3NTAtY2E5OS00MTAzLWFmYmQtNWE5NWY3YzYxYzcz"
 
 
 class ClockifyAPI:
