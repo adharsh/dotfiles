@@ -123,7 +123,7 @@ rm Miniforge3-Linux-x86_64.sh
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort
+yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets
 nbdime config-git --enable --global
 mamba deactivate
 
