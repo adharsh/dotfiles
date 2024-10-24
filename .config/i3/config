@@ -190,6 +190,7 @@ bar {
 # TODO(adharsh): Other keybinding should map to $mod+Print
 # # New, sticky window
 # bindsym $mod+Shift+s sticky toggle
+bindsym $mod+y sticky toggle
 
 # Scratchpad
 # Make the currently focused window a scratchpad
