@@ -7,9 +7,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import requests
-from dateutil import parser as date_parser
 
-CLOCKIFY_API_KEY = "NDk1ZGI3NTAtY2E5OS00MTAzLWFmYmQtNWE5NWY3YzYxYzcz"
+CLOCKIFY_API_KEY = "ZWUzZWYwZmMtZGM0My00M2NmLTk3NjctYjg2YjYwODM2NGQx"
 
 
 class ClockifyAPI:
@@ -157,54 +156,39 @@ def get_time_window(date: datetime) -> tuple[datetime, datetime]:
     return start_time, end_time
 
 
-def parse_keyword_date(keyword: str) -> Optional[datetime]:
-    """Parse common date keywords into datetime objects"""
-    keyword = keyword.lower().strip()
+def parse_input(input_str: str) -> datetime:
+    """
+    Parse input string into a datetime object. Accepts:
+    - No argument: returns today
+    - Integer n: returns date n days ago
+    - Date in MM/DD/YYYY format
+    """
     local_tz = datetime.now().astimezone().tzinfo
     today = datetime.now(local_tz)
 
-    keywords = {
-        "yesterday": today - timedelta(days=1),
-        "today": today,
-        "tomorrow": today + timedelta(days=1),
-    }
+    if not input_str:  # No argument provided
+        return today
 
-    return keywords.get(keyword)
-
-
-def parse_date(date_str: str) -> datetime:
-    """
-    Parse date string using multiple methods:
-    1. Check for keywords (yesterday, today, tomorrow)
-    2. Try MM/DD/YYYY format
-    3. Fall back to dateutil parser
-    """
-    # Check for keywords first
-    keyword_date = parse_keyword_date(date_str)
-    if keyword_date:
-        return keyword_date
-
-    local_tz = datetime.now().astimezone().tzinfo
-
-    # Try MM/DD/YYYY format
+    # Try parsing as integer (days ago)
     try:
-        parsed_date = datetime.strptime(date_str, "%m/%d/%Y")
+        days_ago = int(input_str)
+        if days_ago < 0:
+            raise argparse.ArgumentTypeError("Days argument must be non-negative")
+        return today - timedelta(days=days_ago)
+    except ValueError:
+        pass
+
+    # Try parsing as date string (MM/DD/YYYY)
+    try:
+        parsed_date = datetime.strptime(input_str, "%m/%d/%Y")
         return parsed_date.replace(tzinfo=local_tz)
     except ValueError:
-        # Try dateutil parser as last resort
-        try:
-            parsed_date = date_parser.parse(date_str)
-            # Ensure timezone awareness
-            if parsed_date.tzinfo is None:
-                parsed_date = parsed_date.replace(tzinfo=local_tz)
-            return parsed_date
-        except (ValueError, TypeError):
-            raise argparse.ArgumentTypeError(
-                "Invalid date format. Accepted formats:\n"
-                "- Keywords: yesterday, today, tomorrow\n"
-                "- MM/DD/YYYY (e.g., 03/20/2024)\n"
-                "- Common date formats (e.g., 'last friday', 'March 20')"
-            )
+        raise argparse.ArgumentTypeError(
+            "Invalid format. Use either:\n"
+            "- No argument for today\n"
+            "- A non-negative number for days ago\n"
+            "- MM/DD/YYYY format for specific date"
+        )
 
 
 def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
@@ -236,25 +220,24 @@ def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
 
 
 def main():
-    local_tz = datetime.now().astimezone().tzinfo
     parser = argparse.ArgumentParser(
-        description="Fetch Clockify time entries for a specific date"
+        description="Fetch Clockify time entries. Usage: cl [days_ago | MM/DD/YYYY]"
     )
     parser.add_argument(
         "date",
-        type=parse_date,
+        type=str,
         nargs="?",
-        default=datetime.now(local_tz),
-        help="Date to fetch entries for. Accepts keywords (yesterday, today), "
-        "MM/DD/YYYY format, or common date formats (default: yesterday)",
+        default="",
+        help="Optional: number of days ago (non-negative integer) or specific date (MM/DD/YYYY)",
     )
 
     args = parser.parse_args()
 
     try:
-        entries = get_project_tasks(CLOCKIFY_API_KEY, args.date)
+        target_date = parse_input(args.date)
+        entries = get_project_tasks(CLOCKIFY_API_KEY, target_date)
 
-        print(f"=== Daily Time Report: {args.date.strftime('%B %d, %Y')} ===")
+        print(f"=== Daily Time Report: {target_date.strftime('%B %d, %Y')} ===")
 
         project_totals = defaultdict(timedelta)
         total_time = timedelta(0)
