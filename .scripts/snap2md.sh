@@ -3,9 +3,6 @@
 # Set your OpenAI API key here
 API_KEY="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"
 
-# Start timing
-start_time=$(date +%s.%N)
-
 # Define the detailed prompt
 read -r -d '' PROMPT << EOM
 Transcribe the text in the provided image to markdown format, with the following specifications:
@@ -49,6 +46,9 @@ echo "JSON: $TEMP_JSON"
 # Take a screenshot of selected area and copy to clipboard
 echo "Select the area you want to capture..."
 maim -s -f png "$TEMP_IMAGE"
+
+# Start timing
+start_time=$(date +%s.%N)
 
 # Check the exit status of maim and the file size
 if [ $? -ne 0 ] || [ ! -s "$TEMP_IMAGE" ]; then
