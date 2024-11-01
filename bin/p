@@ -1,7 +1,6 @@
 #!/home/adharsh/miniforge3/envs/basic/bin/python
 
 import argparse
-from collections import OrderedDict
 import ast
 import numpy as np
 import pandas as pd
@@ -54,12 +53,12 @@ def safe_eval(expr):
         except Exception:
             raise ValueError(f"Invalid expression: {expr}")
 
-def csv_to_dict(csv_path: Path) -> OrderedDict:
+def parse_csv(csv_path: Path) -> list:
     """
-    Convert CSV file to OrderedDict containing curriculum details.
+    Parse CSV file containing curriculum details into a list.
     CSV should have headers: task,total_subtasks,estimated_minutes_per_subtask,progress
     """
-    curriculum = OrderedDict()
+    curriculum = []
     
     with open(csv_path) as f:
         # Skip header
@@ -91,44 +90,45 @@ def csv_to_dict(csv_path: Path) -> OrderedDict:
             # Unpack the parts
             task, total_subtasks, estimated_minutes, progress = parts
             
-            curriculum[task] = {
+            curriculum.append({
+                'task': task,
                 'total_subtasks': safe_eval(total_subtasks),
                 'estimated_minutes_per_subtask': safe_eval(estimated_minutes),
                 'progress': ast.literal_eval(progress.strip('"'))
-            }
+            })
     
     return curriculum
 
-def generate_analysis(curriculum: OrderedDict) -> pd.DataFrame:
+def generate_analysis(curriculum: list) -> pd.DataFrame:
     """
     Analyze curriculum progress and generate DataFrame with completion estimates.
     """
     df_rows = []
     
-    for task, details in curriculum.items():
+    for entry in curriculum:
         # Calculate remaining time
-        completed_subtasks = len(details['progress'])
-        remaining_subtasks = details['total_subtasks'] - completed_subtasks
+        completed_subtasks = len(entry['progress'])
+        remaining_subtasks = entry['total_subtasks'] - completed_subtasks
         
         if remaining_subtasks < 0:
-            raise ValueError(f"Task '{task}' has more progress entries than total subtasks")
+            raise ValueError(f"Task '{entry['task']}' has more progress entries than total subtasks")
 
         def avg_last_n(arr, n):
             if not arr:
-                return details['estimated_minutes_per_subtask']
+                return entry['estimated_minutes_per_subtask']
             return int(np.ceil(sum(arr[-n:]) / len(arr[-n:])))
 
-        completed_mins = sum(details['progress'])
-        remaining_mins_estimated = remaining_subtasks * details['estimated_minutes_per_subtask']
+        completed_mins = sum(entry['progress'])
+        remaining_mins_estimated = remaining_subtasks * entry['estimated_minutes_per_subtask']
 
         remaining_mins_last_completed = remaining_mins_estimated
         remaining_mins_avg_last_n = remaining_mins_estimated
         if completed_subtasks > 0:
-            remaining_mins_last_completed = remaining_subtasks * details['progress'][-1]
-            remaining_mins_avg_last_n = remaining_subtasks * avg_last_n(details['progress'], min(5, completed_subtasks))
+            remaining_mins_last_completed = remaining_subtasks * entry['progress'][-1]
+            remaining_mins_avg_last_n = remaining_subtasks * avg_last_n(entry['progress'], min(5, completed_subtasks))
         
         df_rows.append({
-            "task": task,
+            "task": entry['task'],
             "subtasks_completed": completed_subtasks,
             "subtasks_remaining": remaining_subtasks,
             "completed_mins": completed_mins,
@@ -244,7 +244,7 @@ def main():
     pd.set_option('display.width', 1000)
     
     # Process curriculum data
-    curriculum = csv_to_dict(args.csv_file)
+    curriculum = parse_csv(args.csv_file)
     analysis_df = generate_analysis(curriculum)
     deadlines_df = calculate_deadlines(analysis_df, args.focus_hours_day, args.focus_hours_week)
     
