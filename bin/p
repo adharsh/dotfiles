@@ -1,0 +1,135 @@
+#!/home/adharsh/miniforge3/envs/basic/bin/python
+
+from collections import OrderedDict
+import ast
+import numpy as np
+import pandas as pd
+from datetime import datetime, timedelta
+from IPython.display import display
+
+pd.set_option('display.max_rows', 50)  # Show up to 50 rows
+pd.set_option('display.max_columns', 10)  # Show up to 10 columns
+pd.set_option('display.width', 1000)     # Wide display
+
+
+def csv_to_dict(csv_str: str) -> OrderedDict:
+    curriculum = OrderedDict()
+    
+    # Split into lines and skip header
+    lines = csv_str.strip().split('\n')[1:]
+    
+    for line in lines:
+        # Split on comma, but preserve commas inside quoted strings
+        parts = []
+        current = ''
+        in_quotes = False
+        
+        for char in line:
+            if char == '"':
+                in_quotes = not in_quotes
+            elif char == ',' and not in_quotes:
+                parts.append(current)
+                current = ''
+            else:
+                current += char
+        parts.append(current)  # Add the last part
+        
+        # Unpack the parts
+        task, total_subtasks, estimated_minutes, progress = parts
+        
+        curriculum[task] = {
+            'total_subtasks': eval(total_subtasks),
+            'estimated_minutes_per_subtask': eval(estimated_minutes),
+            'progress': ast.literal_eval(progress.strip('"'))
+        }
+    
+    return curriculum
+
+def generate_analysis(curriculum: OrderedDict) -> pd.DataFrame:
+    """
+    Analyzes the curriculum and returns:
+    - Total estimated minutes for everything
+    - Remaining estimated minutes
+    - Detailed breakdown per task
+    """
+    df_rows = []
+    
+    for task, details in curriculum.items():
+        # Calculate remaining time
+        completed_subtasks = len(details['progress'])
+        remaining_subtasks = details['total_subtasks'] - completed_subtasks
+        assert remaining_subtasks > 0, "Progress array is filled with too many values"
+
+        def avg_last_n(arr, n): return int(np.ceil(sum(arr[-n:]) / len(arr[-n:])))
+
+        completed_mins = sum(details['progress'])
+        remaining_mins_estimated = remaining_subtasks * details['estimated_minutes_per_subtask']
+
+        remaining_mins_last_completed = remaining_mins_estimated
+        remaining_mins_avg_last_n = remaining_mins_estimated
+        if completed_subtasks > 0:
+            remaining_mins_last_completed = remaining_subtasks * details['progress'][-1]
+            remaining_mins_avg_last_n = remaining_subtasks * avg_last_n(details['progress'], 5)
+        
+        # Store analysis
+        df_rows.append(
+            {
+                "task" : task,
+                "subtasks_completed" : completed_subtasks,
+                "subtasks_remaining" : remaining_subtasks,
+                "completed_mins" : completed_mins,
+                "remaining_mins_estimated" : remaining_mins_estimated,
+                "remaining_mins_last_completed" : remaining_mins_last_completed,
+                "remaining_mins_avg_last_n" : remaining_mins_avg_last_n,                
+            }
+        )
+        
+    return pd.DataFrame(df_rows)
+
+def main():
+    curriculum = csv_to_dict(PROGRESS_TABLE)
+    df = generate_analysis(curriculum)
+    
+    remaining_cols = [s for s in df.columns if s.startswith("remaining_")]
+    
+    for remaining_col in remaining_cols:
+        df['total_' + remaining_col[len("remaining_"):]] = df["completed_mins"] + df[remaining_col]
+    
+    cumulative_sum_df = df.cumsum()
+    cumulative_sum_df['task'] = df['task']
+    deadlines_rows = []
+    
+    today = datetime(year=datetime.now().year, month=datetime.now().month, day=datetime.now().day)
+    for row in cumulative_sum_df.itertuples():
+        def mins_to_focus_days(mins): return np.ceil(mins/60.0/FOCUS_HOURS_PER_DAY)
+        def mins_to_focus_week_days(mins): return np.ceil((mins/60.0/FOCUS_HOURS_PER_WEEK)*7.0)
+
+        deadlines_rows.append(
+            {
+                "Task" : row.task,
+    
+                "Estimated Deadline (by week)" : today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated)),
+                "Last Completed Deadline (by week)" : today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed)),
+                "Avg Last N Deadline (by week)" : today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n)),
+    
+                "Estimated Deadline (by day)" : today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated)),
+                "Last Completed Deadline (by day)" : today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed)),
+                "Avg Last N Deadline (by day)" : today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n)),
+            }
+        )
+    
+    deadlines_df = pd.DataFrame(deadlines_rows)
+    
+    display(deadlines_df)
+    print(deadlines_df.to_string(index=False))    
+
+PROGRESS_TABLE = """
+task,total_subtasks,estimated_minutes_per_subtask,progress
+PMPP Textbook,7,60,"[]"
+PMPP Lectures,7,120,"[]"
+CUDA by Example,7,60,"[]"
+"""
+FOCUS_HOURS_PER_DAY = 7
+FOCUS_HOURS_PER_WEEK = 49
+
+main()
