@@ -19,13 +19,13 @@ def parse_args():
         help='Path to CSV file containing curriculum progress'
     )
     parser.add_argument(
-        '--focus-hours-day',
+        '--focus-hours-day', '-d',
         type=float,
         default=7.0,
         help='Number of focus hours per day'
     )
     parser.add_argument(
-        '--focus-hours-week',
+        '--focus-hours-week', '-w',
         type=float,
         default=49.0,
         help='Number of focus hours per week'
