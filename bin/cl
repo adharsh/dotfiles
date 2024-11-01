@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 
-CLOCKIFY_API_KEY = "ZWUzZWYwZmMtZGM0My00M2NmLTk3NjctYjg2YjYwODM2NGQx"
+CLOCKIFY_API_KEY = "YTU1NTUwZTEtNjg4Mi00MTA2LWEyNTctZjAyNjA5MDA5Mzdk"
 
 
 class ClockifyAPI:
