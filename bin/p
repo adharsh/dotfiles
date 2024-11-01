@@ -153,10 +153,15 @@ def generate_analysis(curriculum: list) -> pd.DataFrame:
         
     return pd.DataFrame(df_rows)
 
-def format_duration(minutes: float | Scalar) -> str:
-    """Convert minutes into human readable duration string using timedelta."""
-    minutes = pd.to_numeric(minutes)
-    delta = timedelta(minutes=minutes)
+def format_duration(delta: timedelta) -> str:
+    """Convert timedelta into human readable duration string.
+    
+    Args:
+        delta: A timedelta object representing a duration
+        
+    Returns:
+        str: Formatted duration string (e.g. "3h", "2d 4h", "1w 3d", "2m 1w")
+    """
     hours = delta.total_seconds() / 3600
     
     if hours < 24:
@@ -196,23 +201,26 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
+    def format_date(date):
+        return date.strftime('%m-%d-%Y')
+
     deadlines_rows = []
     for row in cumulative_sum_df.itertuples():
         deadlines_rows.append({
             "Task": row.task,
-            "Last Completed Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed)),
-            "Avg Last N Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n)),
-            "Estimated Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated)),
-            "Last Completed Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed)),
-            "Avg Last N Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n)),
-            "Estimated Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated)),
+            "Last Completed Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed))),
+            "Avg Last N Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n))),
+            "Estimated Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated))),
+            "Last Completed Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed))),
+            "Avg Last N Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n))),
+            "Estimated Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated))),
 
-            "Last Completed Deadline (by week) Duration": format_duration(row.remaining_mins_last_completed),
-            "Avg Last N Deadline (by week) Duration": format_duration(row.remaining_mins_avg_last_n),
-            "Estimated Deadline (by week) Duration": format_duration(row.remaining_mins_estimated),
-            "Last Completed Deadline (by day) Duration": format_duration(row.remaining_mins_last_completed),
-            "Avg Last N Deadline (by day) Duration": format_duration(row.remaining_mins_avg_last_n),
-            "Estimated Deadline (by day) Duration": format_duration(row.remaining_mins_estimated),
+            "Last Completed Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed))),
+            "Avg Last N Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n))),
+            "Estimated Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated))),
+            "Last Completed Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed))),
+            "Avg Last N Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n))),
+            "Estimated Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_estimated))),
         })
     
     return pd.DataFrame(deadlines_rows)
@@ -247,8 +255,13 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
         df.columns = ['Task', 'Deadline', 'Duration']
         df_str = df.to_string(index=False)
         width = max(len(line) for line in df_str.split('\n'))
-        title_padding = (width - len(title)) // 2
-        formatted = f"{' ' * title_padding}{title}\n{'=' * width}\n{df_str}"
+
+        # Ensure the title is centered exactly
+        title_padding = (width - len(title)) / 2
+        left_padding = ' ' * int(title_padding)
+        right_padding = ' ' * (width - len(title) - int(title_padding))
+        formatted = f"{left_padding}{title}{right_padding}\n{'=' * width}\n{df_str}"
+  
         return formatted.split('\n')
     
     # Process each row (by_week and by_day)
