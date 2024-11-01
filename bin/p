@@ -37,6 +37,23 @@ def parse_args():
         
     return args
 
+def safe_eval(expr):
+    """Safely evaluate mathematical expressions."""
+    try:
+        # First try direct integer conversion
+        return int(expr)
+    except ValueError:
+        try:
+            # If that fails, evaluate as a mathematical expression
+            # Replace any whitespace to prevent code injection
+            clean_expr = expr.replace(' ', '')
+            if all(c in '0123456789*+-/' for c in clean_expr):
+                return int(eval(clean_expr))
+            else:
+                raise ValueError(f"Invalid characters in expression: {expr}")
+        except Exception as e:
+            raise ValueError(f"Invalid expression: {expr}")
+
 def csv_to_dict(csv_path: Path) -> OrderedDict:
     """
     Convert CSV file to OrderedDict containing curriculum details.
@@ -67,8 +84,8 @@ def csv_to_dict(csv_path: Path) -> OrderedDict:
             task, total_subtasks, estimated_minutes, progress = parts
             
             curriculum[task] = {
-                'total_subtasks': int(total_subtasks),
-                'estimated_minutes_per_subtask': int(estimated_minutes),
+                'total_subtasks': safe_eval(total_subtasks),
+                'estimated_minutes_per_subtask': safe_eval(estimated_minutes),
                 'progress': ast.literal_eval(progress.strip('"'))
             }
     
