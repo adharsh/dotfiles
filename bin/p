@@ -231,20 +231,20 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
     # Create the separate views
     views = {
         'by_week': [
-            ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week) Duration", "Last Completed Deadline (by week)"]]),
-            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week) Duration", "Avg Last N Deadline (by week)"]]),
-            ("Estimated (by week)", deadlines_df[["Task","Estimated Deadline (by week) Duration", "Estimated Deadline (by week)"]]),
+            ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week)", "Last Completed Deadline (by week) Duration"]]),
+            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week)", "Avg Last N Deadline (by week) Duration"]]),
+            ("Estimated (by week)", deadlines_df[["Task","Estimated Deadline (by week)", "Estimated Deadline (by week) Duration"]]),
         ],
         'by_day': [
-            ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day) Duration", "Last Completed Deadline (by day)"]]),
-            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day) Duration", "Avg Last N Deadline (by day)"]]),
-            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day) Duration", "Estimated Deadline (by day)"]]),
+            ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day)", "Last Completed Deadline (by day) Duration"]]),
+            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day)", "Avg Last N Deadline (by day) Duration"]]),
+            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day)", "Estimated Deadline (by day) Duration"]]),
         ]
     }
     
     # Helper function to format a single dataframe
     def format_df(df, title):
-        df.columns = ['Task', 'Duration', 'Deadline']
+        df.columns = ['Task', 'Deadline', 'Duration']
         df_str = df.to_string(index=False)
         width = max(len(line) for line in df_str.split('\n'))
         title_padding = (width - len(title)) // 2
