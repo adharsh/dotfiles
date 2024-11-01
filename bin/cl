@@ -260,7 +260,7 @@ def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
 
 def print_task_report(api_key: str) -> None:
     """Print a detailed task breakdown report for each project."""
-    print("=== Complete Task Time Report ===")
+    print("=== Complete Task Report ===")
     
     api = ClockifyAPI(api_key)
     
@@ -271,56 +271,58 @@ def print_task_report(api_key: str) -> None:
     
     workspace_id = workspaces[0]["id"]
     
-    # Get all projects
-    projects = api.get_projects(workspace_id)
+    # Get all projects in a single request
+    try:
+        projects = api.get_projects(workspace_id)
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting projects: {e}")
+        return
+
+    # Fetch all tasks for all projects in a single batch
+    all_project_tasks = {}
+    project_id_to_name = {}
     
-    # Find the longest task name for padding
-    max_task_length = 0
     for project in projects:
+        project_id = project["id"]
+        project_id_to_name[project_id] = project["name"]
         try:
-            tasks = api.get_project_tasks(workspace_id, project["id"])
-            max_task_length = max(
-                max_task_length,
-                max((len(task["name"]) for task in tasks), default=0)
-            )
-        except requests.exceptions.RequestException:
-            continue
-    
-    max_task_length += 4  # Add space for tree structure
-    
-    # Process each project
-    for project in projects:
-        try:
-            tasks = api.get_project_tasks(workspace_id, project["id"])
-            
-            if not tasks:  # Skip projects with no tasks
-                continue
-            
-            print(f"\n{project['name']}")
-            
-            # Sort tasks by duration
-            sorted_tasks = []
-            for task in tasks:
-                duration = api.parse_duration(task.get("duration", "PT0S"))
-                sorted_tasks.append((task["name"], duration))
-            
-            sorted_tasks.sort(key=lambda x: x[1], reverse=True)
-            
-            # Print each task
-            for i, (task_name, duration) in enumerate(sorted_tasks):
-                # Choose the appropriate tree symbol
-                prefix = "  └─ " if i == len(sorted_tasks) - 1 else "  ├─ "
-                
-                # Convert duration to minutes
-                minutes = int(duration.total_seconds() / 60)
-                
-                # Format the line with proper alignment
-                formatted_duration = api.format_duration(duration)
-                print(f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m")
-                
+            tasks = api.get_project_tasks(workspace_id, project_id)
+            if tasks:  # Only store projects that have tasks
+                all_project_tasks[project_id] = tasks
         except requests.exceptions.RequestException as e:
             print(f"Error getting tasks for project {project['name']}: {e}")
             continue
+
+    if not all_project_tasks:
+        print("No tasks found in any projects.")
+        return
+
+    # Find the longest task name for padding (now using our cached data)
+    max_task_length = max(
+        len(task["name"])
+        for tasks in all_project_tasks.values()
+        for task in tasks
+    ) + 4  # Add space for tree structure
+
+    # Process and display each project's tasks
+    for project_id, tasks in all_project_tasks.items():
+        project_name = project_id_to_name[project_id]
+        print(f"\n{project_name}")
+        
+        # Sort tasks by duration
+        sorted_tasks = []
+        for task in tasks:
+            duration = api.parse_duration(task.get("duration", "PT0S"))
+            sorted_tasks.append((task["name"], duration))
+        
+        sorted_tasks.sort(key=lambda x: x[1], reverse=True)
+        
+        # Print each task
+        for i, (task_name, duration) in enumerate(sorted_tasks):
+            prefix = "  └─ " if i == len(sorted_tasks) - 1 else "  ├─ "
+            minutes = int(duration.total_seconds() / 60)
+            formatted_duration = api.format_duration(duration)
+            print(f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m")
 
     print()
 
