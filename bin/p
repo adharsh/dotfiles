@@ -148,6 +148,27 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
     
     return pd.DataFrame(deadlines_rows)
 
+def display_deadline_views(deadlines_df: pd.DataFrame):
+    """
+    Display deadlines in separate vertical views for better readability.
+    """
+    views = {
+        "Estimated Deadlines (by week)": deadlines_df[["Task", "Estimated Deadline (by week)"]],
+        "Last Completed Deadlines (by week)": deadlines_df[["Task", "Last Completed Deadline (by week)"]],
+        "Average Last N Deadlines (by week)": deadlines_df[["Task", "Avg Last N Deadline (by week)"]],
+        "Estimated Deadlines (by day)": deadlines_df[["Task", "Estimated Deadline (by day)"]],
+        "Last Completed Deadlines (by day)": deadlines_df[["Task", "Last Completed Deadline (by day)"]],
+        "Average Last N Deadlines (by day)": deadlines_df[["Task", "Avg Last N Deadline (by day)"]]
+    }
+    
+    for title, df_view in views.items():
+        print(f"\n{title}:")
+        print("=" * len(title))
+        # Rename the second column to 'Deadline' for cleaner display
+        df_view.columns = ['Task', 'Deadline']
+        print(df_view.to_string(index=False))
+        print()
+
 def main():
     args = parse_args()
     
@@ -161,10 +182,8 @@ def main():
     analysis_df = generate_analysis(curriculum)
     deadlines_df = calculate_deadlines(analysis_df, args.focus_hours_day, args.focus_hours_week)
     
-    # Display results
-    print("Deadlines:")
-    print("==============================")
-    print(deadlines_df.to_string(index=False))
+    # Display results using the new function
+    display_deadline_views(deadlines_df)
 
 if __name__ == "__main__":
     main()
