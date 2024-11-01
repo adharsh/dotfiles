@@ -205,6 +205,25 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
         return date.strftime('%m-%d-%Y')
 
     deadlines_rows = []
+
+    # Add today's date as first row
+    today_str = datetime.now().strftime('%m-%d-%Y')
+    deadlines_rows.append({
+        "Task": "Today",
+        "Last Completed Deadline (by week)": today_str,
+        "Avg Last N Deadline (by week)": today_str,
+        "Estimated Deadline (by week)": today_str,
+        "Last Completed Deadline (by day)": today_str,
+        "Avg Last N Deadline (by day)": today_str,
+        "Estimated Deadline (by day)": today_str,
+        "Last Completed Deadline (by week) Duration": "-",
+        "Avg Last N Deadline (by week) Duration": "-",
+        "Estimated Deadline (by week) Duration": "-",
+        "Last Completed Deadline (by day) Duration": "-",
+        "Avg Last N Deadline (by day) Duration": "-",
+        "Estimated Deadline (by day) Duration": "-",
+    })
+
     for row in cumulative_sum_df.itertuples():
         deadlines_rows.append({
             "Task": row.task,
