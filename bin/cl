@@ -55,6 +55,15 @@ class ClockifyAPI:
 
         return self.projects_cache[workspace_id].get(project_id, "Unknown Project")
 
+    def get_project_tasks(self, workspace_id: str, project_id: str) -> List[Dict]:
+        """Get all tasks for a specific project."""
+        response = requests.get(
+            f"{self.base_url}/workspaces/{workspace_id}/projects/{project_id}/tasks",
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()
+
     def get_time_entries(
         self, workspace_id: str, start_time: str, end_time: str
     ) -> List[Dict]:
@@ -218,6 +227,102 @@ def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
     # Format entries with project names
     return api.format_time_entries(workspace_id, entries)
 
+def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
+    print(f"=== Daily Time Report: {target_date.strftime('%B %d, %Y')} ===")
+
+    project_totals = defaultdict(timedelta)
+    total_time = timedelta(0)
+
+    for entry in entries:
+        project_totals[entry["project"]] += entry["duration"]
+        total_time += entry["duration"]
+
+    # Convert to list and sort by duration
+    sorted_projects = sorted(
+        project_totals.items(), key=lambda x: x[1], reverse=True
+    )
+
+    # Find the longest project name for padding
+    max_project_length = (
+        max(len(project) for project, _ in sorted_projects)
+        if sorted_projects
+        else 0
+    )
+
+    # Print each project with aligned columns
+    for project, duration in sorted_projects:
+        percentage = duration.total_seconds() / total_time.total_seconds() * 100
+        print(
+            f"{project:<{max_project_length}}    {ClockifyAPI.format_duration(duration):<12} {percentage:>5.1f}%"
+        )
+
+    print("\nTotal tracked time:", ClockifyAPI.format_duration(total_time))
+
+def print_task_report(api_key: str) -> None:
+    """Print a detailed task breakdown report for each project."""
+    print("=== Complete Task Time Report ===")
+    
+    api = ClockifyAPI(api_key)
+    
+    # Get first workspace
+    workspaces = api.get_workspaces()
+    if not workspaces:
+        raise ValueError("No workspaces found")
+    
+    workspace_id = workspaces[0]["id"]
+    
+    # Get all projects
+    projects = api.get_projects(workspace_id)
+    
+    # Find the longest task name for padding
+    max_task_length = 0
+    for project in projects:
+        try:
+            tasks = api.get_project_tasks(workspace_id, project["id"])
+            max_task_length = max(
+                max_task_length,
+                max((len(task["name"]) for task in tasks), default=0)
+            )
+        except requests.exceptions.RequestException:
+            continue
+    
+    max_task_length += 4  # Add space for tree structure
+    
+    # Process each project
+    for project in projects:
+        try:
+            tasks = api.get_project_tasks(workspace_id, project["id"])
+            
+            if not tasks:  # Skip projects with no tasks
+                continue
+            
+            print(f"\n{project['name']}")
+            
+            # Sort tasks by duration
+            sorted_tasks = []
+            for task in tasks:
+                duration = api.parse_duration(task.get("duration", "PT0S"))
+                sorted_tasks.append((task["name"], duration))
+            
+            sorted_tasks.sort(key=lambda x: x[1], reverse=True)
+            
+            # Print each task
+            for i, (task_name, duration) in enumerate(sorted_tasks):
+                # Choose the appropriate tree symbol
+                prefix = "  └─ " if i == len(sorted_tasks) - 1 else "  ├─ "
+                
+                # Convert duration to minutes
+                minutes = int(duration.total_seconds() / 60)
+                
+                # Format the line with proper alignment
+                formatted_duration = api.format_duration(duration)
+                print(f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Error getting tasks for project {project['name']}: {e}")
+            continue
+
+    print()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -230,42 +335,21 @@ def main():
         default="",
         help="Optional: number of days ago (non-negative integer) or specific date (MM/DD/YYYY)",
     )
+    parser.add_argument(
+        "--tasks",
+        action="store_true",
+        help="Show detailed task breakdown for each project",
+    )
 
     args = parser.parse_args()
 
     try:
-        target_date = parse_input(args.date)
-        entries = get_project_tasks(CLOCKIFY_API_KEY, target_date)
-
-        print(f"=== Daily Time Report: {target_date.strftime('%B %d, %Y')} ===")
-
-        project_totals = defaultdict(timedelta)
-        total_time = timedelta(0)
-
-        for entry in entries:
-            project_totals[entry["project"]] += entry["duration"]
-            total_time += entry["duration"]
-
-        # Convert to list and sort by duration
-        sorted_projects = sorted(
-            project_totals.items(), key=lambda x: x[1], reverse=True
-        )
-
-        # Find the longest project name for padding
-        max_project_length = (
-            max(len(project) for project, _ in sorted_projects)
-            if sorted_projects
-            else 0
-        )
-
-        # Print each project with aligned columns
-        for project, duration in sorted_projects:
-            percentage = duration.total_seconds() / total_time.total_seconds() * 100
-            print(
-                f"{project:<{max_project_length}}    {ClockifyAPI.format_duration(duration):<12} {percentage:>5.1f}%"
-            )
-
-        print("\nTotal tracked time:", ClockifyAPI.format_duration(total_time))
+        if args.tasks:
+            print_task_report(CLOCKIFY_API_KEY)
+        else:
+            target_date = parse_input(args.date)
+            entries = get_project_tasks(CLOCKIFY_API_KEY, target_date)
+            print_daily_report(target_date, entries)
 
     except requests.exceptions.RequestException as e:
         print(f"API Error: {e}")
