@@ -51,7 +51,7 @@ def safe_eval(expr):
                 return int(eval(clean_expr))
             else:
                 raise ValueError(f"Invalid characters in expression: {expr}")
-        except Exception as e:
+        except Exception:
             raise ValueError(f"Invalid expression: {expr}")
 
 def csv_to_dict(csv_path: Path) -> OrderedDict:
