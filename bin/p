@@ -4,6 +4,7 @@ import argparse
 import ast
 import numpy as np
 import pandas as pd
+from pandas.core.generic import Scalar
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -152,6 +153,29 @@ def generate_analysis(curriculum: list) -> pd.DataFrame:
         
     return pd.DataFrame(df_rows)
 
+def format_duration(minutes: float | Scalar) -> str:
+    """Convert minutes into human readable duration string using timedelta."""
+    minutes = pd.to_numeric(minutes)
+    delta = timedelta(minutes=minutes)
+    hours = delta.total_seconds() / 3600
+    
+    if hours < 24:
+        return f"{int(hours)}h"
+    
+    days = delta.days
+    if days < 7:
+        h = int(hours % 24)
+        return f"{days}d {h}h" if h > 0 else f"{days}d"
+    
+    weeks = days // 7
+    if weeks < 4:
+        d = days % 7
+        return f"{weeks}w {d}d" if d > 0 else f"{weeks}w"
+    
+    months = weeks // 4
+    w = weeks % 4
+    return f"{months}m {w}w" if w > 0 else f"{months}m"
+
 def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_week: float) -> pd.DataFrame:
     """
     Calculate completion deadlines based on different estimation methods.
@@ -182,6 +206,13 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
             "Last Completed Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed)),
             "Avg Last N Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n)),
             "Estimated Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated)),
+
+            "Last Completed Deadline (by week) Duration": format_duration(row.remaining_mins_last_completed),
+            "Avg Last N Deadline (by week) Duration": format_duration(row.remaining_mins_avg_last_n),
+            "Estimated Deadline (by week) Duration": format_duration(row.remaining_mins_estimated),
+            "Last Completed Deadline (by day) Duration": format_duration(row.remaining_mins_last_completed),
+            "Avg Last N Deadline (by day) Duration": format_duration(row.remaining_mins_avg_last_n),
+            "Estimated Deadline (by day) Duration": format_duration(row.remaining_mins_estimated),
         })
     
     return pd.DataFrame(deadlines_rows)
@@ -200,20 +231,20 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
     # Create the separate views
     views = {
         'by_week': [
-            ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week)"]]),
-            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week)"]]),
-            ("Estimated (by week)", deadlines_df[["Task", "Estimated Deadline (by week)"]]),
+            ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week) Duration", "Last Completed Deadline (by week)"]]),
+            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week) Duration", "Avg Last N Deadline (by week)"]]),
+            ("Estimated (by week)", deadlines_df[["Task","Estimated Deadline (by week) Duration", "Estimated Deadline (by week)"]]),
         ],
         'by_day': [
-            ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day)"]]),
-            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day)"]]),
-            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day)"]]),
+            ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day) Duration", "Last Completed Deadline (by day)"]]),
+            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day) Duration", "Avg Last N Deadline (by day)"]]),
+            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day) Duration", "Estimated Deadline (by day)"]]),
         ]
     }
     
     # Helper function to format a single dataframe
     def format_df(df, title):
-        df.columns = ['Task', 'Deadline']
+        df.columns = ['Task', 'Duration', 'Deadline']
         df_str = df.to_string(index=False)
         width = max(len(line) for line in df_str.split('\n'))
         title_padding = (width - len(title)) // 2
