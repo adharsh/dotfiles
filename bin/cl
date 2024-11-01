@@ -353,7 +353,7 @@ def print_task_report(api_key: str) -> None:
         project_name = project_id_to_name[project_id]
         tasks = all_project_tasks[project_id]
 
-        print(f"\n{project_name}")
+        print(f"{project_name}")
 
         # Sort tasks by duration
         sorted_tasks = []
@@ -371,8 +371,6 @@ def print_task_report(api_key: str) -> None:
             print(
                 f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m"
             )
-
-    print()
 
 
 def main():
