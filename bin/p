@@ -167,24 +167,61 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
 
 def display_deadline_views(deadlines_df: pd.DataFrame):
     """
-    Display deadlines in separate vertical views for better readability.
+    Display deadlines in a 2x3 grid format:
+    - First row: all 'by week' views side by side
+    - Second row: all 'by day' views side by side
     """
+    # Set pandas display options for cleaner output
+    pd.set_option('display.max_rows', 50)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
+    
+    # Create the separate views
     views = {
-        "Estimated Deadlines (by week)": deadlines_df[["Task", "Estimated Deadline (by week)"]],
-        "Last Completed Deadlines (by week)": deadlines_df[["Task", "Last Completed Deadline (by week)"]],
-        "Average Last N Deadlines (by week)": deadlines_df[["Task", "Avg Last N Deadline (by week)"]],
-        "Estimated Deadlines (by day)": deadlines_df[["Task", "Estimated Deadline (by day)"]],
-        "Last Completed Deadlines (by day)": deadlines_df[["Task", "Last Completed Deadline (by day)"]],
-        "Average Last N Deadlines (by day)": deadlines_df[["Task", "Avg Last N Deadline (by day)"]]
+        'by_week': [
+            ("Estimated (by week)", deadlines_df[["Task", "Estimated Deadline (by week)"]]),
+            ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week)"]]),
+            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week)"]])
+        ],
+        'by_day': [
+            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day)"]]),
+            ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day)"]]),
+            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day)"]])
+        ]
     }
     
-    for title, df_view in views.items():
-        print(f"\n{title}:")
-        print("=" * len(title))
-        # Rename the second column to 'Deadline' for cleaner display
-        df_view.columns = ['Task', 'Deadline']
-        print(df_view.to_string(index=False))
-        print()
+    # Helper function to format a single dataframe
+    def format_df(df, title):
+        df.columns = ['Task', 'Deadline']
+        df_str = df.to_string(index=False)
+        width = max(len(line) for line in df_str.split('\n'))
+        title_padding = (width - len(title)) // 2
+        formatted = f"{' ' * title_padding}{title}\n{'=' * width}\n{df_str}"
+        return formatted.split('\n')
+    
+    # Process each row (by_week and by_day)
+    for view_type, view_list in views.items():
+        # Format all DataFrames in the current row
+        formatted_dfs = [format_df(df, title) for title, df in view_list]
+        
+        # Find the maximum height among all formatted DataFrames
+        max_height = max(len(df_lines) for df_lines in formatted_dfs)
+        
+        # Pad shorter DataFrames with empty lines to match the maximum height
+        padded_dfs = [
+            df_lines + [''] * (max_height - len(df_lines))
+            for df_lines in formatted_dfs
+        ]
+        
+        # Print the DataFrames side by side
+        for row_idx in range(max_height):
+            row_parts = []
+            for df_lines in padded_dfs:
+                row_parts.append(df_lines[row_idx].ljust(40))
+            print('    '.join(row_parts))
+        
+        # Add a blank line between rows
+        print('\n')
 
 def main():
     args = parse_args()
