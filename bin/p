@@ -50,14 +50,14 @@ def safe_eval(expr):
     """Safely evaluate mathematical expressions."""
     try:
         # First try direct integer conversion
-        return int(expr)
+        return float(expr)
     except ValueError:
         try:
             # If that fails, evaluate as a mathematical expression
             # Replace any whitespace to prevent code injection
             clean_expr = expr.replace(' ', '')
-            if all(c in '0123456789*+-/' for c in clean_expr):
-                return int(eval(clean_expr))
+            if all(c in '0123456789.*+-/' for c in clean_expr):
+                return float(eval(clean_expr))
             else:
                 raise ValueError(f"Invalid characters in expression: {expr}")
         except Exception:
@@ -190,15 +190,25 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
     for remaining_col in remaining_cols:
         df['total_' + remaining_col[len("remaining_"):]] = df["completed_mins"] + df[remaining_col]
     
-    cumulative_sum_df = df.cumsum()
-    cumulative_sum_df['task'] = df['task']
+    def mins_to_focus_week_days(mins): 
+        return np.ceil((mins / 60.0 / focus_hours_week) * 7.0)
     
     def mins_to_focus_days(mins): 
         return np.ceil(mins / 60.0 / focus_hours_day)
     
-    def mins_to_focus_week_days(mins): 
-        return np.ceil((mins / 60.0 / focus_hours_week) * 7.0)
+    cumulative_sum_df = pd.DataFrame()
+    cumulative_sum_df['task'] = df['task'].copy()
+    cs_cols = []
+    for col in remaining_cols:
+        cumulative_sum_df[col + "__CS_Days_by_week_"] = df[col].apply(mins_to_focus_week_days)
+        cumulative_sum_df[col + "__CS_Days_by_day_"] = df[col].apply(mins_to_focus_days)
+        cs_cols += [col + "__CS_Days_by_week_", col + "__CS_Days_by_day_"] 
 
+        cumulative_sum_df[col + "__Days_by_week_"] = df[col].apply(mins_to_focus_week_days)
+        cumulative_sum_df[col + "__Days_by_day_"] = df[col].apply(mins_to_focus_days)
+
+    cumulative_sum_df[cs_cols] = cumulative_sum_df[cs_cols].cumsum() 
+    
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
     def format_date(date):
@@ -227,19 +237,20 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
     for row in cumulative_sum_df.itertuples():
         deadlines_rows.append({
             "Task": row.task,
-            "Last Completed Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed))),
-            "Avg Last N Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n))),
-            "Estimated Deadline (by week)": format_date(today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated))),
-            "Last Completed Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed))),
-            "Avg Last N Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n))),
-            "Estimated Deadline (by day)": format_date(today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated))),
 
-            "Last Completed Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed))),
-            "Avg Last N Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n))),
-            "Estimated Deadline (by week) Duration": format_duration(timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated))),
-            "Last Completed Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed))),
-            "Avg Last N Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n))),
-            "Estimated Deadline (by day) Duration": format_duration(timedelta(days=mins_to_focus_days(row.remaining_mins_estimated))),
+            "Last Completed Deadline (by week)": format_date(today + timedelta(days=getattr(row, "remaining_mins_last_completed__CS_Days_by_week_"))),
+            "Avg Last N Deadline (by week)": format_date(today + timedelta(days=getattr(row, "remaining_mins_avg_last_n__CS_Days_by_week_"))),
+            "Estimated Deadline (by week)": format_date(today + timedelta(days=getattr(row, "remaining_mins_estimated__CS_Days_by_week_"))),
+            "Last Completed Deadline (by day)": format_date(today + timedelta(days=getattr(row, "remaining_mins_last_completed__CS_Days_by_day_"))),
+            "Avg Last N Deadline (by day)": format_date(today + timedelta(days=getattr(row, "remaining_mins_avg_last_n__CS_Days_by_day_"))),
+            "Estimated Deadline (by day)": format_date(today + timedelta(days=getattr(row, "remaining_mins_estimated__CS_Days_by_day_"))),
+
+            "Last Completed Deadline (by week) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_last_completed__Days_by_week_"))),
+            "Avg Last N Deadline (by week) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_avg_last_n__Days_by_week_"))),
+            "Estimated Deadline (by week) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_estimated__Days_by_week_"))),
+            "Last Completed Deadline (by day) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_last_completed__Days_by_day_"))),
+            "Avg Last N Deadline (by day) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_avg_last_n__Days_by_day_"))),
+            "Estimated Deadline (by day) Duration": format_duration(timedelta(days=getattr(row, "remaining_mins_estimated__Days_by_day_"))),
         })
     
     return pd.DataFrame(deadlines_rows)
