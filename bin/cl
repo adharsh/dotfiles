@@ -2,11 +2,11 @@
 
 import argparse
 import re
-from collections import defaultdict
-from datetime import datetime, timedelta
-from typing import Dict, List,Tuple, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
 import requests
 
@@ -61,7 +61,7 @@ class ClockifyAPI:
         """Get all tasks for a specific project."""
         response = requests.get(
             f"{self.base_url}/workspaces/{workspace_id}/projects/{project_id}/tasks",
-            headers=self.headers
+            headers=self.headers,
         )
         response.raise_for_status()
         return response.json()
@@ -229,6 +229,7 @@ def get_project_tasks(api_key: str, date: datetime) -> List[Dict]:
     # Format entries with project names
     return api.format_time_entries(workspace_id, entries)
 
+
 def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
     print(f"=== Daily Time Report: {target_date.strftime('%B %d, %Y')} ===")
 
@@ -240,15 +241,11 @@ def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
         total_time += entry["duration"]
 
     # Convert to list and sort by duration
-    sorted_projects = sorted(
-        project_totals.items(), key=lambda x: x[1], reverse=True
-    )
+    sorted_projects = sorted(project_totals.items(), key=lambda x: x[1], reverse=True)
 
     # Find the longest project name for padding
     max_project_length = (
-        max(len(project) for project, _ in sorted_projects)
-        if sorted_projects
-        else 0
+        max(len(project) for project, _ in sorted_projects) if sorted_projects else 0
     )
 
     # Print each project with aligned columns
@@ -260,7 +257,10 @@ def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
 
     print("\nTotal tracked time:", ClockifyAPI.format_duration(total_time))
 
-def fetch_project_tasks(api: ClockifyAPI, workspace_id: str, project: Dict) -> Tuple[str, str, List[Dict]]:
+
+def fetch_project_tasks(
+    api: ClockifyAPI, workspace_id: str, project: Dict
+) -> Tuple[str, str, List[Dict]]:
     """
     Helper function to fetch tasks for a single project.
     Returns tuple of (project_id, project_name, tasks)
@@ -274,26 +274,27 @@ def fetch_project_tasks(api: ClockifyAPI, workspace_id: str, project: Dict) -> T
         print(f"Error getting tasks for project {project_name}: {e}")
         return project_id, project_name, []
 
+
 def print_task_report(api_key: str) -> None:
     """Print a detailed task breakdown report for each project using parallel processing."""
     print("=== Complete Task Report ===")
-    
+
     # Thread-local storage for the API client
     thread_local = threading.local()
-    
+
     def get_api():
         if not hasattr(thread_local, "api"):
             thread_local.api = ClockifyAPI(api_key)
         return thread_local.api
-    
+
     # Get first workspace
     api = get_api()
     workspaces = api.get_workspaces()
     if not workspaces:
         raise ValueError("No workspaces found")
-    
+
     workspace_id = workspaces[0]["id"]
-    
+
     # Get all projects in a single request
     try:
         projects = api.get_projects(workspace_id)
@@ -316,20 +317,24 @@ def print_task_report(api_key: str) -> None:
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Create future objects for all project task fetches
         future_to_project = {
-            executor.submit(fetch_project_tasks, get_api(), workspace_id, project): project
+            executor.submit(
+                fetch_project_tasks, get_api(), workspace_id, project
+            ): project
             for project in projects
         }
 
         # Process completed futures as they come in
         for future in as_completed(future_to_project):
             project_id, project_name, tasks = future.result()
-            
+
             if tasks:  # Only store projects that have tasks
                 all_project_tasks[project_id] = tasks
                 project_id_to_name[project_id] = project_name
-                
+
                 # Update max task length
-                project_max_length = max((len(task["name"]) for task in tasks), default=0)
+                project_max_length = max(
+                    (len(task["name"]) for task in tasks), default=0
+                )
                 max_task_length = max(max_task_length, project_max_length)
 
     if not all_project_tasks:
@@ -339,32 +344,36 @@ def print_task_report(api_key: str) -> None:
     max_task_length += 4  # Add space for tree structure
 
     # Sort projects by name for consistent output
-    sorted_project_ids = sorted(all_project_tasks.keys(), 
-                              key=lambda x: project_id_to_name[x])
+    sorted_project_ids = sorted(
+        all_project_tasks.keys(), key=lambda x: project_id_to_name[x]
+    )
 
     # Process and display each project's tasks
     for project_id in sorted_project_ids:
         project_name = project_id_to_name[project_id]
         tasks = all_project_tasks[project_id]
-        
+
         print(f"\n{project_name}")
-        
+
         # Sort tasks by duration
         sorted_tasks = []
         for task in tasks:
             duration = api.parse_duration(task.get("duration", "PT0S"))
             sorted_tasks.append((task["name"], duration))
-        
+
         sorted_tasks.sort(key=lambda x: x[1], reverse=True)
-        
+
         # Print each task
         for i, (task_name, duration) in enumerate(sorted_tasks):
             prefix = "  └─ " if i == len(sorted_tasks) - 1 else "  ├─ "
             minutes = int(duration.total_seconds() / 60)
             formatted_duration = api.format_duration(duration)
-            print(f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m")
+            print(
+                f"{prefix}{task_name:<{max_task_length-4}}{formatted_duration:>12}    {minutes:>4}m"
+            )
 
     print()
+
 
 def main():
     parser = argparse.ArgumentParser(
