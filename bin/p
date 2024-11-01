@@ -36,6 +36,15 @@ def parse_args():
         
     return args
 
+def safe_list_eval(value):
+   try:
+        if isinstance(value, str):
+            value = value.strip('"')
+        result = ast.literal_eval(value)
+        return result if isinstance(result, list) else []
+   except Exception: 
+        return []
+
 def safe_eval(expr):
     """Safely evaluate mathematical expressions."""
     try:
@@ -88,13 +97,17 @@ def parse_csv(csv_path: Path) -> list:
                 continue
 
             # Unpack the parts
-            task, total_subtasks, estimated_minutes, progress = parts
+            try:
+                task, total_subtasks, estimated_minutes, progress = parts
+            except ValueError:
+                task, total_subtasks, estimated_minutes = parts
+                progress = None
             
             curriculum.append({
                 'task': task,
                 'total_subtasks': safe_eval(total_subtasks),
                 'estimated_minutes_per_subtask': safe_eval(estimated_minutes),
-                'progress': ast.literal_eval(progress.strip('"'))
+                'progress': safe_list_eval(progress)
             })
     
     return curriculum
