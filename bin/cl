@@ -4,7 +4,9 @@ import argparse
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List,Tuple, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 import requests
 
@@ -258,13 +260,34 @@ def print_daily_report(target_date: datetime, entries: List[Dict]) -> None:
 
     print("\nTotal tracked time:", ClockifyAPI.format_duration(total_time))
 
+def fetch_project_tasks(api: ClockifyAPI, workspace_id: str, project: Dict) -> Tuple[str, str, List[Dict]]:
+    """
+    Helper function to fetch tasks for a single project.
+    Returns tuple of (project_id, project_name, tasks)
+    """
+    project_id = project["id"]
+    project_name = project["name"]
+    try:
+        tasks = api.get_project_tasks(workspace_id, project_id)
+        return project_id, project_name, tasks
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting tasks for project {project_name}: {e}")
+        return project_id, project_name, []
+
 def print_task_report(api_key: str) -> None:
-    """Print a detailed task breakdown report for each project."""
+    """Print a detailed task breakdown report for each project using parallel processing."""
     print("=== Complete Task Report ===")
     
-    api = ClockifyAPI(api_key)
+    # Thread-local storage for the API client
+    thread_local = threading.local()
+    
+    def get_api():
+        if not hasattr(thread_local, "api"):
+            thread_local.api = ClockifyAPI(api_key)
+        return thread_local.api
     
     # Get first workspace
+    api = get_api()
     workspaces = api.get_workspaces()
     if not workspaces:
         raise ValueError("No workspaces found")
@@ -278,35 +301,52 @@ def print_task_report(api_key: str) -> None:
         print(f"Error getting projects: {e}")
         return
 
-    # Fetch all tasks for all projects in a single batch
+    if not projects:
+        print("No projects found.")
+        return
+
+    # Use ThreadPoolExecutor to fetch tasks for all projects in parallel
     all_project_tasks = {}
     project_id_to_name = {}
-    
-    for project in projects:
-        project_id = project["id"]
-        project_id_to_name[project_id] = project["name"]
-        try:
-            tasks = api.get_project_tasks(workspace_id, project_id)
+    max_task_length = 0
+
+    # Determine the optimal number of workers (you can adjust this based on your needs)
+    max_workers = min(len(projects), 10)  # Limit to 10 concurrent requests
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Create future objects for all project task fetches
+        future_to_project = {
+            executor.submit(fetch_project_tasks, get_api(), workspace_id, project): project
+            for project in projects
+        }
+
+        # Process completed futures as they come in
+        for future in as_completed(future_to_project):
+            project_id, project_name, tasks = future.result()
+            
             if tasks:  # Only store projects that have tasks
                 all_project_tasks[project_id] = tasks
-        except requests.exceptions.RequestException as e:
-            print(f"Error getting tasks for project {project['name']}: {e}")
-            continue
+                project_id_to_name[project_id] = project_name
+                
+                # Update max task length
+                project_max_length = max((len(task["name"]) for task in tasks), default=0)
+                max_task_length = max(max_task_length, project_max_length)
 
     if not all_project_tasks:
         print("No tasks found in any projects.")
         return
 
-    # Find the longest task name for padding (now using our cached data)
-    max_task_length = max(
-        len(task["name"])
-        for tasks in all_project_tasks.values()
-        for task in tasks
-    ) + 4  # Add space for tree structure
+    max_task_length += 4  # Add space for tree structure
+
+    # Sort projects by name for consistent output
+    sorted_project_ids = sorted(all_project_tasks.keys(), 
+                              key=lambda x: project_id_to_name[x])
 
     # Process and display each project's tasks
-    for project_id, tasks in all_project_tasks.items():
+    for project_id in sorted_project_ids:
         project_name = project_id_to_name[project_id]
+        tasks = all_project_tasks[project_id]
+        
         print(f"\n{project_name}")
         
         # Sort tasks by duration
