@@ -4,4 +4,5 @@ bin/*
 # But don't ignore these specific files
 !bin/aider
 !bin/cl
+!bin/p
 !bin/sgpt
