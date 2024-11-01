@@ -80,6 +80,10 @@ def csv_to_dict(csv_path: Path) -> OrderedDict:
                     current += char
             parts.append(current.strip())  # Add the last part
             
+            # Skip empty lines
+            if len(parts) == 1 and not parts[0]:
+                continue
+
             # Unpack the parts
             task, total_subtasks, estimated_minutes, progress = parts
             
