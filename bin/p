@@ -200,6 +200,7 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
         return formatted.split('\n')
     
     # Process each row (by_week and by_day)
+    first_row = True
     for view_type, view_list in views.items():
         # Format all DataFrames in the current row
         formatted_dfs = [format_df(df, title) for title, df in view_list]
@@ -220,8 +221,11 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
                 row_parts.append(df_lines[row_idx].ljust(40))
             print('    '.join(row_parts))
         
-        # Add a blank line between rows
-        print('\n')
+        # Add a blank line between rows, but not after the last row
+        if first_row:
+            print()
+            print()
+            first_row = False
 
 def main():
     args = parse_args()
