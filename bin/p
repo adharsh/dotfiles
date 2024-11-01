@@ -83,6 +83,10 @@ def csv_to_dict(csv_path: Path) -> OrderedDict:
             # Skip empty lines
             if len(parts) == 1 and not parts[0]:
                 continue
+            
+            # Skip comments
+            if parts[0].startswith("#"):
+                continue
 
             # Unpack the parts
             task, total_subtasks, estimated_minutes, progress = parts
@@ -159,12 +163,12 @@ def calculate_deadlines(df: pd.DataFrame, focus_hours_day: float, focus_hours_we
     for row in cumulative_sum_df.itertuples():
         deadlines_rows.append({
             "Task": row.task,
-            "Estimated Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated)),
             "Last Completed Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_last_completed)),
             "Avg Last N Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_avg_last_n)),
-            "Estimated Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated)),
+            "Estimated Deadline (by week)": today + timedelta(days=mins_to_focus_week_days(row.remaining_mins_estimated)),
             "Last Completed Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_last_completed)),
             "Avg Last N Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_avg_last_n)),
+            "Estimated Deadline (by day)": today + timedelta(days=mins_to_focus_days(row.remaining_mins_estimated)),
         })
     
     return pd.DataFrame(deadlines_rows)
@@ -183,14 +187,14 @@ def display_deadline_views(deadlines_df: pd.DataFrame):
     # Create the separate views
     views = {
         'by_week': [
-            ("Estimated (by week)", deadlines_df[["Task", "Estimated Deadline (by week)"]]),
             ("Last Completed (by week)", deadlines_df[["Task", "Last Completed Deadline (by week)"]]),
-            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week)"]])
+            ("Avg Last N (by week)", deadlines_df[["Task", "Avg Last N Deadline (by week)"]]),
+            ("Estimated (by week)", deadlines_df[["Task", "Estimated Deadline (by week)"]]),
         ],
         'by_day': [
-            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day)"]]),
             ("Last Completed (by day)", deadlines_df[["Task", "Last Completed Deadline (by day)"]]),
-            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day)"]])
+            ("Avg Last N (by day)", deadlines_df[["Task", "Avg Last N Deadline (by day)"]]),
+            ("Estimated (by day)", deadlines_df[["Task", "Estimated Deadline (by day)"]]),
         ]
     }
     
