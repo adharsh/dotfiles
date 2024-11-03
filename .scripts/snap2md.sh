@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Disable glob pattern matching (*, ?, [])
+# Example: 'echo *' prints "*" instead of matching files
+set -f
+
 # Set your OpenAI API key here
 API_KEY="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"
 
@@ -91,7 +95,7 @@ RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
 # Clean up temporary files
 rm "$TEMP_IMAGE" "$TEMP_BASE64" "$TEMP_JSON"
 
-# Extract the markdown text from the API response
+# Extract the markdown text from API response (glob pattern matching disabled)
 MARKDOWN=$(echo $RESPONSE | jq -r '.choices[0].message.content')
 
 # Echo the full response for debugging
