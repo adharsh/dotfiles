@@ -4,7 +4,6 @@ import argparse
 import ast
 import numpy as np
 import pandas as pd
-from pandas.core.generic import Scalar
 from datetime import datetime, timedelta
 from pathlib import Path
 
