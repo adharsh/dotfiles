@@ -385,7 +385,7 @@ def main():
         help="Optional: number of days ago (non-negative integer) or specific date (MM/DD/YYYY)",
     )
     parser.add_argument(
-        "--tasks",
+        "--tasks", "-t", 
         action="store_true",
         help="Show detailed task breakdown for each project",
     )
