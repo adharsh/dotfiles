@@ -74,7 +74,7 @@ popd
 read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled."
 
 # Make sure to install Anki plugins, descriptions in order below
-read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 "
+read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 175794613"
 # Anki Connect: for connecting to Anki via an API
 # Advanced browser: In browse, add Time (Total) and Lapses, sort by either column
 # Review Heatmap: Heatmap similar to contribution activity on Github
@@ -82,6 +82,7 @@ read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 8171086
 # True Retention: Shift+Click Stats button
 ## Adjust interval so retention is 80-90%: https://youtu.be/A56wVF9Fr0Q?si=ibnpMcC4nsgdksZu&t=564
 # Anki Simulator: Predict how long it will to master a deck
+# Anki Leaderboard: Compete online
 read -p "Adjust Display Order->New card gather order = Random cards"
 read -p "Adjust Display Order->New card sort order = Order gathered"
 
