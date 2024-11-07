@@ -4,6 +4,6 @@ bin/*
 # But don't ignore these specific files
 !bin/aider
 !bin/cl
-!bin/f
-!bin/p
+!bin/csvfmt
+!bin/deadlines
 !bin/sgpt
