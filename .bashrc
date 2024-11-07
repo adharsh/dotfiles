@@ -164,7 +164,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PAT
 # Others
 alias gsm='gnome-system-monitor & exit'
 alias md="m deactivate"
-alias ma="m activate"
+alias ma="md && m activate"
 alias m=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
