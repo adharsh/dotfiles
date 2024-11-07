@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+
+from datetime import datetime, date, timedelta
+import argparse
+import sys
+import uuid
+
+class ICSGenerator:
+    def __init__(self):
+        self.events = []
+        
+    def add_event(self, summary, start_time, end_time=None, description="", location="", 
+                  organizer=None, all_day=False, is_task=False):
+        """
+        Add an event to the calendar.
+        
+        Parameters:
+        - summary: str, title of the event
+        - start_time: datetime or date, start time of event
+        - end_time: datetime or date, end time of event (optional for all-day events)
+        - description: str, event description (optional)
+        - location: str, event location (optional)
+        - organizer: str, email of organizer (optional)
+        - all_day: bool, whether this is an all-day event
+        - is_task: bool, whether this event should be treated as a task
+        """
+        # Handle all-day events
+        if all_day:
+            # Convert datetime to date if necessary
+            if isinstance(start_time, datetime):
+                start_time = start_time.date()
+            
+            # If end_time is not provided, make it the same as start_time
+            if end_time is None:
+                end_time = start_time
+            elif isinstance(end_time, datetime):
+                end_time = end_time.date()
+            
+            # For all-day events, end_date should be the day after the last day
+            from datetime import timedelta
+            end_time = end_time + timedelta(days=1)
+
+        event = {
+            'uid': str(uuid.uuid4()),
+            'summary': summary,
+            'start_time': start_time,
+            'end_time': end_time,
+            'description': description,
+            'location': location,
+            'organizer': organizer,
+            'created': datetime.now(),
+            'all_day': all_day,
+            'is_task': is_task
+        }
+        self.events.append(event)
+    
+    def generate_ics_content(self):
+        """Generate ICS file content as a string."""
+        lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//My Calendar App//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH'
+        ]
+        
+        for event in self.events:
+            lines.extend([
+                'BEGIN:VEVENT',
+                f'UID:{event["uid"]}',
+                f'DTSTAMP:{event["created"].strftime("%Y%m%dT%H%M%SZ")}'
+            ])
+
+            # Handle all-day events differently
+            if event['all_day']:
+                # Use DATE format for all-day events
+                lines.append(f'DTSTART;VALUE=DATE:{event["start_time"].strftime("%Y%m%d")}')
+                if event['end_time']:
+                    lines.append(f'DTEND;VALUE=DATE:{event["end_time"].strftime("%Y%m%d")}')
+            else:
+                # Use DATETIME format for regular events
+                lines.append(f'DTSTART:{event["start_time"].strftime("%Y%m%dT%H%M%SZ")}')
+                if event['end_time']:
+                    lines.append(f'DTEND:{event["end_time"].strftime("%Y%m%dT%H%M%SZ")}')
+            
+            lines.append(f'SUMMARY:{event["summary"]}')
+            
+            if event['description']:
+                # Handle potential multiline descriptions
+                description = event['description'].replace('\n', '\\n')
+                lines.append(f'DESCRIPTION:{description}')
+                
+            if event['location']:
+                lines.append(f'LOCATION:{event["location"]}')
+                
+            if event['organizer']:
+                lines.append(f'ORGANIZER:mailto:{event["organizer"]}')
+            
+            # Add task-specific properties
+            if event['is_task']:
+                lines.extend([
+                    'CATEGORIES:TASK',
+                    'STATUS:NEEDS-ACTION',
+                    'X-MICROSOFT-CDO-BUSYSTATUS:TASK'  # For better Outlook compatibility
+                ])
+                
+            lines.append('END:VEVENT')
+            
+        lines.append('END:VCALENDAR')
+        return '\r\n'.join(lines)
+    
+    def save_ics_file(self, filename):
+        """Save the calendar to an ICS file."""
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(self.generate_ics_content())
+
+# Example usage
+if __name__ == "__main__":
+    # Create a new calendar
+    calendar = ICSGenerator()
+    
+    # Add a regular event
+    calendar.add_event(
+        summary="Team Meeting",
+        start_time=datetime(2024, 11, 8, 10, 0),
+        end_time=datetime(2024, 11, 8, 11, 0),
+        description="Weekly team sync meeting",
+        location="Conference Room A"
+    )
+    
+    # Add a task
+    calendar.add_event(
+        summary="Submit Project Proposal",
+        start_time=date(2024, 11, 15),
+        description="Complete and submit Q1 project proposal",
+        all_day=True,
+        is_task=True
+    )
+    
+    # Save to file
+    calendar.save_ics_file('my_calendar.ics')
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Generate an ICS file with evenly spaced subtasks until a deadline.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    
+    parser.add_argument(
+        "name",
+        type=str,
+        help="Name of the main task"
+    )
+    parser.add_argument(
+        "-t", "--total",
+        type=int,
+        required=True,
+        help="Total number of subtasks"
+    )
+    parser.add_argument(
+        "-c", "--completed",
+        type=int,
+        default=0,
+        help="Number of completed subtasks"
+    )
+    parser.add_argument(
+        "-d", "--deadline",
+        required=True,
+        help="Deadline in MM-DD-YYYY format"
+    )
+    parser.add_argument(
+        "-o", "--output",
+        default="subtasks.ics",
+        help="Output ICS filename"
+    )
+
+    args = parser.parse_args()
+
+    try:
+        # Convert deadline string to datetime first
+        try:
+            deadline = datetime.strptime(args.deadline, "%m-%d-%Y")
+        except ValueError:
+            print("Error: Invalid date format. Please use MM-DD-YYYY (e.g., 12-31-2024)", file=sys.stderr)
+            sys.exit(1)
+
+        if args.completed < 0 or args.total < 0:
+            raise ValueError("Invalid values.")
+        if args.completed > args.total:
+            raise ValueError("Completed subtasks cannot exceed total subtasks")
+        if args.completed == args.total:
+            raise ValueError("All tasks are already completed")
+
+        calendar = ICSGenerator()
+        
+        remaining_subtasks = args.total - args.completed
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if deadline < today:
+            raise ValueError("Deadline cannot be in the past")
+            
+        duration_per_subtask = (deadline - today) / remaining_subtasks
+        offset = timedelta(0)
+        epsilon = timedelta(seconds=1)
+        
+        for i in range(1, remaining_subtasks + 1):
+            subtask_name = f"Subtask: {i}/{args.total}"
+            offset += duration_per_subtask
+            subtask_deadline = today + offset - epsilon
+            
+            calendar.add_event(
+                summary=subtask_name,
+                start_time=subtask_deadline,
+                description=f"Subtask of main task: {args.name}",
+                all_day=True,
+                is_task=True
+            )
+            print(f"{args.name} {i}/{remaining_subtasks}: {subtask_deadline.strftime('%Y-%m-%d')}")
+
+        calendar.save_ics_file(args.output)
+        print(f"Calendar file {args.output} has been created successfully!")
+        
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
