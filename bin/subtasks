@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import argparse
 import sys
 import uuid
@@ -114,31 +114,31 @@ class ICSGenerator:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(self.generate_ics_content())
 
-# Example usage
-if __name__ == "__main__":
-    # Create a new calendar
-    calendar = ICSGenerator()
+# # Example usage
+# if __name__ == "__main__":
+#     # Create a new calendar
+#     calendar = ICSGenerator()
     
-    # Add a regular event
-    calendar.add_event(
-        summary="Team Meeting",
-        start_time=datetime(2024, 11, 8, 10, 0),
-        end_time=datetime(2024, 11, 8, 11, 0),
-        description="Weekly team sync meeting",
-        location="Conference Room A"
-    )
+#     # Add a regular event
+#     calendar.add_event(
+#         summary="Team Meeting",
+#         start_time=datetime(2024, 11, 8, 10, 0),
+#         end_time=datetime(2024, 11, 8, 11, 0),
+#         description="Weekly team sync meeting",
+#         location="Conference Room A"
+#     )
     
-    # Add a task
-    calendar.add_event(
-        summary="Submit Project Proposal",
-        start_time=date(2024, 11, 15),
-        description="Complete and submit Q1 project proposal",
-        all_day=True,
-        is_task=True
-    )
+#     # Add a task
+#     calendar.add_event(
+#         summary="Submit Project Proposal",
+#         start_time=date(2024, 11, 15),
+#         description="Complete and submit Q1 project proposal",
+#         all_day=True,
+#         is_task=True
+#     )
     
-    # Save to file
-    calendar.save_ics_file('my_calendar.ics')
+#     # Save to file
+#     calendar.save_ics_file('my_calendar.ics')
 
 if __name__ == "__main__":
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
-        "name",
+        "task_name",
         type=str,
         help="Name of the main task"
     )
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c", "--completed",
         type=int,
-        default=0,
+        required=True,
         help="Number of completed subtasks"
     )
     parser.add_argument(
@@ -204,19 +204,19 @@ if __name__ == "__main__":
         offset = timedelta(0)
         epsilon = timedelta(seconds=1)
         
-        for i in range(1, remaining_subtasks + 1):
-            subtask_name = f"Subtask: {i}/{args.total}"
+        for i in range(args.completed+1, args.total + 1):
+            subtask_name = f"{args.task_name} {i}/{args.total}"
             offset += duration_per_subtask
             subtask_deadline = today + offset - epsilon
             
             calendar.add_event(
                 summary=subtask_name,
                 start_time=subtask_deadline,
-                description=f"Subtask of main task: {args.name}",
+                description=f"Subtask of {args.task_name}",
                 all_day=True,
                 is_task=True
             )
-            print(f"{args.name} {i}/{remaining_subtasks}: {subtask_deadline.strftime('%Y-%m-%d')}")
+            print(f"{args.task_name} {i}/{args.total}: {subtask_deadline.strftime('%Y-%m-%d')}")
 
         calendar.save_ics_file(args.output)
         print(f"Calendar file {args.output} has been created successfully!")
