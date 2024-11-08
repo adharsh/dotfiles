@@ -171,8 +171,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o", "--output",
+        type=str,
         default="subtasks.ics",
         help="Output ICS filename"
+    )
+    parser.add_argument(
+        "--initial_offset_days",
+        type=int,
+        default=0,
+        help="Initial offset added to today and deadline date."
     )
 
     args = parser.parse_args()
@@ -185,8 +192,8 @@ if __name__ == "__main__":
             print("Error: Invalid date format. Please use MM-DD-YYYY (e.g., 12-31-2024)", file=sys.stderr)
             sys.exit(1)
 
-        if args.completed < 0 or args.total < 0:
-            raise ValueError("Invalid values.")
+        if args.completed < 0 or args.total < 0 or args.initial_offset_days < 0:
+            raise ValueError("Invalid negative value entered.")
         if args.completed > args.total:
             raise ValueError("Completed subtasks cannot exceed total subtasks")
         if args.completed == args.total:
@@ -196,6 +203,9 @@ if __name__ == "__main__":
         
         remaining_subtasks = args.total - args.completed
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        today += timedelta(days=args.initial_offset_days)
+        deadline += timedelta(days=args.initial_offset_days)
         
         if deadline < today:
             raise ValueError("Deadline cannot be in the past")
@@ -203,7 +213,8 @@ if __name__ == "__main__":
         duration_per_subtask = (deadline - today) / remaining_subtasks
         offset = timedelta(0)
         epsilon = timedelta(seconds=1)
-        
+
+        prev_deadline = None
         for i in range(args.completed+1, args.total + 1):
             subtask_name = f"{args.task_name} {i}/{args.total}"
             offset += duration_per_subtask
@@ -216,7 +227,13 @@ if __name__ == "__main__":
                 all_day=True,
                 is_task=True
             )
-            print(f"{args.task_name} {i}/{args.total}: {subtask_deadline.strftime('%Y-%m-%d')}")
+            if not prev_deadline:
+                print(f"{args.task_name} {i:3d}/{args.total}: {subtask_deadline.strftime('%Y-%m-%d')}     Diff Deadlines")
+                prev_deadline = subtask_deadline
+            else:
+                diff = subtask_deadline - prev_deadline
+                print(f"{args.task_name} {i:3d}/{args.total}: {subtask_deadline.strftime('%Y-%m-%d')}     {diff}")
+                prev_deadline = subtask_deadline
 
         calendar.save_ics_file(args.output)
         print(f"Calendar file {args.output} has been created successfully!")
