@@ -21,7 +21,7 @@ done
 first_monitor="eDP-1" 
 second_monitor=$(xrandr --query | rg ' connected ' | tail -1 | awk '{print $1}')
 
-if [ "$second_monitor" != "eDP-1" ]; then
+if [ "$second_monitor" != "$first_monitor" ]; then
     # Get the dimensions of the second monitor from the line below its name
     second_monitor_res=$(xrandr --query | awk "/$second_monitor/{getline; print \$1}")
     second_monitor_width=$(echo $second_monitor_res | cut -d'x' -f1)
