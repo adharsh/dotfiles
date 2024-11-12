@@ -6,7 +6,8 @@ echo "Log stored at: ~/log_xsessionrc.txt"
 # High resolution screen change:
 # https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
 # Note: Modify this line on a new laptop
-xrandr --output eDP-1 --scale '1.0x1.0'
+first_monitor=$(xrandr | rg primary | cut -d' ' -f1)
+xrandr --output "$first_monitor" --scale '1.0x1.0'
 
 # Enable tap, drag by tap, and natural scrolling
 # https://github.com/maxwell-bland/i3-natural-scrolling-and-tap/blob/master/inverse-scroll.sh
