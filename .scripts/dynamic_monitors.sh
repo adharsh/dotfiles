@@ -18,7 +18,7 @@ for workspace in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 # Find the name of the second monitor
-first_monitor="eDP-1" 
+first_monitor=$(xrandr | rg primary | cut -d' ' -f1)
 second_monitor=$(xrandr --query | rg ' connected ' | tail -1 | awk '{print $1}')
 
 if [ "$second_monitor" != "$first_monitor" ]; then
