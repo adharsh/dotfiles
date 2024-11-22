@@ -65,8 +65,14 @@ if [ -n "$save_path" ]; then
             markdown_path="$filename"
         fi
          
-        # Create the Markdown image syntax and copy it to clipboard
-        echo -n "![${filename}](${markdown_path})" | xclip -selection clipboard
+        # Option 1: Set markdown str to standard markdown
+        # markdown_str="![${filename}](${markdown_path})"
+        # echo -n "${markdown_str}" | xclip -selection clipboard
+
+        # Option 2: Set markdown str to half width and centered image
+        markdown_str="<div align=\"center\">\n  <img src=\"${markdown_path}\" style=\"max-width: 50%; height: auto;\" alt=\"${filename}\">\n</div>"
+        echo -e -n "${markdown_str}" | xclip -selection clipboard
+
     else
         zenity --error --text="Failed to save the image"
     fi
