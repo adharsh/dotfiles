@@ -83,7 +83,7 @@ jq -n \
         ]
       }
     ],
-    max_tokens: 300
+    max_tokens: 4096
   }' > "$TEMP_JSON"
 
 # Send the image to OpenAI API for analysis
