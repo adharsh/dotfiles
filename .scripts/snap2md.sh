@@ -69,7 +69,7 @@ base64 "$TEMP_IMAGE" > "$TEMP_BASE64"
 
 # Create the JSON payload using jq, reading the base64 image from the file
 jq -n \
-  --arg model "gpt-4o-mini" \
+  --arg model "chatgpt-4o-latest" \
   --arg prompt "$PROMPT" \
   --rawfile image "$TEMP_BASE64" \
   '{
@@ -78,8 +78,14 @@ jq -n \
       {
         role: "user",
         content: [
-          {type: "text", text: $prompt},
-          {type: "image_url", image_url: {url: "data:image/png;base64,\($image)"}}
+            {type: "text", text: $prompt},
+            {
+                type: "image_url", 
+                image_url: {
+                    url: "data:image/png;base64,\($image)", 
+                    "detail": "high"
+                }
+            }
         ]
       }
     ],
