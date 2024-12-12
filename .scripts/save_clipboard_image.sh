@@ -70,7 +70,7 @@ if [ -n "$save_path" ]; then
         # echo -n "${markdown_str}" | xclip -selection clipboard
 
         # Option 2: Set markdown str to half width and centered image
-        markdown_str="<div align=\"center\">\n  <img src=\"${markdown_path}\" style=\"max-width: 50%; height: auto;\" alt=\"${filename}\">\n</div>"
+        markdown_str="<div align=\"center\">\n  <img src=\"${markdown_path}\" style=\"max-width: 70%; height: auto;\" alt=\"${filename}\">\n</div>"
         echo -e -n "${markdown_str}" | xclip -selection clipboard
 
     else
