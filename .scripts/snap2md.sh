@@ -11,6 +11,7 @@ API_KEY="sk-proj-QAdIONKu8MKKcnjxHDW0F0FD8fX9iT59CipxoOcqyRjj1-SPbW2EQmtdH2WbwFs
 read -r -d '' PROMPT << EOM
 Transcribe the text in the provided image to markdown format, with the following specifications:
 - Use standard markdown syntax for headings, lists, bold, italics, etc.
+- For mathematical expressions, use KaTeX syntax.
 - For inline (non-centered) mathematical expressions, use single dollar signs: $...$
 - For block (centered) mathematical expressions, use double dollar signs: $$...$$
 - When using dollar signs, place entire expression into a single line, examples:
@@ -20,7 +21,7 @@ Transcribe the text in the provided image to markdown format, with the following
     $$
     \text{This is a bad example: }\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
     $$
-- Never use \[ or \]
+- Never use \[ \] or \( \) for math mode. Only use dollar signs as described previously.
 - Utilize KaTeX syntax for all mathematical notations
 - Only use \dfrac and never \frac
 - Output only the transcribed markdown text AS IS, without any additional modifications or explanations, comments, or enclosing ticks
