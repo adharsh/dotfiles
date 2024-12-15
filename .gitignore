@@ -8,3 +8,4 @@ bin/*
 !bin/deadlines
 !bin/sgpt
 !bin/subtasks
+!bin/gsm
