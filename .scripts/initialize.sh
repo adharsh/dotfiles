@@ -153,6 +153,13 @@ mamba install -y pip
 yes | pip install aider-chat
 mamba deactivate
 
+## For VSCode Extension: Latex Sympy Calculator
+mamba create -n latex_sympy_calculator python=3.11 -y
+mamba activate latex_sympy_calculator 
+mamba install -y pip
+yes | pip install latex2sympy2 Flask 
+mamba deactivate
+
 # Install docker
 ## Add Docker's official GPG key:
 sudo apt update
