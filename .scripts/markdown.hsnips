@@ -344,12 +344,12 @@ endsnippet
 
 context math(context)
 snippet // "Fraction" iA
-\\frac{$1}{$2}$0
+\\dfrac{$1}{$2}$0
 endsnippet
 
 context math(context)
 snippet `((\d+)|(\d*)(\\)?([A-Za-z]+)((\^|_)(\{\d+\}|\d))*)/` "Fraction no ()" A
-\frac{``rv = m[1]``}{$1}$0
+\dfrac{``rv = m[1]``}{$1}$0
 endsnippet
 
 snippet `^.*\)/` "Fraction with ()" Am
@@ -368,7 +368,7 @@ snippet `^.*\)/` "Fraction with ()" Am
         i -= 1;
     }
 
-    let results = str.slice(0, i) + "\\frac{" + str.slice(i+1, -1) + "}";
+    let results = str.slice(0, i) + "\\dfrac{" + str.slice(i+1, -1) + "}";
     rv = results;
 	rv += `{${snip.tabstop(1)}}${snip.tabstop(0)}`;
     ``
@@ -782,12 +782,12 @@ endsnippet
 priority 100
 context math(context)
 snippet pdif "d/dx" iA
-\frac{\partial ${1:V}}{\partial ${2:x}} $0
+\dfrac{\partial ${1:V}}{\partial ${2:x}} $0
 endsnippet
 
 context math(context)
 snippet dif "d/dx" iA
-\frac{\mathrm{d}${1:y}}{\mathrm{d}${2:x}} $0
+\dfrac{\mathrm{d}${1:y}}{\mathrm{d}${2:x}} $0
 endsnippet
 
 context math(context)
