@@ -560,20 +560,20 @@ snippet `(?<!\\)iff` "if and only if" A
 endsnippet
 
 snippet fm "inline Math" wA
-\(${1}\)``
+$${1}$``
 let test = t[1][0];
 if (test != ',' &&  test != '.' &&  test != '-' && test !='?' && test !=' '){
-	rv = ' ';
+    rv = ' ';
 }
 else{
-	rv = '';
+    rv = '';
 }``$2
 endsnippet
 
 snippet dm "display Math" bA
-\[
-	${1}
-\]$0
+$$
+${1}
+$$$0
 endsnippet
 
 context math(context)
