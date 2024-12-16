@@ -1,0 +1,23 @@
+global
+// How to find out which scopes are active in the current cursor position?
+// Open "Developer: Inspect Editor Tokens and Scopes" in Command Palette
+
+// $...$, $$...$$
+function math(context) {
+    return context.scopes.some(s => s.includes("math"));
+}
+
+function notmath(context) {
+    return !math(context);
+}
+
+// // Commented out below, not always consistent
+// // $...$
+// function inline_math(context){
+//     return context.scopes.some(s => s.includes("math.inline"));
+// }
+// // $$...$$
+// function block_math(context){
+//     return context.scopes.some(s => s.includes("math.display")) || context.scopes.some(s => s.includes("math.block"));
+// }
+endglobal
