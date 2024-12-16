@@ -7,7 +7,7 @@ set -e
 sudo apt update
 
 # Assume's Chrome is installed
-read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled."
+read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
 
 # Install configurations
 cd ~/dotfiles
@@ -26,7 +26,7 @@ git config --global user.name "Adharsh Babu"
 
 # Add $USER to video group so you don't need sudo to run brightnessctl
 sudo apt install -y brightnessctl
-sudo usermod -aG video $USER
+sudo usermod -aG video "$USER"
 
 # xcape
 # Linux: https://github.com/alols/xcape
@@ -46,15 +46,15 @@ bash .scripts/caffeine-indicator-fix.sh
 
 # Web Dev - fnm, node, pnpm
 curl -fsSL https://fnm.vercel.app/install | bash
-read -p "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag"
+read -p "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag" -r
 fnm install --lts
-fnm default $(fnm list | grep lts | tail -n1)
+fnm default "$(fnm list | grep lts | tail -n1)"
 corepack enable pnpm
 command -v fnm >/dev/null 2>&1 || { echo "Error: fnm is NOT installed"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "Error: Node.js is NOT installed"; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo "Error: pnpm is NOT installed"; exit 1; }
 pnpm setup
-read -p "New pnpm script is appended to .bashrc, merge with existing one."
+read -p "New pnpm script is appended to .bashrc, merge with existing one." -r
 
 # pnpm global packages 
 ## Anki
@@ -66,15 +66,15 @@ cd ~/Downloads
 wget https://github.com/ankitects/anki/releases/download/24.06.3/anki-24.06.3-linux-qt6.tar.zst
 tar --use-compress-program=unzstd -xvf anki-24.06.3-linux-qt6.tar.zst
 cd anki-24.06.3-linux-qt6/
-read -p "Please check anki-24.06.3-linux-qt6/install.sh script before running with sudo. Once done, hit enter."
+read -p "Please check anki-24.06.3-linux-qt6/install.sh script before running with sudo. Once done, hit enter." -r
 sudo ./install.sh
 cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
 popd 
-read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled."
+read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled." -r
 
 # Make sure to install Anki plugins, descriptions in order below
-read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 175794613"
+read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 175794613" -r
 # Anki Connect: for connecting to Anki via an API
 # Advanced browser: In browse, add Time (Total) and Lapses, sort by either column
 # Review Heatmap: Heatmap similar to contribution activity on Github
@@ -83,8 +83,8 @@ read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 8171086
 ## Adjust interval so retention is 80-90%: https://youtu.be/A56wVF9Fr0Q?si=ibnpMcC4nsgdksZu&t=564
 # Anki Simulator: Predict how long it will to master a deck
 # Anki Leaderboard: Compete online
-read -p "Adjust Display Order->New card gather order = Random cards"
-read -p "Adjust Display Order->New card sort order = Order gathered"
+read -p "Adjust Display Order->New card gather order = Random cards" -r
+read -p "Adjust Display Order->New card sort order = Order gathered" -r
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
@@ -109,9 +109,9 @@ rm vscode.deb
 # SPECIAL NOTE: If Visual Studio Code complains about that it is corrupted, simply click “Don't show again”.
 # NOTE: Every time after Visual Studio Code is updated, please re-enable Custom CSS.
 # NOTE: Every time you change the configuration, please re-enable Custom CSS.
-sudo chown -R $(whoami) "$(which code)"
-sudo chown -R $(whoami) /usr/share/code
-read -p "Activate command in VSCode: Reload Custom CSS and JS"
+sudo chown -R "$(whoami)" "$(which code)"
+sudo chown -R "$(whoami)" /usr/share/code
+read -p "Activate command in VSCode: Reload Custom CSS and JS" -r
 
 # Installing mamba from miniforge
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
@@ -143,7 +143,7 @@ mamba activate sgpt
 mamba install -y pip
 yes | pip install shell-gpt litellm
 sgpt --install-integration
-read -p "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing."
+read -p "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing." -r
 mamba deactivate
 
 ## Installing aider
@@ -161,6 +161,7 @@ sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 ## Add the repository to Apt sources:
+# shellcheck disable=SC1091
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
@@ -170,7 +171,7 @@ sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ## Linux post install
 sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 newgrp docker
 ## Installation verification
 docker run hello-world | grep -q "Hello from Docker!"
@@ -182,4 +183,4 @@ sudo systemctl enable containerd.service
 wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
 chmod +x ~/bin/bazel
 
-read -p "Reboot to see changes."
+read -p "Reboot to see changes." -r
