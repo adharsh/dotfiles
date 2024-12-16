@@ -8,7 +8,7 @@ get_last_directory() {
     if [ -f "$CONFIG_FILE" ]; then
         cat "$CONFIG_FILE"
     else
-        echo "$HOME"
+        pwd
     fi
 }
 
@@ -17,21 +17,73 @@ save_last_directory() {
     dirname "$1" > "$CONFIG_FILE"
 }
 
+save_markdown_to_clipboard() {
+    local filepath="$1"
+    local filename
+    local parent_dir
+
+    filepath="$1"
+    filename=$(basename "$filepath")
+    parent_dir=$(basename "$(dirname "$filepath")")
+    
+    # Create the Markdown image syntax based on the parent directory
+    if [ "$parent_dir" = "imgs" ]; then
+        markdown_path="imgs/$filename"
+    else
+        markdown_path="$filename"
+    fi
+
+    # Option 1: Set markdown str to standard markdown
+    # markdown_str="![${filename}](${markdown_path})"
+    # echo -n "${markdown_str}" | xclip -selection clipboard
+
+    # Option 2: Set markdown str to centered image with percentage width
+    markdown_str="<div align=\"center\">
+    <img src=\"${markdown_path}\" 
+        style=\"max-width: 70%; height: auto;\" 
+        alt=\"${filename}\">
+</div>"
+    echo -e -n "${markdown_str}" | xclip -selection clipboard
+}
+
+# Check for quick save flag
+while getopts "q" opt; do
+    case $opt in
+        q) 
+            # Get last directory and generate save path
+            save_path="$(get_last_directory)/screenshot-$(date '+%Y-%m-%d-%H-%M-%S-%N').png"
+            
+            # Capture screenshot directly to final location
+            if ! maim -s "$save_path" || [ ! -s "$save_path" ]; then
+                rm -f "$save_path"
+                exit 1
+            fi
+            
+            # Save markdown to clipboard and exit
+            save_markdown_to_clipboard "$save_path"
+            exit 0
+            ;;
+         *) 
+             echo "Usage: $(basename "$0") [-q]" >&2
+             echo "  -q    Quick save to last used directory" >&2
+             exit 1
+             ;;
+    esac
+done
+
 # Create a temporary file for the screenshot
 TEMP_IMAGE=$(mktemp --suffix=.png)
 
 # Capture the screenshot directly to the file
-maim -s "$TEMP_IMAGE"
-
-# Check the exit status of maim and the file size
-if [ $? -ne 0 ] || [ ! -s "$TEMP_IMAGE" ]; then
+#  and check the exit status of maim and the file size
+if ! maim -s "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
     echo "Failed to capture screenshot or screenshot was cancelled. Exiting."
     rm -f "$TEMP_IMAGE"
     exit 1
 fi
 
 # If we get here, we have a valid screenshot. Now copy it to clipboard
-xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
+# xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
 
 # Get the last used directory
 last_dir=$(get_last_directory)
@@ -44,38 +96,11 @@ if [ -n "$save_path" ]; then
     # Move the temporary image file to the selected save path
     mv "$TEMP_IMAGE" "$save_path"
     
-    # Check if the save was successful
-    if [ $? -eq 0 ]; then
-        # Save the directory of the successful save
-        save_last_directory "$save_path"
+    # Save the directory of the successful save
+    save_last_directory "$save_path"
         
-        # Get the filename and parent directory from the full path
-        filename=$(basename "$save_path")
-        parent_dir=$(basename "$(dirname "$save_path")")
-        
-        # Create the Markdown image syntax based on the parent directory
-        if [ "$parent_dir" = "imgs" ]; then
-            # Use relative path if parent directory is "imgs"
-            markdown_path="imgs/$filename"
-        else
-            # # Save to absolute path
-            # markdown_path="$save_path"
-
-            # Save to current working directory
-            markdown_path="$filename"
-        fi
-         
-        # Option 1: Set markdown str to standard markdown
-        # markdown_str="![${filename}](${markdown_path})"
-        # echo -n "${markdown_str}" | xclip -selection clipboard
-
-        # Option 2: Set markdown str to half width and centered image
-        markdown_str="<div align=\"center\">\n  <img src=\"${markdown_path}\" style=\"max-width: 70%; height: auto;\" alt=\"${filename}\">\n</div>"
-        echo -e -n "${markdown_str}" | xclip -selection clipboard
-
-    else
-        zenity --error --text="Failed to save the image"
-    fi
+    # Save markdown to clipboard
+    save_markdown_to_clipboard "$save_path"
 else
     echo "No file selected. Exiting."
     rm -f "$TEMP_IMAGE"
