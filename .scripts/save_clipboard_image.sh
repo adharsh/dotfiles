@@ -61,6 +61,7 @@ while getopts "q" opt; do
             
             # Save markdown to clipboard and exit
             save_markdown_to_clipboard "$save_path"
+            notify-send "Screenshot saved" "$save_path" -t 3000
             exit 0
             ;;
          *) 
