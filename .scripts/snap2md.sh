@@ -32,7 +32,7 @@ $$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
 3. Mixed markdown and KaTeX:
 # Quadratic Formula
 The solutions to a quadratic equation $ax^2 + bx + c = 0$ are given by:
-$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
+$$x = \dfrac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
 Where:
 - $a \neq 0$
 - The term under the square root ($b^2 - 4ac$) is called the discriminant
