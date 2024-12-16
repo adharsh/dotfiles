@@ -166,6 +166,7 @@ alias md="m deactivate"
 alias ma="md && m activate"
 alias m=mamba
 alias t=tree
+alias rcopyq="killall copyq && copyq & copyq show && exit"
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
 
