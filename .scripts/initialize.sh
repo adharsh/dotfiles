@@ -191,6 +191,6 @@ wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/downl
 chmod +x ~/bin/bazel
 
 # HyperSnips Markdown
-ln -s ~/dotfiles/.scripts/markdown.hsnips "$HOME"/.config/Code/User/globalStorage/draivin.hsnips/hsnips/markdown.hsnips
+ln -s ~/dotfiles/.scripts/markdown.hsnips ~/.config/Code/User/globalStorage/draivin.hsnips/hsnips/markdown.hsnips
 
 read -p "Reboot to see changes." -r
