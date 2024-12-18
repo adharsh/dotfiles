@@ -38,7 +38,7 @@ save_markdown_to_clipboard() {
     # echo -n "${markdown_str}" | xclip -selection clipboard
 
     # Option 2: Set markdown str to centered image with percentage width
-    markdown_str="<div align=\"center\">
+    markdown_str="<div style=\"text-align: center;\">
     <img src=\"${markdown_path}\" 
         style=\"max-width: 70%; height: auto;\" 
         alt=\"${filename}\">
