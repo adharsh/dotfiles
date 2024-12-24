@@ -202,7 +202,7 @@ bindsym $mod+minus scratchpad show
 bindsym Mod4+l exec --no-startup-id "i3lock --color 000000 --show-failed-attempts"
 
 # Suspend
-bindsym Mod4+Shift+l exec --no-startup-id "i3lock --nofork --color 000000 --show-failed-attempts && systemctl suspend"
+bindsym Mod4+Shift+l exec --no-startup-id "i3lock --color 000000 --show-failed-attempts && systemctl suspend"
 
 # Brightness
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set 10%+
