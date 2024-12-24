@@ -165,7 +165,7 @@ read -p "Install CUDA first." -r
 mamba create -n ml python=3.12 -y
 mamba activate ml
 mamba install -y pip
-yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets
+yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets nvitop altair
 python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -p "CUDA is not available" -r
 mamba deactivate
 
