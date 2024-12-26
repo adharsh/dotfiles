@@ -48,19 +48,16 @@ echo "Image: $TEMP_IMAGE"
 echo "Base64: $TEMP_BASE64"
 echo "JSON: $TEMP_JSON"
 
-# Take a screenshot of selected area and copy to clipboard
+# Take a screenshot of selected area, check exit status and file size
 echo "Select the area you want to capture..."
-maim -s -f png "$TEMP_IMAGE"
-
-# Start timing
-start_time=$(date +%s.%N)
-
-# Check the exit status of maim and the file size
-if [ $? -ne 0 ] || [ ! -s "$TEMP_IMAGE" ]; then
+if ! maim -s -f png "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
     echo "Failed to capture screenshot or screenshot was cancelled. Aborting."
     rm -f "$TEMP_IMAGE"
     exit 1
 fi
+
+# Start timing
+start_time=$(date +%s.%N)
 
 # If we get here, we have a valid screenshot. Now copy it to clipboard
 xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
@@ -103,7 +100,7 @@ RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
 rm "$TEMP_IMAGE" "$TEMP_BASE64" "$TEMP_JSON"
 
 # Extract the markdown text from API response (glob pattern matching disabled)
-MARKDOWN=$(echo $RESPONSE | jq -r '.choices[0].message.content')
+MARKDOWN=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
 
 # Echo the full response for debugging
 echo "Full API Response:"
@@ -116,6 +113,6 @@ echo "$MARKDOWN" | tee >(xclip -selection clipboard)
 # Calculate elapsed time
 end_time=$(date +%s.%N)
 elapsed=$(echo "$end_time - $start_time" | bc)
-elapsed_rounded=$(printf "%.2f" $elapsed)
+elapsed_rounded=$(printf "%.2f" "$elapsed")
 
 notify-send "Transcription complete (${elapsed_rounded}s)" "Markdown copied to clipboard" -t 3000
