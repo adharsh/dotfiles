@@ -18,7 +18,7 @@ stow .
 sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
-sudo apt install -y stress-ng gnome-system-monitor
+sudo apt install -y stress-ng gnome-system-monitor ncdu
 
 # Git config
 git config --global user.email "adharsh.babu@gmail.com"
