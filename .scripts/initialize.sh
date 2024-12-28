@@ -6,7 +6,8 @@ set -e
 # Update apt repos
 sudo apt update
 
-# Assume's Chrome is installed
+# Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view 
+# Verify version with: dpkg-deb -f google-chrome-stable_current_amd64.deb Version
 read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
 
 # Install configurations
