@@ -6,8 +6,18 @@ set -e
 # Update apt repos
 sudo apt update
 
-# Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view 
-# Verify version with: dpkg-deb -f google-chrome-stable_current_amd64.deb Version
+# Install Chrome (specific version to avoid breaking changes to viewport)
+pushd .
+cd ~/Downloads/
+read -p  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view" -r
+# Verify version with: 
+version=$(dpkg-deb -f google-chrome-stable_current_amd64.deb Version)
+if [ "$version" != "130.0.6723.58-1" ]; then
+    echo "Version mismatch" >&2
+    exit 1
+fi
+sudo apt install ./google-chrome-stable_current_amd64.deb
+popd
 read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
 
 # Install configurations
@@ -125,7 +135,7 @@ rm Miniforge3-Linux-x86_64.sh
 mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
-yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets
+yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
 nbdime config-git --enable --global
 mamba deactivate
 
