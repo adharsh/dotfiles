@@ -7,9 +7,9 @@ set -e
 sudo apt update
 
 # Install Chrome (specific version to avoid breaking changes to viewport)
+read -p  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view" -r
 pushd .
 cd ~/Downloads/
-read -p  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view" -r
 # Verify version with: 
 version=$(dpkg-deb -f google-chrome-stable_current_amd64.deb Version)
 if [ "$version" != "130.0.6723.58-1" ]; then
