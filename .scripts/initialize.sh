@@ -211,9 +211,6 @@ sudo systemctl enable containerd.service
 wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
 chmod +x ~/bin/bazel
 
-# HyperSnips Markdown
-ln -s ~/dotfiles/.scripts/markdown.hsnips ~/.config/Code/User/globalStorage/draivin.hsnips/hsnips/markdown.hsnips
-
 # Scrcpy, screen capture for Android
 sudo apt install ffmpeg libsdl2-2.0-0 adb wget \
                  gcc git pkg-config meson ninja-build libsdl2-dev \

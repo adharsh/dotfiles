@@ -4,7 +4,8 @@ global
 
 // $...$, $$...$$
 function math(context) {
-    return context.scopes.some(s => s.includes("math")) || context.scopes.some(s => s.includes("markup.inline")) || context.scopes.some(s => s.includes("inline-dollars"));
+    return false;
+    // return context.scopes.some(s => s.includes("math")) || context.scopes.some(s => s.includes("markup.inline")) || context.scopes.some(s => s.includes("inline-dollars"));
 }
 
 function notmath(context) {
