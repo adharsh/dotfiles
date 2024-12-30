@@ -177,8 +177,11 @@ mamba create -n ml python=3.12 -y
 mamba activate ml
 mamba install -y pip
 yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets nvitop altair
-yes | pip install jupyterlab pandas tokenizers datasets nvitop altair triton
 python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -p "CUDA is not available" -r
+yes | pip install jupyterlab pandas tokenizers datasets nvitop altair triton
+yes | pip install jaxtyping pycairo
+git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
+(cd .triton-viz && pip install -e .)
 mamba deactivate
 
 # Install docker
@@ -218,5 +221,7 @@ sudo apt install ffmpeg libsdl2-2.0-0 adb wget \
                  libswresample-dev libusb-1.0-0 libusb-1.0-0-dev
 git clone https://github.com/Genymobile/scrcpy ~/.scrcpy
 (cd ~/.scrcpy && ./install_release.sh)
+
+
 
 read -p "Reboot to see changes." -r
