@@ -286,7 +286,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True):
             if last_project is not None:
                 time_diff = (current_deadline - last_project_deadline).days
                 duration_str = format_duration(time_diff)
-                print(f"{last_project:{max_project_len}}: {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
+                print(f"{last_project}: {'':{max_project_len-len(last_project)}} {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
                 print(current_project_output.rstrip())
                 current_project_output = ""
             last_project = project
@@ -295,14 +295,14 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True):
         
         time_diff = (current_deadline - last_task_deadline).days if last_task_deadline else 0
         duration_str = format_duration(time_diff)
-        current_project_output += f"  {task:{max_task_len}}: {duration_str:>{max_duration_len}}, {event['date_str']}\n"
+        current_project_output += f"  {task}: {'':{max_task_len-len(task)}} {duration_str:>{max_duration_len}}, {event['date_str']}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
     if last_project:
         time_diff = (current_deadline - start_date).days  # Compare with start date
         duration_str = format_duration(time_diff)
-        print(f"{last_project:{max_project_len}}: {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
+        print(f"{last_project}: {'':{max_project_len-len(last_project)}} {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
         print(current_project_output.rstrip())
 
     # Create calendar events
