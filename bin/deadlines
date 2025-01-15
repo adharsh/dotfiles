@@ -246,13 +246,11 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_
             if task_minutes <= minutes_remaining:
                 # Create calendar event
                 events.append({
-                    "date_str": current_date.strftime("%Y-%m-%d"),
-                    "title_str": f"{row['project']}: {row['task']}",
-                    "description_str": f"{row['task']}\nEstimated time: {row['estimated_mins']} minutes",
-
                     "date": current_date,
                     "project": row['project'],
                     "task": row['task'],
+                    # "description": row['description'],
+                    "estimated_mins": row['estimated_mins'],
                 })
                 minutes_remaining -= task_minutes
                 task_minutes = 0
@@ -296,7 +294,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_
         
         time_diff = (current_deadline - last_task_deadline).days if last_task_deadline else 0
         duration_str = format_duration(time_diff)
-        current_project_output += f"  {task}: {'':{max_task_len-len(task)}} {duration_str:>{max_duration_len}}, {event['date_str']}\n"
+        current_project_output += f"  {task}: {'':{max_task_len-len(task)}} {duration_str:>{max_duration_len}}, {event['date']}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
@@ -312,10 +310,17 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_
     if update_gcal:
         delete_all_events(calendar_name)
         for event in events:
+            event_date = event['date'].strftime("%Y-%m-%d")
+            title = f"{event['project']}: {event['task']}"
+            description = (
+                # f"{event['task']}:\n{event['description']}\n"
+                f"{event['task']}"
+                f"Estimated time: {event['estimated_mins']} minutes"
+            )
             create_calendar_event(
-                event_date=event['date_str'],
-                title=event['title_str'],
-                description=event['description_str'],
+                event_date=event_date,
+                title=title,
+                description=description,
                 calendar_name=calendar_name
             )
 
