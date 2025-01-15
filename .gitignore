@@ -9,3 +9,6 @@ bin/*
 !bin/sgpt
 !bin/subtasks
 !bin/gsm
+
+# Ignore credentials directory
+/credentials
