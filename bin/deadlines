@@ -158,7 +158,7 @@ def load_csv_data(file_path):
     path = Path(file_path) if isinstance(file_path, str) else file_path
     
     # Read CSV file
-    df = pd.read_csv(path, skipinitialspace=True)
+    df = pd.read_csv(path, skipinitialspace=True, comment='#')
     
     # Function to safely evaluate mathematical expressions
     def safe_eval(x):
