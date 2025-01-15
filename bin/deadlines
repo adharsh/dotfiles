@@ -211,7 +211,7 @@ def format_duration(total_days):
     
     return " ".join(parts)
 
-def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True):
+def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_gcal=True):
     """
     Schedule tasks from CSV file into calendar based on available minutes per day.
     
@@ -309,19 +309,21 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True):
     print()
 
     # Create calendar events
-    delete_all_events(calendar_name)
-    for event in events:
-        create_calendar_event(
-            event_date=event['date_str'],
-            title=event['title_str'],
-            description=event['description_str'],
-            calendar_name=calendar_name
-        )
+    if update_gcal:
+        delete_all_events(calendar_name)
+        for event in events:
+            create_calendar_event(
+                event_date=event['date_str'],
+                title=event['title_str'],
+                description=event['description_str'],
+                calendar_name=calendar_name
+            )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Schedule tasks from CSV into calendar')
     parser.add_argument('filepath', type=str, help='Path to the todos.csv file')
     parser.add_argument('--start-today', action='store_false', default=True, help='Start scheduling from today instead of tomorrow (default: start tomorrow)')
+    parser.add_argument('--update-gcal', action='store_true', default=True, help='Update Google Calendar with the scheduled tasks')
   
     args = parser.parse_args()
     
@@ -330,4 +332,4 @@ if __name__ == "__main__":
     if not filepath.exists():
         raise FileNotFoundError(f"Could not find file: {filepath}")
     
-    schedule_tasks(filepath, start_tomorrow=args.start_today)
+    schedule_tasks(filepath, start_tomorrow=args.start_today, update_gcal=args.update_gcal)
