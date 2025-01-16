@@ -15,7 +15,8 @@ import pandas as pd
 
 @retry(
     wait=wait_exponential(multiplier=2, min=10, max=60),
-    reraise=True
+    reraise=True,
+    before_sleep=lambda retry_state: print(f"Rate limit hit, retrying in {retry_state.next_action.sleep} seconds...")
 )
 def delete_event_with_retry(service, calendar_id, event_id):
     try:
@@ -29,7 +30,8 @@ def delete_event_with_retry(service, calendar_id, event_id):
 
 @retry(
     wait=wait_exponential(multiplier=2, min=10, max=60),
-    reraise=True
+    reraise=True,
+    before_sleep=lambda retry_state: print(f"Rate limit hit, retrying in {retry_state.next_action.sleep} seconds...")
 )
 def create_event_with_retry(service, calendar_id, event_body):
     try:
