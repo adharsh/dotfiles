@@ -144,7 +144,7 @@ def create_calendar_event(event_date, title, description, calendar_name):
 
 def delete_all_events(calendar_name):
     """
-    Delete all events from a specified calendar in parallel
+    Delete all events from a specified calendar
     
     Args:
         calendar_name (str): Name of the calendar to delete events from
@@ -169,24 +169,29 @@ def delete_all_events(calendar_name):
         maxResults=2500
     ).execute()
     
-    events = events_result.get('items', [])
+    failed_events = events_result.get('items', [])
     
-    def delete_event(event):
-        service = get_service()
-        try:
-            delete_event_with_retry(service, calendar_id, event['id'])
-        except Exception as e:
-            print(f"Failed to delete event {event.get('summary')}: {str(e)}")
-            return False
-        return True
+    while failed_events:
+        still_failed = []
+        
+        def delete_event(event):
+            try:
+                delete_event_with_retry(service, calendar_id, event['id'])
+                return True
+            except Exception as e:
+                print(f"Failed to delete event {event.get('summary')}: {str(e)}")
+                return False
 
-    # Delete events in parallel and collect results
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        results = list(executor.map(delete_event, events))
-    
-    # Check if all deletions were successful
-    if not all(results):
-        print("Warning: Some events failed to delete")
+        # Try to delete events in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            results = list(zip(executor.map(delete_event, failed_events), failed_events))
+            still_failed = [event for success, event in results if not success]
+        
+        if still_failed:
+            print(f"Retrying {len(still_failed)} failed deletions...")
+            failed_events = still_failed
+        else:
+            failed_events = []
 
 
 def load_csv_data(file_path):
@@ -406,29 +411,42 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
 
     # Create calendar events in parallel
     def create_event_wrapper(event):
-        event_date = event['date'].strftime("%Y-%m-%d")
-        title = f"{event['estimated_hrs']}hrs - {event['project']}: {event['task']}"
-        description = (
-            f"{event['task']}\n"
-            f"Estimated time: {event['estimated_hrs']} hours"
-        )
-        create_calendar_event(
-            event_date=event_date,
-            title=title,
-            description=description,
-            calendar_name=calendar_name
-        )
+        try:
+            event_date = event['date'].strftime("%Y-%m-%d")
+            title = f"{event['estimated_hrs']}hrs - {event['project']}: {event['task']}"
+            description = (
+                f"{event['task']}\n"
+                f"Estimated time: {event['estimated_hrs']} hours"
+            )
+            create_calendar_event(
+                event_date=event_date,
+                title=title,
+                description=description,
+                calendar_name=calendar_name
+            )
+            return True
+        except Exception as e:
+            print(f"Failed to create event for {event['task']}: {str(e)}")
+            return False
 
     # Delete all existing events first
     delete_all_events(calendar_name)
 
-    # Create new events in parallel and collect results
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = list(executor.map(create_event_wrapper, events))
-    
-    # Check if all creations were successful
-    if None in futures:
-        print("Warning: Some events failed to create")
+    # Create new events with retries
+    failed_events = events
+    while failed_events:
+        still_failed = []
+        
+        # Try to create events in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            results = list(zip(executor.map(create_event_wrapper, failed_events), failed_events))
+            still_failed = [event for success, event in results if not success]
+        
+        if still_failed:
+            print(f"Retrying {len(still_failed)} failed creations...")
+            failed_events = still_failed
+        else:
+            failed_events = []
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Schedule tasks from CSV into calendar')
