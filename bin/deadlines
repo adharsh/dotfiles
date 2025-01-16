@@ -293,20 +293,23 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         while task_hours > 0:
             # If we can fit the task in today's remaining time
             if task_hours <= hours_remaining:
-                # Create calendar event
-                events.append({
-                    "date": current_date,
-                    "project": row['project'],
-                    "task": row['task'],
-                    # "description": row['description'],
-                    "estimated_hrs": row['estimated_hrs'],
-                })
-                hours_remaining -= task_hours
-                task_hours = 0
+                hours_for_this_day = task_hours
             else:
-                # Use up the remaining hours for today
-                task_hours -= hours_remaining
+                hours_for_this_day = hours_remaining
 
+            # Create calendar event
+            events.append({
+                "date": current_date,
+                "project": row['project'],
+                "task": row['task'],
+                # "description": row['description'],
+                "estimated_hrs": hours_for_this_day,
+            })
+            
+            hours_remaining -= hours_for_this_day
+            task_hours -= hours_for_this_day
+            
+            if task_hours > 0:
                 # Move to next day
                 current_date += timedelta(days=1)
                 current_day = current_date.strftime("%A")
