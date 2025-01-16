@@ -97,50 +97,6 @@ def get_credentials():
     
     return creds
 
-def create_calendar_event(event_date, title, description, calendar_name):
-    """
-    Create an all-day event in Google Calendar
-    
-    Args:
-        event_date (str): Date in 'YYYY-MM-DD' format
-        title (str): Event title
-        description (str): Event description
-        calendar_name (str): Name of the calendar to add event to
-    """
-    service = get_service()
-    
-    # Get calendar ID by name
-    calendar_list = service.calendarList().list().execute()
-    calendar_id = None
-    
-    for calendar in calendar_list['items']:
-        if calendar['summary'] == calendar_name:
-            calendar_id = calendar['id']
-            break
-    
-    if not calendar_id:
-        raise ValueError(f"Calendar '{calendar_name}' not found")
-    
-    # Create event
-    event = {
-        'summary': title,
-        'description': description,
-        'start': {
-            'date': event_date,
-            'timeZone': 'UTC',
-        },
-        'end': {
-            'date': event_date,
-            'timeZone': 'UTC',
-        }
-    }
-    
-    try:
-        return create_event_with_retry(service, calendar_id, event)
-    except Exception as e:
-        print(f"Failed to create event {title}: {str(e)}")
-        return None
-    # print(f"Event created: {event.get('htmlLink')}")
 
 def delete_all_events(calendar_name):
     """
@@ -151,7 +107,7 @@ def delete_all_events(calendar_name):
     """
     service = get_service()
     
-    # Get calendar ID by name
+    # Get calendar ID by name ONCE at the start
     calendar_list = service.calendarList().list().execute()
     calendar_id = None
     
@@ -176,6 +132,7 @@ def delete_all_events(calendar_name):
         
         def delete_event(event):
             try:
+                service = get_service()  # Get fresh service for each thread
                 delete_event_with_retry(service, calendar_id, event['id'])
                 return True
             except Exception as e:
@@ -409,28 +366,48 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     if no_sync:
         return
 
-    # Create calendar events in parallel
+    # Get calendar ID ONCE before starting event creation
+    service = get_service()
+    calendar_list = service.calendarList().list().execute()
+    calendar_id = None
+    
+    for calendar in calendar_list['items']:
+        if calendar['summary'] == calendar_name:
+            calendar_id = calendar['id']
+            break
+    
+    if not calendar_id:
+        raise ValueError(f"Calendar '{calendar_name}' not found")
+
+    # Delete all existing events first
+    delete_all_events(calendar_name)
+
     def create_event_wrapper(event):
         try:
+            service = get_service()  # Get fresh service for each thread
             event_date = event['date'].strftime("%Y-%m-%d")
             title = f"{event['estimated_hrs']}hrs - {event['project']}: {event['task']}"
             description = (
                 f"{event['task']}\n"
                 f"Estimated time: {event['estimated_hrs']} hours"
             )
-            create_calendar_event(
-                event_date=event_date,
-                title=title,
-                description=description,
-                calendar_name=calendar_name
-            )
+            event_body = {
+                'summary': title,
+                'description': description,
+                'start': {
+                    'date': event_date,
+                    'timeZone': 'UTC',
+                },
+                'end': {
+                    'date': event_date,
+                    'timeZone': 'UTC',
+                }
+            }
+            create_event_with_retry(service, calendar_id, event_body)
             return True
         except Exception as e:
             print(f"Failed to create event for {event['task']}: {str(e)}")
             return False
-
-    # Delete all existing events first
-    delete_all_events(calendar_name)
 
     # Create new events with retries
     failed_events = events
