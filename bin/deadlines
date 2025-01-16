@@ -175,7 +175,7 @@ def load_csv_data(file_path):
 
     return df
 
-def format_duration(total_days):
+def format_days(total_days):
     """
     Format a duration in days to a string showing months, weeks, and days.
     
@@ -211,7 +211,51 @@ def format_duration(total_days):
     
     return " ".join(parts)
 
-def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_gcal=True):
+def format_hours(total_hours):
+    """
+    Format a duration in hours to a string showing months, weeks, days, and hours.
+    
+    Args:
+        total_hours (int): Total number of hours
+        
+    Returns:
+        str: Formatted string like "1m 2w 3d 4h" or "5h"
+    """
+    # Calculate days from hours
+    total_days = total_hours // 24
+    hours = total_hours % 24
+    
+    # Calculate months (assuming 30 days per month)
+    months = total_days // 30
+    remaining_days = total_days % 30
+    
+    # Calculate weeks from remaining days
+    weeks = remaining_days // 7
+    days = remaining_days % 7
+    
+    # Build the output string
+    parts = []
+    
+    if months > 0:
+        parts.append(f"{months}m")
+    
+    if weeks > 0:
+        parts.append(f"{weeks}w")
+    
+    if days > 0:
+        parts.append(f"{days}d")
+        
+    if hours > 0:
+        parts.append(f"{hours}h")
+    
+    # Handle special case when duration is 0
+    if not parts:
+        return "0h"
+    
+    return " ".join(parts)
+
+
+def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync=False):
     """
     Schedule tasks from CSV file into calendar based on available minutes per day.
     
@@ -263,16 +307,11 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_
                 current_day = current_date.strftime("%A")
                 minutes_remaining = MINUTES_PER_DAY[current_day]
 
-    # Calculate maximum lengths for padding
-    max_project_len = max(len(event['project']) for event in events)
-    max_task_len = max(len(event['task']) for event in events)
-    max_duration_len = max(len(format_duration((event['date'] - start_date).days)) for event in events)
-
     # Print project and task timeline
-    start_date = start_date - timedelta(days=1)  # Subtract 1 day to include today
+    start_date = start_date
     last_project = events[0]['project']
-    last_project_deadline = start_date 
-    last_task_deadline = start_date
+    first_task_deadline = events[0]['date']
+    last_task_deadline = None
     current_project_output = "" 
 
     print(f"Timeline from {(start_date + timedelta(days=1)).strftime('%Y-%m-%d')}.")
@@ -281,54 +320,57 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, update_
         project = event['project']
         task = event['task']
         
+        # Processing new project
         if project != last_project:
-            if last_project is not None:
-                time_diff = (current_deadline - last_project_deadline).days
-                duration_str = format_duration(time_diff)
-                print(f"\n{last_project}: {'':{max_project_len-len(last_project)}} {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
-                print(current_project_output.rstrip())
-                current_project_output = ""
+            time_diff = (last_task_deadline - first_task_deadline).days + 1
+            duration_str = format_days(time_diff)
+            print(f"\n{last_project}: {duration_str}, {last_task_deadline.strftime('%Y-%m-%d')}")
+            print(current_project_output.rstrip())
+            current_project_output = ""
+
             last_project = project
-            last_project_deadline = current_deadline
+            first_task_deadline = current_deadline
             last_task_deadline = None
         
-        time_diff = (current_deadline - last_task_deadline).days if last_task_deadline else 0
-        duration_str = format_duration(time_diff)
-        current_project_output += f"  {task}: {'':{max_task_len-len(task)}} {duration_str:>{max_duration_len}}, {event['date']}\n"
+        duration_str = format_hours(event['estimated_mins'] // 60)
+        hours_given_day = str(MINUTES_PER_DAY[event['date'].strftime('%A')] // 60) + "h"
+        current_project_output += f"  {task}: {duration_str}, {event['date'].strftime('%a')} {hours_given_day}, {event['date'].strftime('%Y-%m-%d')}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
     if last_project:
-        time_diff = (current_deadline - start_date).days  # Compare with start date
-        duration_str = format_duration(time_diff)
-        print(f"\n{last_project}: {'':{max_project_len-len(last_project)}} {duration_str:>{max_duration_len}}, {last_task_deadline.strftime('%Y-%m-%d')}")
+        time_diff = (last_task_deadline - first_task_deadline).days + 1
+        duration_str = format_days(time_diff)
+        print(f"\n{last_project}: {duration_str}, {last_task_deadline.strftime('%Y-%m-%d')}")
         print(current_project_output.rstrip())
 
     print()
 
+    if no_sync:
+        return
+
     # Create calendar events
-    if update_gcal:
-        delete_all_events(calendar_name)
-        for event in events:
-            event_date = event['date'].strftime("%Y-%m-%d")
-            title = f"{event['project']}: {event['task']}"
-            description = (
-                # f"{event['task']}:\n{event['description']}\n"
-                f"{event['task']}"
-                f"Estimated time: {event['estimated_mins']} minutes"
-            )
-            create_calendar_event(
-                event_date=event_date,
-                title=title,
-                description=description,
-                calendar_name=calendar_name
-            )
+    delete_all_events(calendar_name)
+    for event in events:
+        event_date = event['date'].strftime("%Y-%m-%d")
+        title = f"{event['project']}: {event['task']}"
+        description = (
+            # f"{event['task']}:\n{event['description']}\n"
+            f"{event['task']}"
+            f"Estimated time: {event['estimated_mins']} minutes"
+        )
+        create_calendar_event(
+            event_date=event_date,
+            title=title,
+            description=description,
+            calendar_name=calendar_name
+        )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Schedule tasks from CSV into calendar')
     parser.add_argument('filepath', type=str, help='Path to the todos.csv file')
     parser.add_argument('--start-today', action='store_false', default=True, help='Start scheduling from today instead of tomorrow (default: start tomorrow)')
-    parser.add_argument('--update-gcal', action='store_true', default=True, help='Update Google Calendar with the scheduled tasks')
+    parser.add_argument('--no-sync', action='store_true', default=False, help='Print schedule without updating Google Calendar')
   
     args = parser.parse_args()
     
@@ -337,4 +379,4 @@ if __name__ == "__main__":
     if not filepath.exists():
         raise FileNotFoundError(f"Could not find file: {filepath}")
     
-    schedule_tasks(filepath, start_tomorrow=args.start_today, update_gcal=args.update_gcal)
+    schedule_tasks(filepath, start_tomorrow=args.start_today, no_sync=args.no_sync)
