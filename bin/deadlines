@@ -14,7 +14,7 @@ import pickle
 import pandas as pd
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
+    wait=wait_exponential(multiplier=2, min=10, max=60),
     reraise=True
 )
 def delete_event_with_retry(service, calendar_id, event_id):
@@ -28,7 +28,7 @@ def delete_event_with_retry(service, calendar_id, event_id):
         raise
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
+    wait=wait_exponential(multiplier=2, min=10, max=60),
     reraise=True
 )
 def create_event_with_retry(service, calendar_id, event_body):
@@ -181,7 +181,7 @@ def delete_all_events(calendar_name):
         return True
 
     # Delete events in parallel and collect results
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         results = list(executor.map(delete_event, events))
     
     # Check if all deletions were successful
@@ -423,7 +423,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     delete_all_events(calendar_name)
 
     # Create new events in parallel and collect results
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         futures = list(executor.map(create_event_wrapper, events))
     
     # Check if all creations were successful
