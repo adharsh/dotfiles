@@ -129,33 +129,19 @@ def delete_all_events(calendar_name):
         maxResults=2500
     ).execute()
     
-    failed_events = events_result.get('items', [])
-    total_events = len(failed_events)
+    events = events_result.get('items', [])
+    total_events = len(events)
     print(f"Found {total_events} events to delete")
     
-    while failed_events:
-        still_failed = []
-        
-        def delete_event(event):
-            try:
-                service = get_service()  # Get fresh service for each thread
-                delete_event_with_retry(service, calendar_id, event['id'])
-                return True
-            except Exception as e:
-                print(f"Failed to delete event {event.get('summary')}: {str(e)}")
-                return False
+    def delete_event(event):
+        service = get_service()  # Get fresh service for each thread
+        delete_event_with_retry(service, calendar_id, event['id'])
 
-        # Try to delete events in parallel
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            results = list(zip(executor.map(delete_event, failed_events), failed_events))
-            still_failed = [event for success, event in results if not success]
-        
-        if still_failed:
-            print(f"Retrying {len(still_failed)} failed deletions ({len(still_failed)}/{total_events} remaining)...")
-            failed_events = still_failed
-        else:
-            print("Successfully deleted all events!")
-            failed_events = []
+    # Delete events in parallel
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        list(executor.map(delete_event, events))
+    
+    print("Successfully deleted all events!")
 
 
 def load_csv_data(file_path):
