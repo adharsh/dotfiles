@@ -270,6 +270,10 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     # Get start date
     start_date = datetime.now() + timedelta(days=1 if start_tomorrow else 0)
     current_date = start_date
+
+    # Calculate padding lengths
+    max_project_len = max(len(str(p)) for p in df['project']) + 5  # Add some buffer
+    max_task_len = max(len(str(t)) for t in df['task']) + 5  # Add some buffer
     
     # Initialize hours remaining for the current day
     current_day = current_date.strftime("%A")
@@ -308,6 +312,9 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
                 current_day = current_date.strftime("%A")
                 hours_remaining = HOURS_PER_DAY[current_day]
 
+    # Calculate max duration length from all events
+    max_duration_len = max(len(format_hours(event['estimated_hrs'])) for event in events) + 5  # Add some buffer
+
     # Print project and task timeline
     start_date = start_date
     last_project = events[0]['project']
@@ -325,7 +332,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         if project != last_project:
             time_diff = (last_task_deadline - first_task_deadline).days + 1
             duration_str = format_days(time_diff)
-            print(f"\n{last_project:<25} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
+            print(f"\n{last_project:<{max_project_len}} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
             print(current_project_output.rstrip())
             current_project_output = ""
 
@@ -335,14 +342,14 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         
         duration_str = format_hours(event['estimated_hrs'])
         hours_given_day = str(HOURS_PER_DAY[event['date'].strftime('%A')]) + "h"
-        current_project_output += f"  {task:<35} {duration_str:<12} {event['date'].strftime('%a')} {hours_given_day:<6} {event['date'].strftime('%Y-%m-%d')}\n"
+        current_project_output += f"  {task:<{max_task_len}} {duration_str:<{max_duration_len}} {event['date'].strftime('%a')} {hours_given_day:<6} {event['date'].strftime('%Y-%m-%d')}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
     if last_project:
         time_diff = (last_task_deadline - first_task_deadline).days + 1
         duration_str = format_days(time_diff)
-        print(f"\n{last_project:<25} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
+        print(f"\n{last_project:<{max_project_len}} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
         print(current_project_output.rstrip())
 
     print()
