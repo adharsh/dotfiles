@@ -335,7 +335,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         
         duration_str = format_hours(event['estimated_hrs'])
         hours_given_day = str(HOURS_PER_DAY[event['date'].strftime('%A')]) + "h"
-        current_project_output += f"  {task:<35} {duration_str:<8} {event['date'].strftime('%a')} {hours_given_day:<4} {event['date'].strftime('%Y-%m-%d')}\n"
+        current_project_output += f"  {task:<35} {duration_str:<12} {event['date'].strftime('%a')} {hours_given_day:<6} {event['date'].strftime('%Y-%m-%d')}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
