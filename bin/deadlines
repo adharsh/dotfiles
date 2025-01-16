@@ -324,7 +324,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         if project != last_project:
             time_diff = (last_task_deadline - first_task_deadline).days + 1
             duration_str = format_days(time_diff)
-            print(f"\n{last_project}: {duration_str}, {last_task_deadline.strftime('%Y-%m-%d')}")
+            print(f"\n{last_project:<15} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
             print(current_project_output.rstrip())
             current_project_output = ""
 
@@ -334,14 +334,14 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         
         duration_str = format_hours(event['estimated_mins'] // 60)
         hours_given_day = str(MINUTES_PER_DAY[event['date'].strftime('%A')] // 60) + "h"
-        current_project_output += f"  {task}: {duration_str}, {event['date'].strftime('%a')} {hours_given_day}, {event['date'].strftime('%Y-%m-%d')}\n"
+        current_project_output += f"  {task:<20} {duration_str:<4} {event['date'].strftime('%a')} {hours_given_day:<4} {event['date'].strftime('%Y-%m-%d')}\n"
         last_task_deadline = current_deadline
     
     # Print the last project
     if last_project:
         time_diff = (last_task_deadline - first_task_deadline).days + 1
         duration_str = format_days(time_diff)
-        print(f"\n{last_project}: {duration_str}, {last_task_deadline.strftime('%Y-%m-%d')}")
+        print(f"\n{last_project:<15} {duration_str:<4} {last_task_deadline.strftime('%Y-%m-%d')}")
         print(current_project_output.rstrip())
 
     print()
