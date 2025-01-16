@@ -9,13 +9,11 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from concurrent.futures import ThreadPoolExecutor
 from threading import local
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, wait_exponential
 import pickle
 import pandas as pd
-import time
 
 @retry(
-    stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     reraise=True
 )
@@ -30,7 +28,6 @@ def delete_event_with_retry(service, calendar_id, event_id):
         raise
 
 @retry(
-    stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     reraise=True
 )
