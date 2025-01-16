@@ -389,7 +389,7 @@ if __name__ == "__main__":
     parser.add_argument('--start-today', action='store_false', default=True, help='Start scheduling from today instead of tomorrow (default: start tomorrow)')
     parser.add_argument('--no-sync', action='store_true', default=False, help='Print schedule without updating Google Calendar')
   
-    args = parser.parse_args()
+    args = parser.parse_args(["todos.csv"])
     
     # Convert string path to Path object and verify it exists
     filepath = Path(args.filepath)
