@@ -7,8 +7,18 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from concurrent.futures import ThreadPoolExecutor
+from threading import local
 import pickle
 import pandas as pd
+
+thread_local = local()
+
+def get_service():
+    """Get a thread-local Calendar API service object"""
+    if not hasattr(thread_local, "service"):
+        creds = get_credentials()
+        thread_local.service = build('calendar', 'v3', credentials=creds)
+    return thread_local.service
 
 # Constants
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -67,11 +77,8 @@ def create_calendar_event(event_date, title, description, calendar_name):
         description (str): Event description
         calendar_name (str): Name of the calendar to add event to
     """
-    # Get credentials
-    creds = get_credentials()
-    
-    # Build the service
-    service = build('calendar', 'v3', credentials=creds)
+    # Get service
+    service = get_service()
     
     # Get calendar ID by name
     calendar_list = service.calendarList().list().execute()
@@ -109,11 +116,8 @@ def delete_all_events(calendar_name):
     Args:
         calendar_name (str): Name of the calendar to delete events from
     """
-    # Get credentials
-    creds = get_credentials()
-    
-    # Build the service
-    service = build('calendar', 'v3', credentials=creds)
+    # Get initial service for calendar ID lookup
+    service = get_service()
     
     # Get calendar ID by name
     calendar_list = service.calendarList().list().execute()
@@ -136,6 +140,7 @@ def delete_all_events(calendar_name):
     events = events_result.get('items', [])
 
     def delete_event(event):
+        service = get_service()  # Get thread-local service
         service.events().delete(
             calendarId=calendar_id,
             eventId=event['id']
