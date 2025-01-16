@@ -364,10 +364,10 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     delete_all_events(calendar_name)
     for event in events:
         event_date = event['date'].strftime("%Y-%m-%d")
-        title = f"{event['project']}: {event['task']}"
+        title = f"{event['estimated_hrs']}hrs - {event['project']}: {event['task']}"
         description = (
             # f"{event['task']}:\n{event['description']}\n"
-            f"{event['task']}"
+            f"{event['task']}\n"
             f"Estimated time: {event['estimated_hrs']} hours"
         )
         create_calendar_event(
