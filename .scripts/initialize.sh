@@ -137,7 +137,7 @@ mamba create -n basic python -y
 mamba activate basic
 mamba install -y pip
 yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
-yes | pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client
+yes | pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
 nbdime config-git --enable --global
 mamba deactivate
 
