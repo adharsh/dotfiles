@@ -104,7 +104,7 @@ def create_calendar_event(event_date, title, description, calendar_name):
 
 def delete_all_events(calendar_name):
     """
-    Delete all events from a specified calendar
+    Delete all events from a specified calendar in parallel
     
     Args:
         calendar_name (str): Name of the calendar to delete events from
@@ -134,16 +134,16 @@ def delete_all_events(calendar_name):
     ).execute()
     
     events = events_result.get('items', [])
-    
-    # Delete each event
-    for event in events:
+
+    def delete_event(event):
         service.events().delete(
             calendarId=calendar_id,
             eventId=event['id']
         ).execute()
-        # print(f"Deleted event: {event.get('summary')}")
     
-    # print(f"Deleted all events from calendar: {calendar_name}")
+    # Delete events in parallel
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(delete_event, events)
 
 
 def load_csv_data(file_path):
