@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from concurrent.futures import ThreadPoolExecutor
 import pickle
 import pandas as pd
 
@@ -360,13 +361,11 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     if no_sync:
         return
 
-    # Create calendar events
-    delete_all_events(calendar_name)
-    for event in events:
+    # Create calendar events in parallel
+    def create_event_wrapper(event):
         event_date = event['date'].strftime("%Y-%m-%d")
         title = f"{event['estimated_hrs']}hrs - {event['project']}: {event['task']}"
         description = (
-            # f"{event['task']}:\n{event['description']}\n"
             f"{event['task']}\n"
             f"Estimated time: {event['estimated_hrs']} hours"
         )
@@ -376,6 +375,13 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
             description=description,
             calendar_name=calendar_name
         )
+
+    # Delete all existing events first
+    delete_all_events(calendar_name)
+
+    # Create new events in parallel
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(create_event_wrapper, events)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Schedule tasks from CSV into calendar')
