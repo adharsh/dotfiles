@@ -13,6 +13,24 @@ from tenacity import retry, wait_exponential
 import pickle
 import pandas as pd
 
+# Constants
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+CONFIG_DIR = Path.home() / 'dotfiles' / 'credentials' / 'google_calendar'
+CREDENTIALS_PATH = CONFIG_DIR / 'credentials.json'
+TOKEN_PATH = CONFIG_DIR / 'token.pickle'
+
+# Number of hours availabe for each day of the week
+# Total: 50 hours
+HOURS_PER_DAY = {
+    "Monday": 7,
+    "Tuesday": 9,
+    "Wednesday": 9,
+    "Thursday": 4,
+    "Friday": 4,
+    "Saturday": 6,
+    "Sunday": 11
+}
+
 @retry(
     wait=wait_exponential(multiplier=2, min=10, max=60),
     reraise=True,
@@ -51,24 +69,6 @@ def get_service():
         creds = get_credentials()
         thread_local.service = build('calendar', 'v3', credentials=creds)
     return thread_local.service
-
-# Constants
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-CONFIG_DIR = Path.home() / 'dotfiles' / 'credentials' / 'google_calendar'
-CREDENTIALS_PATH = CONFIG_DIR / 'credentials.json'
-TOKEN_PATH = CONFIG_DIR / 'token.pickle'
-
-# Number of hours availabe for each day of the week
-# Total: 50 hours
-HOURS_PER_DAY = {
-    "Monday": 7,
-    "Tuesday": 9,
-    "Wednesday": 9,
-    "Thursday": 4,
-    "Friday": 4,
-    "Saturday": 6,
-    "Sunday": 11
-}
 
 def get_credentials():
     """Get valid credentials, either from token file or by authenticating."""
