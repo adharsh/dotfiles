@@ -13,6 +13,9 @@ from tenacity import retry, wait_exponential
 import pickle
 import pandas as pd
 
+# Download credentials.json from Google Cloud Console and place in below defined config directory
+# https://console.cloud.google.com/apis/credentials?project=calendar-api-441018
+
 # Constants
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 CONFIG_DIR = Path.home() / 'dotfiles' / 'credentials' / 'google_calendar'
