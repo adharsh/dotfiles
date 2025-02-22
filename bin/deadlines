@@ -1,5 +1,7 @@
 #!/home/adharsh/miniforge3/envs/basic/bin/python
 
+# deadlines todos.csv --no-sync 2>&1 | tee calendar.txt
+
 import argparse
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -321,13 +323,12 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     max_duration_len = max(len(format_hours(event['estimated_hrs'])) for event in events) + 5  # Add some buffer
 
     # Print project and task timeline
-    start_date = start_date
     last_project = events[0]['project']
     first_task_deadline = events[0]['date']
     last_task_deadline = None
     current_project_output = "" 
 
-    print(f"Timeline from {(start_date + timedelta(days=1)).strftime('%Y-%m-%d')}.")
+    print(f"Timeline from {(start_date).strftime('%Y-%m-%d')}.")
     for event in events:
         current_deadline = event['date']
         project = event['project']
