@@ -1,6 +1,7 @@
 #!/home/adharsh/miniforge3/envs/basic/bin/python
 
-# deadlines todos.csv --no-sync 2>&1 | tee calendar.txt
+# Usage:
+# time deadlines todos.csv --start-today --no-sync 2>&1 | tee calendar.txt
 
 import argparse
 from pathlib import Path
