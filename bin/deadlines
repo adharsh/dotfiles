@@ -192,11 +192,11 @@ def format_days(total_days):
         str: Formatted string like "1 month, 2 weeks, 3 days" or "5 days"
     """
     # Calculate months (assuming 30 days per month)
-    months = total_days // 30
+    months = int(total_days // 30)
     remaining_days = total_days % 30
     
     # Calculate weeks from remaining days
-    weeks = remaining_days // 7
+    weeks = int(remaining_days // 7)
     days = remaining_days % 7
     
     # Build the output string
@@ -228,15 +228,15 @@ def format_hours(total_hours):
         str: Formatted string like "1m 2w 3d 4h" or "5h"
     """
     # Calculate days from hours
-    total_days = total_hours // 24
+    total_days = int(total_hours // 24)
     hours = total_hours % 24
     
     # Calculate months (assuming 30 days per month)
-    months = total_days // 30
+    months = int(total_days // 30)
     remaining_days = total_days % 30
     
     # Calculate weeks from remaining days
-    weeks = remaining_days // 7
+    weeks = int(remaining_days // 7)
     days = remaining_days % 7
     
     # Build the output string
@@ -252,8 +252,8 @@ def format_hours(total_hours):
         parts.append(f"{days}d")
         
     if hours > 0:
-        parts.append(f"{hours}h")
-    
+        parts.append(f"{int(hours) if hours.is_integer() else hours}h")
+
     # Handle special case when duration is 0
     if not parts:
         return "0h"
