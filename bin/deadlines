@@ -282,7 +282,7 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
     
     # Initialize hours remaining for the current day
     current_day = current_date.strftime("%A")
-    hours_remaining = HOURS_PER_DAY[current_day]
+    hours_remaining_for_curr_day = HOURS_PER_DAY[current_day]
     
     # Process each task
     events = []
@@ -296,11 +296,15 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
         
         # While we still have hours to allocate for this task
         while task_hours > 0:
+
+            # If we have no more hours left for the current day, move to next day
+            if hours_remaining_for_curr_day == 0:
+                current_date += timedelta(days=1)
+                current_day = current_date.strftime("%A")
+                hours_remaining_for_curr_day = HOURS_PER_DAY[current_day]
+
             # If we can fit the task in today's remaining time
-            if task_hours <= hours_remaining:
-                hours_for_this_day = task_hours
-            else:
-                hours_for_this_day = hours_remaining
+            task_hours_for_curr_day = min(task_hours, hours_remaining_for_curr_day)
 
             # Create calendar event
             events.append({
@@ -308,17 +312,11 @@ def schedule_tasks(filepath, calendar_name="Focus", start_tomorrow=True, no_sync
                 "project": row['project'],
                 "task": row['task'],
                 # "description": row['description'],
-                "estimated_hrs": hours_for_this_day,
+                "estimated_hrs": task_hours_for_curr_day,
             })
             
-            hours_remaining -= hours_for_this_day
-            task_hours -= hours_for_this_day
-            
-            if task_hours > 0:
-                # Move to next day
-                current_date += timedelta(days=1)
-                current_day = current_date.strftime("%A")
-                hours_remaining = HOURS_PER_DAY[current_day]
+            hours_remaining_for_curr_day -= task_hours_for_curr_day
+            task_hours -= task_hours_for_curr_day
 
     # Calculate max duration length from all events
     max_duration_len = max(len(format_hours(event['estimated_hrs'])) for event in events) + 5  # Add some buffer
