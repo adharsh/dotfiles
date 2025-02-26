@@ -106,12 +106,16 @@ def get_credentials():
     return creds
 
 
-def delete_all_events(calendar_name):
+def delete_all_events(calendar_name, max_retries=3):
     """
     Delete all events from a specified calendar
     
     Args:
         calendar_name (str): Name of the calendar to delete events from
+        max_retries (int): Maximum number of retry attempts if events remain
+    
+    Raises:
+        RuntimeError: If events still remain after all retry attempts
     """
     service = get_service()
     
@@ -129,25 +133,48 @@ def delete_all_events(calendar_name):
     if not calendar_id:
         raise ValueError(f"Calendar '{calendar_name}' not found")
     
-    # Get all events
-    events_result = service.events().list(
-        calendarId=calendar_id,
-        maxResults=2500
-    ).execute()
-    
-    events = events_result.get('items', [])
-    total_events = len(events)
-    print(f"Found {total_events} events to delete")
-    
-    def delete_event(event):
-        service = get_service()  # Get fresh service for each thread
-        delete_event_with_retry(service, calendar_id, event['id'])
+    for attempt in range(max_retries):
+        # Get all events
+        events_result = service.events().list(
+            calendarId=calendar_id,
+            maxResults=2500
+        ).execute()
+        
+        events = events_result.get('items', [])
+        total_events = len(events)
+        
+        if total_events == 0:
+            print("No events to delete!")
+            return
+            
+        print(f"Found {total_events} events to delete (attempt {attempt+1}/{max_retries})")
+        
+        def delete_event(event):
+            service = get_service()  # Get fresh service for each thread
+            delete_event_with_retry(service, calendar_id, event['id'])
 
-    # Delete events in parallel
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        list(executor.map(delete_event, events))
+        # Delete events in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            list(executor.map(delete_event, events))
+        
+        # Verify deletion by checking if any events remain
+        verification_result = service.events().list(
+            calendarId=calendar_id,
+            maxResults=2500
+        ).execute()
+        
+        remaining_events = verification_result.get('items', [])
+        remaining_count = len(remaining_events)
+        
+        if remaining_count == 0:
+            print("Successfully deleted all events!")
+            return
+        else:
+            print(f"Warning: {remaining_count} events still remain after deletion attempt {attempt+1}")
+            # If this is not the last attempt, we'll try again
     
-    print("Successfully deleted all events!")
+    # If we get here, we've exhausted all retries and events still remain
+    raise RuntimeError(f"Failed to delete all events after {max_retries} attempts. {remaining_count} events still remain.")
 
 
 def load_csv_data(file_path):
