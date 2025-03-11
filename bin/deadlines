@@ -18,6 +18,7 @@ import pandas as pd
 
 # Download credentials.json from Google Cloud Console and place in below defined config directory
 # https://console.cloud.google.com/apis/credentials?project=calendar-api-441018
+# Delete token.pickle to re-authenticate
 
 # Constants
 SCOPES = ['https://www.googleapis.com/auth/calendar']
