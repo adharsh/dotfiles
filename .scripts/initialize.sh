@@ -138,6 +138,7 @@ mamba activate basic
 mamba install -y pip
 yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
 yes | pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
+yes | pip install nvitop
 nbdime config-git --enable --global
 mamba deactivate
 
@@ -178,9 +179,9 @@ read -p "Install CUDA first." -r
 mamba create -n ml python=3.12 -y
 mamba activate ml
 mamba install -y pip
-yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets nvitop altair
+yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
 python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -p "CUDA is not available" -r
-yes | pip install jupyterlab pandas tokenizers datasets nvitop altair triton
+yes | pip install jupyterlab pandas tokenizers datasets altair triton
 yes | pip install jaxtyping pycairo
 git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
 (cd .triton-viz && pip install -e .)
