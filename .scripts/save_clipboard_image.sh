@@ -22,7 +22,6 @@ save_markdown_to_clipboard() {
     local filename
     local parent_dir
 
-    filepath="$1"
     filename=$(basename "$filepath")
     parent_dir=$(basename "$(dirname "$filepath")")
     
@@ -46,12 +45,15 @@ save_markdown_to_clipboard() {
     echo -e -n "${markdown_str}" | xclip -selection clipboard
 }
 
+# Generate a consistent filename for the screenshot
+screenshot_filename="screenshot-$(date '+%Y-%m-%d-%H-%M-%S-%N').png"
+
 # Check for quick save flag
 while getopts "q" opt; do
     case $opt in
         q) 
             # Get last directory and generate save path
-            save_path="$(get_last_directory)/screenshot-$(date '+%Y-%m-%d-%H-%M-%S-%N').png"
+            save_path="$(get_last_directory)/$screenshot_filename"
             
             # Capture screenshot directly to final location
             if ! maim -s "$save_path" || [ ! -s "$save_path" ]; then
@@ -89,8 +91,8 @@ fi
 # Get the last used directory
 last_dir=$(get_last_directory)
 
-# Use zenity to open a file selection dialog, starting in the last used directory
-save_path=$(zenity --file-selection --save --filename="$last_dir/clipboard_image.png" --title="Select where to save the image")
+# Use zenity to open a file selection dialog, starting in the last used directory with default filename
+save_path=$(zenity --file-selection --save --filename="$last_dir/$screenshot_filename" --title="Select where to save the image")
 
 # Check if a file was selected
 if [ -n "$save_path" ]; then
