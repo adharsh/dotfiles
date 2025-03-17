@@ -91,8 +91,8 @@ fi
 # Get the last used directory
 last_dir=$(get_last_directory)
 
-# Use zenity to open a file selection dialog, starting in the last used directory with default filename
-save_path=$(zenity --file-selection --save --filename="$last_dir/$screenshot_filename" --title="Select where to save the image")
+# Use yad to open a file selection dialog, starting in the last used directory with default filename
+save_path=$(yad --file-selection --save --filename="$last_dir/$screenshot_filename" --title="Select where to save the image")
 
 # Check if a file was selected
 if [ -n "$save_path" ]; then
