@@ -157,6 +157,7 @@ mamba activate sgpt
 mamba install -y pip
 yes | pip install shell-gpt litellm
 sgpt --install-integration
+sgpt --install-functions
 read -p "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing." -r
 mamba deactivate
 
