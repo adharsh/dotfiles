@@ -170,22 +170,10 @@ alias rcopyq="killall copyq && copyq & copyq show && exit"
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
 
-# Usage: c                 - Copies the last run command to clipboard
-# Usage: echo "text" | c   - Copies piped input to clipboard
-c() {
-    if [ -t 0 ] && [ $# -eq 0 ]; then
-        # If nothing is piped in and no arguments are provided
-        fc -ln -1 | sed 's/^\s*//' | tee >(xclip -selection clipboard)
-    else
-        # Copy piped input to clipboard
-        tee >(xclip -selection clipboard)
-    fi
-}
-
-# Load api keys (openai key same as anthropic key for sgpt)
-export OPENAI_API_KEY=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
+# Load api keys: sgpt - openai, aider - anthropic
+export OPENAI_API_KEY=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
 export ANTHROPIC_API_KEY=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
-export TAVILY_API_KEY=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
+# export TAVILY_API_KEY=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
 
 # Disable ctrl+s (which freezes output) to allow Shell-GPT integration
 stty -ixon
@@ -202,35 +190,29 @@ fi
 bind -x '"\C-s": _sgpt_bash'
 # Shell-GPT integration BASH v0.2
 
-# Shell-GPT 
+# Clipboard
+## Usage: c                 - Copies the last run command to clipboard
+## Usage: echo "text" | c   - Copies piped input to clipboard
+c() {
+    if [ -t 0 ] && [ $# -eq 0 ]; then
+        # If nothing is piped in and no arguments are provided
+        fc -ln -1 | sed 's/^\s*//' | tee >(xclip -selection clipboard)
+    else
+        # Copy piped input to clipboard
+        tee >(xclip -selection clipboard)
+    fi
+}
+
+# Shell-GPT quick chat
 ## Usage: <command> | s
 ## Usage: s your prompt here
 s() {
-    # Check if input is coming from a pipe or as arguments
-    if [ -p /dev/stdin ]; then
-        # Input is coming from a pipe
-        input=$(cat)
-    else
-        # Input is coming as arguments
-        sgpt "$*"
-        return 0
-    fi
+  sgpt "$*"
+}
 
-    # Echo the input
-    echo "$input"
-
-    # Generate a unique identifier for this chat session
-    chat_id="sgpt_$(date +%s)"
-
-    # Start the non-interactive explanation in the background
-    sgpt --no-interaction --chat "$chat_id" "$input" &
-    explanation_pid=$!
-
-    # Start the interactive REPL session immediately
-    sleep 0.1
-    sgpt --repl "$chat_id"
-    # repl_pid=$!
-
-    # Wait for both processes to finish
-    wait $explanation_pid
+# Shell-GPT chat
+## Usage: <command> | srt
+## Usage: srt < my_file.txt
+srt() {
+  sgpt --repl temp "$@"
 }
