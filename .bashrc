@@ -204,15 +204,17 @@ c() {
 }
 
 # Shell-GPT quick chat
-## Usage: <command> | s
 ## Usage: s your prompt here
+## Usage: <command> | s
+## Usage: <command> | s your prompt here
 s() {
   sgpt "$*"
 }
 
 # Shell-GPT chat
-## Usage: <command> | srt
+## Usage: srt
 ## Usage: srt < my_file.txt
+## Usage: <command> | srt
 srt() {
   sgpt --repl temp "$@"
 }
