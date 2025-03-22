@@ -18,7 +18,11 @@ if [ "$version" != "130.0.6723.58-1" ]; then
 fi
 sudo apt install ./google-chrome-stable_current_amd64.deb
 popd
-read -p "Assumes chrome is already installed. Set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
+
+# Dark Mode 
+read -p "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
+# Light Mode profile / dev-profile
+cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
 
 # Install configurations
 cd ~/dotfiles
