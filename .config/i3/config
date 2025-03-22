@@ -234,8 +234,9 @@ bindsym $mod+c exec --no-startup-id copyq show
 # Dynamic monitors binding
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 
-# Chrome for development
-bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
+# Chrome for development (with sign-in)
+bindsym $mod+Shift+n exec /opt/google/chrome/chrome \
+  --user-data-dir=$HOME/.config/google-chrome/dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \
   --disable-backgrounding-occluded-windows \
@@ -248,5 +249,21 @@ bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
   --metrics-recording-only \
   --no-first-run \
   --no-default-browser-check \
+  --remote-debugging-port=9222
+
+# Chrome for development (without sign-in)
+bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
   --user-data-dir=/tmp/chrome-dev-profile \
+  --disable-background-networking \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-breakpad \
+  --disable-client-side-phishing-detection \
+  --disable-default-apps \
+  --disable-dev-shm-usage \
+  --disable-renderer-backgrounding \
+  --disable-sync \
+  --metrics-recording-only \
+  --no-first-run \
+  --no-default-browser-check \
   --remote-debugging-port=9222
