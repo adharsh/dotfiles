@@ -60,7 +60,7 @@ fi
 start_time=$(date +%s.%N)
 
 # If we get here, we have a valid screenshot. Now copy it to clipboard
-xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
+# xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
 
 # Encode the image to base64 and save to a file
 base64 "$TEMP_IMAGE" > "$TEMP_BASE64"
