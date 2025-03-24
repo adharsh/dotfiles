@@ -4,8 +4,8 @@
 # Example: 'echo *' prints "*" instead of matching files
 set -f
 
-# Set your OpenAI API key here
-API_KEY="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"
+# Source the API key file explicitly
+[ -f "$HOME/.api_keys" ] && source "$HOME/.api_keys"
 
 # Define the detailed prompt
 read -r -d '' PROMPT << EOM
@@ -93,7 +93,7 @@ jq -n \
 # Send the image to OpenAI API for analysis
 RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d @"$TEMP_JSON")
 
 # Clean up temporary files

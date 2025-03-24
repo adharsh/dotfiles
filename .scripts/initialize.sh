@@ -24,6 +24,15 @@ read -p "Assumes chrome is already installed. For default profile, set chrome://
 # Light Mode profile / dev-profile
 cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
 
+# Populate .api_keys file
+read -r -d '' PROMPT << EOM
+export OPENAI_API_KEY=
+export ANTHROPIC_API_KEY=
+export CLOCKIFY_API_KEY=
+EOM
+echo "$PROMPT" > .api_keys
+read -p "Populate .api_keys file"
+
 # Install configurations
 cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*

@@ -1,3 +1,6 @@
+# Ignore .api_keys file
+.api_keys
+
 # Ignore all files in the bin directory
 bin/*
 
