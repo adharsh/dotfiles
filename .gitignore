@@ -1,6 +1,3 @@
-# Ignore .api_keys file
-/.api_keys
-
 # Ignore all files in the bin directory
 /bin/*
 
@@ -12,6 +9,12 @@
 /!bin/sgpt
 /!bin/subtasks
 /!bin/gsm
+
+# Ignore .screenshot_save_config
+/.screenshot_save_config
+
+# Ignore .api_keys file
+/.api_keys
 
 # Ignore credentials directory
 /credentials
