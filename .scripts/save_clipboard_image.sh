@@ -56,7 +56,7 @@ while getopts "q" opt; do
             save_path="$(get_last_directory)/$screenshot_filename"
             
             # Capture screenshot directly to final location
-            if ! maim -s "$save_path" || [ ! -s "$save_path" ]; then
+            if ! maim -s --hidecursor "$save_path" || [ ! -s "$save_path" ]; then
                 rm -f "$save_path"
                 exit 1
             fi
@@ -79,7 +79,7 @@ TEMP_IMAGE=$(mktemp --suffix=.png)
 
 # Capture the screenshot directly to the file
 #  and check the exit status of maim and the file size
-if ! maim -s "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
+if ! maim -s --hidecursor "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
     echo "Failed to capture screenshot or screenshot was cancelled. Exiting."
     rm -f "$TEMP_IMAGE"
     exit 1
