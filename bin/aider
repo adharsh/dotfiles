@@ -1,2 +1,2 @@
 #!/bin/bash                                                                                                                                                                                 
-/home/adharsh/miniforge3/envs/aider/bin/aider --sonnet --dark-mode "$@" 
+/home/adharsh/miniforge3/envs/aider/bin/aider --dark-mode "$@" 
