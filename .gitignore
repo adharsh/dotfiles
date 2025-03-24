@@ -1,17 +1,17 @@
 # Ignore .api_keys file
-.api_keys
+/.api_keys
 
 # Ignore all files in the bin directory
-bin/*
+/bin/*
 
 # But don't ignore these specific files
-!bin/aider
-!bin/cl
-!bin/csvfmt
-!bin/deadlines
-!bin/sgpt
-!bin/subtasks
-!bin/gsm
+/!bin/aider
+/!bin/cl
+/!bin/csvfmt
+/!bin/deadlines
+/!bin/sgpt
+/!bin/subtasks
+/!bin/gsm
 
 # Ignore credentials directory
 /credentials
