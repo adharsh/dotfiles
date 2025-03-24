@@ -33,6 +33,9 @@ EOM
 echo "$PROMPT" > .api_keys
 read -rp "Populate .api_keys file"
 
+# Create .screenshot_save_config
+touch .screenshot_save_config
+
 # Install configurations
 cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
