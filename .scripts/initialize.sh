@@ -34,6 +34,7 @@ sudo apt install -y git xpad dunst p7zip-full gnome-sound-recorder pulseaudio pa
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 sudo apt install -y stress-ng gnome-system-monitor ncdu
+sudo apt install -y cmake
 # sudo apt install -y pandoc texlive-latex-recommended wkhtmltopdf
 
 # Git config
