@@ -7,7 +7,7 @@ set -e
 sudo apt update
 
 # Install Chrome (specific version to avoid breaking changes to viewport)
-read -p  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view" -r
+read -rp  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view"
 pushd .
 cd ~/Downloads/
 # Verify version with: 
@@ -20,18 +20,18 @@ sudo apt install ./google-chrome-stable_current_amd64.deb
 popd
 
 # Dark Mode 
-read -p "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled." -r
+read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
 # Light Mode profile / dev-profile
 cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
 
 # Populate .api_keys file
-read -r -d '' PROMPT << EOM
+read -rd '' PROMPT << EOM
 export OPENAI_API_KEY=
 export ANTHROPIC_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
 echo "$PROMPT" > .api_keys
-read -p "Populate .api_keys file"
+read -rp "Populate .api_keys file"
 
 # Install configurations
 cd ~/dotfiles
@@ -72,7 +72,7 @@ bash .scripts/caffeine-indicator-fix.sh
 
 # Web Dev - fnm, node, pnpm
 curl -fsSL https://fnm.vercel.app/install | bash
-read -p "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag" -r
+read -rp "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag"
 fnm install --lts
 fnm default "$(fnm list | grep lts | tail -n1)"
 corepack enable pnpm
@@ -80,7 +80,7 @@ command -v fnm >/dev/null 2>&1 || { echo "Error: fnm is NOT installed"; exit 1; 
 command -v node >/dev/null 2>&1 || { echo "Error: Node.js is NOT installed"; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo "Error: pnpm is NOT installed"; exit 1; }
 pnpm setup
-read -p "New pnpm script is appended to .bashrc, merge with existing one." -r
+read -rp "New pnpm script is appended to .bashrc, merge with existing one."
 
 # pnpm global packages 
 ## Anki
@@ -92,15 +92,15 @@ cd ~/Downloads
 wget https://github.com/ankitects/anki/releases/download/24.06.3/anki-24.06.3-linux-qt6.tar.zst
 tar --use-compress-program=unzstd -xvf anki-24.06.3-linux-qt6.tar.zst
 cd anki-24.06.3-linux-qt6/
-read -p "Please check anki-24.06.3-linux-qt6/install.sh script before running with sudo. Once done, hit enter." -r
+read -rp "Please check anki-24.06.3-linux-qt6/install.sh script before running with sudo. Once done, hit enter."
 sudo ./install.sh
 cd ..
 rm anki-24.06.3-linux-qt6.tar.zst 
 popd 
-read -p "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled." -r
+read -rp "Leave anki-24.06.3-linux-qt6/uninstall.sh in case it needs to be uninstalled."
 
 # Make sure to install Anki plugins, descriptions in order below
-read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 175794613" -r
+read -rp "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 817108664 175794613"
 # Anki Connect: for connecting to Anki via an API
 # Advanced browser: In browse, add Time (Total) and Lapses, sort by either column
 # Review Heatmap: Heatmap similar to contribution activity on Github
@@ -109,8 +109,8 @@ read -p "Install Anki Plugins: 2055492159 874215009 1771074083 613684242 8171086
 ## Adjust interval so retention is 80-90%: https://youtu.be/A56wVF9Fr0Q?si=ibnpMcC4nsgdksZu&t=564
 # Anki Simulator: Predict how long it will to master a deck
 # Anki Leaderboard: Compete online
-read -p "Adjust Display Order->New card gather order = Random cards" -r
-read -p "Adjust Display Order->New card sort order = Order gathered" -r
+read -rp "Adjust Display Order->New card gather order = Random cards"
+read -rp "Adjust Display Order->New card sort order = Order gathered"
 
 # Install timer
 sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
@@ -137,7 +137,7 @@ rm vscode.deb
 # NOTE: Every time you change the configuration, please re-enable Custom CSS.
 sudo chown -R "$(whoami)" "$(which code)"
 sudo chown -R "$(whoami)" /usr/share/code
-read -p "Activate command in VSCode: Reload Custom CSS and JS" -r
+read -rp "Activate command in VSCode: Reload Custom CSS and JS"
 
 # Installing mamba from miniforge
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
@@ -172,7 +172,7 @@ mamba install -y pip
 yes | pip install shell-gpt litellm
 sgpt --install-integration
 sgpt --install-functions
-read -p "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing." -r
+read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history line) before continuing."
 mamba deactivate
 
 ## Installing aider
@@ -190,12 +190,12 @@ yes | pip install latex2sympy2 Flask
 mamba deactivate
 
 ## Installing ML libraries: PyTorch
-read -p "Install CUDA first." -r
+read -rp "Install CUDA first."
 mamba create -n ml python=3.12 -y
 mamba activate ml
 mamba install -y pip
 yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
-python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -p "CUDA is not available" -r
+python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -rp "CUDA is not available"
 yes | pip install jupyterlab pandas tokenizers datasets altair triton
 yes | pip install jaxtyping pycairo
 git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
@@ -242,4 +242,4 @@ git clone https://github.com/Genymobile/scrcpy ~/.scrcpy
 
 
 
-read -p "Reboot to see changes." -r
+read -rp "Reboot to see changes."
