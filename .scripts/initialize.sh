@@ -126,7 +126,8 @@ sudo apt update
 sudo apt install -y copyq
 
 # Install VSCode
-wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+# wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+read -rp "Install VSCode: https://drive.google.com/file/d/1Lm8PEcAtKLCHExo_EPV0Ds_iz-1AJyg7/view"
 sudo apt install ./vscode.deb
 rm vscode.deb
 # Custom CSS and JS Loader for pretty-ts-errors-hack.css
