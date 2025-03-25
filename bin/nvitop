@@ -1,2 +1,2 @@
 #!/bin/bash
-/home/adharsh/miniforge3/envs/basic/bin/nvitop
+/home/adharsh/miniforge3/envs/basic/bin/nvitop "$@" 
