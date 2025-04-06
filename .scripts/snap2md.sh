@@ -50,7 +50,7 @@ echo "JSON: $TEMP_JSON"
 
 # Take a screenshot of selected area, check exit status and file size
 echo "Select the area you want to capture..."
-if ! maim -s -f png "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
+if ! maim -s --hidecursor -f png "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
     echo "Failed to capture screenshot or screenshot was cancelled. Aborting."
     rm -f "$TEMP_IMAGE"
     exit 1
