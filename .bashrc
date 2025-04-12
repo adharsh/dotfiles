@@ -183,8 +183,9 @@ stty -ixon
 # Shell-GPT integration BASH v0.2
 _sgpt_bash() {
 if [[ -n "$READLINE_LINE" ]]; then
+    history -s "$READLINE_LINE" # Custom: Add prompt to shell history
     READLINE_LINE=$(sgpt --shell <<< "$READLINE_LINE" --no-interaction)
-    history -s "$READLINE_LINE" # Custom: Add to shell history
+    history -s "$READLINE_LINE" # Custom: Add generated command to shell history
     READLINE_POINT=${#READLINE_LINE}
 fi
 }
