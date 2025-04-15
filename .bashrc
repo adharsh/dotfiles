@@ -168,10 +168,26 @@ alias m=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 export PATH="$PATH:/opt/jetbrains-toolbox-2.1.3.18901"
-function rcopyq() {
+
+# Restart copyq
+rcopyq() {
     pkill copyq
     nohup copyq >/dev/null 2>&1 &
 }
+
+# Git exclude without tracking
+gex() {
+    if [[ ! -f .git/info/exclude ]]; then
+        echo "Not a Git repository, missing .git/info/exclude file" >&2
+        return 1
+    fi
+
+    for f in "$@"; do
+        echo "$f" >> .git/info/exclude
+        echo "Excluded (without tracking): $f"
+    done
+}
+
 
 # Load api keys
 [ -f "$HOME/.api_keys" ] && source "$HOME/.api_keys"
