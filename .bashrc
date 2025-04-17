@@ -233,29 +233,29 @@ s() {
 ## Usage: srt
 ## Usage: srt < my_file.txt
 ## Usage: <command> | srt
-# srt() {
-#   sgpt --repl temp "$@"
-# }
 srt() {
-#   # Read piped input or stdin (if any)
-#   if [ ! -t 0 ]; then
-#     input="$(cat -)"
-#     echo $input
+  sgpt --repl temp "$@"
+}
+# srt() {
+# #   # Read piped input or stdin (if any)
+# #   if [ ! -t 0 ]; then
+# #     input="$(cat -)"
+# #     echo $input
+# #   fi
+
+#   # Append function arguments on a new line, if any
+#   if [ $# -ne 0 ]; then
+#     # input="${input}"$'\n'"$*"
+#     input="$*"
 #   fi
 
-  # Append function arguments on a new line, if any
-  if [ $# -ne 0 ]; then
-    # input="${input}"$'\n'"$*"
-    input="$*"
-  fi
+#   # Escape backslashes and double quotes for Expect
+#   input_escaped=$(printf '%s' "$input" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-  # Escape backslashes and double quotes for Expect
-  input_escaped=$(printf '%s' "$input" | sed 's/\\/\\\\/g; s/"/\\"/g')
-
-  expect -c "
-    spawn -noecho sgpt --repl temp
-    expect \"> \"
-    send \"${input_escaped}\r\"
-    interact
-  "
-}
+#   expect -c "
+#     spawn -noecho sgpt --repl temp
+#     expect \"> \"
+#     send \"${input_escaped}\r\"
+#     interact
+#   "
+# }
