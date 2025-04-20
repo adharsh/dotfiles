@@ -208,10 +208,6 @@ bindsym Mod4+Shift+l exec --no-startup-id "i3lock --color 000000 --show-failed-a
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set 10%+
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
 
-# Chrome: https://superuser.com/a/377195
-bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default --password-store=gnome
-bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directory=Default --incognito
-
 # Select area for screenshot and copy to clipboard
 bindsym Print exec --no-startup-id "maim -s --hidecursor | xclip -selection clipboard -t image/png"
 # Delayed screenshot, ex: if you want to screenshot right click context menus
@@ -233,6 +229,10 @@ bindsym $mod+c exec --no-startup-id copyq show
 
 # Dynamic monitors binding
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
+
+# Chrome: https://superuser.com/a/377195
+bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default --password-store=gnome
+bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directory=Default --incognito
 
 # Chrome for development (with sign-in)
 bindsym $mod+Shift+n exec /opt/google/chrome/chrome \
