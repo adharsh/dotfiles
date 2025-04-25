@@ -23,6 +23,7 @@ popd
 read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
 # Light Mode profile / dev-profile
 cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
+read -rp "For light mode, also install: https://github.com/adharsh/file-dark-mode/"
 
 # Populate .api_keys file
 read -rd '' PROMPT << EOM
