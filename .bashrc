@@ -183,8 +183,21 @@ gex() {
     fi
 
     for f in "$@"; do
-        echo "$f" >> .git/info/exclude
-        echo "Excluded (without tracking): $f"
+        # Trim trailing slashes and whitespace
+        f_clean=$(echo "$f" | sed 's:/*$::' | xargs)
+
+        # Re-add trailing slash if it's a directory
+        if [[ -d "$f_clean" ]]; then
+            f_clean="$f_clean/"
+        fi
+
+        # Only add if not already present (exact match)
+        if ! grep -qxF "$f_clean" .git/info/exclude; then
+            echo "$f_clean" >> .git/info/exclude
+            echo "Excluded (without tracking): $f_clean"
+        else
+            echo "Already excluded: $f_clean"
+        fi
     done
 }
 
