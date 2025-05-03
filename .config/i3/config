@@ -225,17 +225,17 @@ bindsym $mod+Shift+m exec --no-startup-id ~/dotfiles/.scripts/snap2md.sh
 bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdotool getwindowfocus) _NET_WM_PID | sed 's/_NET_WM_PID(CARDINAL) = //')"
 
 # Clipboard
-bindsym $mod+c exec --no-startup-id copyq show
+bindsym $mod+c exec copyq show
 
 # Dynamic monitors binding
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 
 # Chrome: https://superuser.com/a/377195
-bindsym $mod+g exec --no-startup-id google-chrome-stable --profile-directory=Default --password-store=gnome
-bindsym $mod+Shift+g exec --no-startup-id google-chrome-stable --profile-directory=Default --incognito
+bindsym $mod+g exec ~/dotfiles/.scripts/reset_scale.sh google-chrome-stable --profile-directory=Default --password-store=gnome
+bindsym $mod+Shift+g exec ~/dotfiles/.scripts/reset_scale.sh google-chrome-stable --profile-directory=Default --incognito
 
 # Chrome for development (with sign-in)
-bindsym $mod+Shift+n exec /opt/google/chrome/chrome \
+bindsym $mod+Shift+n exec ~/dotfiles/.scripts/reset_scale.sh /opt/google/chrome/chrome \
   --user-data-dir=$HOME/.config/google-chrome/dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \
@@ -252,7 +252,7 @@ bindsym $mod+Shift+n exec /opt/google/chrome/chrome \
   --remote-debugging-port=9222
 
 # Chrome for development (without sign-in)
-bindsym $mod+Shift+d exec /opt/google/chrome/chrome \
+bindsym $mod+Shift+d exec ~/dotfiles/.scripts/reset_scale.sh /opt/google/chrome/chrome \
   --user-data-dir=/tmp/chrome-dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \

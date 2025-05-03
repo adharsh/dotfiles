@@ -6,19 +6,8 @@ set -e
 # Update apt repos
 sudo apt update
 
-# Install Chrome (specific version to avoid breaking changes to viewport)
-read -rp  "Install Google Chrome 130.0.6723.58: https://drive.google.com/file/d/1Sp1NCEoQFFh8H8cE2O5BY8jRJ4bLSaBG/view"
-pushd .
-cd ~/Downloads/
-# Verify version with: 
-version=$(dpkg-deb -f google-chrome-stable_current_amd64.deb Version)
-if [ "$version" != "130.0.6723.58-1" ]; then
-    echo "Version mismatch" >&2
-    exit 1
-fi
-sudo apt install ./google-chrome-stable_current_amd64.deb
-popd
-
+# Install Chrome
+read -rp  "Install Google Chrome"
 # Dark Mode 
 read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
 # Light Mode profile / dev-profile
@@ -127,8 +116,7 @@ sudo apt update
 sudo apt install -y copyq
 
 # Install VSCode
-# wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
-read -rp "Install VSCode: https://drive.google.com/file/d/1Lm8PEcAtKLCHExo_EPV0Ds_iz-1AJyg7/view"
+wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 sudo apt install ./vscode.deb
 rm vscode.deb
 # Custom CSS and JS Loader for pretty-ts-errors-hack.css

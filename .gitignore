@@ -9,6 +9,7 @@
 !/bin/sgpt
 !/bin/subtasks
 !/bin/gsm
+!/bin/code
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config
