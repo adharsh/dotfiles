@@ -184,15 +184,19 @@ gex() {
     for f in "$@"; do
         # Trim trailing slashes and whitespace
         f_clean=$(echo "$f" | sed 's:/*$::' | xargs)
-
+        
         # Re-add trailing slash if it's a directory
         if [[ -d "$f_clean" ]]; then
             f_clean="$f_clean/"
         fi
-
+        
+        # Escape special characters for Git pattern matching
+        # Escape: [ ] * ? \
+        f_git_escaped=$(printf '%s\n' "$f_clean" | sed -e 's/[][*?\\]/\\&/g')
+        
         # Only add if not already present (exact match)
-        if ! grep -qxF "$f_clean" .git/info/exclude; then
-            echo "$f_clean" >> .git/info/exclude
+        if ! grep -Fxq -- "$f_git_escaped" .git/info/exclude; then
+            echo "$f_git_escaped" >> .git/info/exclude
             echo "Excluded (without tracking): $f_clean"
         else
             echo "Already excluded: $f_clean"
