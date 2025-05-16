@@ -233,6 +233,7 @@ sudo apt install ffmpeg libsdl2-2.0-0 adb wget \
 git clone https://github.com/Genymobile/scrcpy ~/.scrcpy
 (cd ~/.scrcpy && ./install_release.sh)
 
-
+# Nsight Compute & Nsight Systems
+read -rp "Download and install Nsight Compute and Nsight Systems."
 
 read -rp "Reboot to see changes."
