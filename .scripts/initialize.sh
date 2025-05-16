@@ -27,6 +27,7 @@ read -rp "Populate .api_keys file"
 touch .screenshot_save_config
 
 # Install configurations
+rm ~/.bashrc ~/.profile
 cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
 stow .
