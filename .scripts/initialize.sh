@@ -38,12 +38,12 @@ export ANTHROPIC_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
 )
-    echo "$PROMPT" > .api_keys
+    echo "$PROMPT" > ~/dotfiles/.api_keys
     read -rp "Populate .api_keys file"
 fi
 
 # Create .screenshot_save_config
-touch .screenshot_save_config
+touch ~/dotfiles/.screenshot_save_config
 
 # Install configurations
 rm -f ~/.bashrc ~/.profile
