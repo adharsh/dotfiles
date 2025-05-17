@@ -126,12 +126,12 @@ fi
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
     sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
     sudo apt update
-    sudo apt install alarm-clock-applet
+    sudo apt install -y alarm-clock-applet
 fi
 
 # Install copyq clipboard manager
 if ! command -v copyq >/dev/null 2>&1; then
-    sudo add-apt-repository ppa:hluk/copyq
+    sudo add-apt-repository -y ppa:hluk/copyq
     sudo apt update
     sudo apt install -y copyq
 fi
