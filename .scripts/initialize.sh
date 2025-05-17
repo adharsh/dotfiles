@@ -104,7 +104,7 @@ if ! command -v fnm >/dev/null 2>&1; then
     curl -fsSL https://fnm.vercel.app/install | bash
     read -rp "New fnm script is appended to .bashrc, merge with existing one."
     
-    # Update if necessary, doing this since source ~/.bashrc will exit early
+    # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
     FNM_PATH="/home/adharsh/.local/share/fnm"
     if [ -d "$FNM_PATH" ]; then
         export PATH="$FNM_PATH:$PATH"
@@ -160,6 +160,11 @@ if ! command -v mamba >/dev/null 2>&1; then
     wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
     chmod +x Miniforge3-Linux-x86_64.sh
     ./Miniforge3-Linux-x86_64.sh -b
+
+    # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
+    export MAMBA_ROOT_PREFIX="$HOME/miniforge3"
+    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+
     conda config --set auto_activate_base false
     mamba shell init
     rm Miniforge3-Linux-x86_64.sh
