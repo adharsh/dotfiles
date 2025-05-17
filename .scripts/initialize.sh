@@ -56,7 +56,7 @@ if ! command -v google-chrome >/dev/null 2>&1; then
 fi
 
 # Installing vim-gtk3 so yanks go into clipboard
-sudo apt install -y xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
+sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
 sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 sudo apt install -y stress-ng gnome-system-monitor ncdu
