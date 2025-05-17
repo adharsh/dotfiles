@@ -150,6 +150,7 @@ fi
 ## Basic
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/basic" ]; then
     mamba create -n basic python -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate basic
     mamba install -y pip
     yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
@@ -162,6 +163,7 @@ fi
 ## Installing cling: C++ jupyter kernel
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/cling" ]; then
     mamba create -n cling -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate cling
     mamba install -y xeus-cling -c conda-forge
     mamba install -y pip
@@ -172,6 +174,7 @@ fi
 ## Installing sgpt
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/sgpt" ]; then
     mamba create -n sgpt python -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate sgpt
     mamba install -y pip
     yes | pip install shell-gpt litellm
@@ -184,15 +187,18 @@ fi
 ## Installing aider
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/aider" ]; then
     mamba create -n aider python -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate aider
     mamba install -y pip
-    yes | pip install aider-chat
+    yes | pip install aider-install
+    aider-install
     mamba deactivate
 fi
 
 ## For VSCode Extension: Latex Sympy Calculator
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/latex_sympy_calculator" ]; then
     mamba create -n latex_sympy_calculator python=3.11 -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate latex_sympy_calculator 
     mamba install -y pip
     yes | pip install latex2sympy2 Flask 
@@ -203,6 +209,7 @@ fi
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     read -rp "Install CUDA first."
     mamba create -n ml python=3.12 -y
+    eval "$(mamba shell hook --shell bash)"
     mamba activate ml
     mamba install -y pip
     yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
