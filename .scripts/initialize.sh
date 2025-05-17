@@ -2,6 +2,10 @@
 
 # Run from home directory:
 # curl -Lv https://raw.githubusercontent.com/adharsh/dotfiles/master/.scripts/initialize.sh | bash
+if [ "$PWD" != "$HOME" ]; then
+    echo "Error: Not in home directory. Current directory is $PWD"
+    exit 1
+fi
 
 # Stop script if any command fails
 set -ex
