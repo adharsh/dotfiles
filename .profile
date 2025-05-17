@@ -26,6 +26,9 @@ if [ -d "$HOME/.local/bin" ] ; then
     PATH="$HOME/.local/bin:$PATH"
 fi
 
+# uv
+export PATH="/home/adharsh/.local/bin:$PATH"
+
 # High resolution screen change:
 # https://ricostacruz.com/til/fractional-scaling-on-xorg-linux
 export GDK_SCALE=2
