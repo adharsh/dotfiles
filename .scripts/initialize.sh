@@ -15,9 +15,14 @@ sudo apt update
 sudo apt upgrade
 
 # Install git
-sudo apt install -y git 
+sudo apt install -y git xclip
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
+if [ ! -f ~/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
+fi
+cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
+read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys."
 
 # Install dotfiles
 if [ ! -d ~/dotfiles ]; then
