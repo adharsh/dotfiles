@@ -46,7 +46,7 @@ fi
 touch .screenshot_save_config
 
 # Install configurations
-rm ~/.bashrc ~/.profile
+rm -f ~/.bashrc ~/.profile
 cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
 stow .
