@@ -102,7 +102,7 @@ fi
 # Web Dev fnm (like nvm but faster to handle different versions of node.js), pnpm (npm but faster)
 if ! command -v fnm >/dev/null 2>&1; then
     curl -fsSL https://fnm.vercel.app/install | bash
-    read -rp "New fnm script is appended to .bashrc, merge with existing one, be sure to add in --use-on-cd flag"
+    read -rp "New fnm script is appended to .bashrc, merge with existing one."
     source ~/.bashrc
     fnm install --lts
     fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
