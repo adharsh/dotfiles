@@ -15,7 +15,7 @@ sudo apt update
 sudo apt upgrade
 
 # Install git
-sudo apt install -y git xclip vim vim-gtk3 # Installing vim-gtk3 so yanks go into clipboard
+sudo apt install -y git xclip vim vim-gtk3 stow # Installing vim-gtk3 so yanks go into clipboard
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 git config --global core.editor "vim"
@@ -68,7 +68,7 @@ fi
 
 # Install general packages
 sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
-sudo apt install -y i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
+sudo apt install -y i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 sudo apt install -y stress-ng gnome-system-monitor ncdu
 sudo apt install -y cmake
