@@ -103,7 +103,14 @@ fi
 if ! command -v fnm >/dev/null 2>&1; then
     curl -fsSL https://fnm.vercel.app/install | bash
     read -rp "New fnm script is appended to .bashrc, merge with existing one."
-    source ~/.bashrc
+    
+    # Update if necessary, doing this since source ~/.bashrc will exit early
+    FNM_PATH="/home/adharsh/.local/share/fnm"
+    if [ -d "$FNM_PATH" ]; then
+        export PATH="$FNM_PATH:$PATH"
+        eval "`fnm env`"
+    fi
+
     fnm install --lts
     fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
 fi
