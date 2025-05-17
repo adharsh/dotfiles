@@ -15,10 +15,11 @@ sudo apt update
 sudo apt upgrade
 
 # Install git
-sudo apt install -y git xclip
+sudo apt install -y git xclip vim vim-gtk3 # Installing vim-gtk3 so yanks go into clipboard
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
-if [ ! -f ~/.ssh/id_ed25519 ]; then
+git config --global core.editor "vim"
+if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
 fi
 cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
@@ -64,9 +65,9 @@ if ! command -v google-chrome >/dev/null 2>&1; then
     read -rp "If password sync is not working, run .scripts/restart_chrome_password_sync.sh"
 fi
 
-# Installing vim-gtk3 so yanks go into clipboard
+# Install general packages
 sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
-sudo apt install -y vim vim-gtk3 i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
+sudo apt install -y i3 xdotool xautomation silversearcher-ag maim xclip stow udiskie blueman ripgrep curl arandr tree jq gpick
 sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
 sudo apt install -y stress-ng gnome-system-monitor ncdu
 sudo apt install -y cmake
