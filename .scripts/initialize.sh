@@ -32,11 +32,12 @@ fi
 
 # Create .api_keys file
 if [ ! -f ~/.api_keys ]; then
-    read -rd '' PROMPT << EOM
+    PROMPT=$(cat <<EOM
 export OPENAI_API_KEY=
 export ANTHROPIC_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
+)
     echo "$PROMPT" > .api_keys
     read -rp "Populate .api_keys file"
 fi
