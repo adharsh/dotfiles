@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run from home directory:
-# curl -O https://raw.githubusercontent.com/adharsh/dotfiles/master/.scripts/initialize.sh && bash initialize.sh
+# curl -O https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
 if [ "$PWD" != "$HOME" ]; then
     echo "Error: Not in home directory. Current directory is $PWD"
     exit 1
