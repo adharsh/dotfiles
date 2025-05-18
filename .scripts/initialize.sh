@@ -21,9 +21,9 @@ git config --global user.name "Adharsh Babu"
 git config --global core.editor "vim"
 if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
+    cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
+    read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys."
 fi
-cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
-read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys."
 
 # Install dotfiles
 if [ ! -d ~/dotfiles ]; then
@@ -39,7 +39,7 @@ export CLOCKIFY_API_KEY=
 EOM
 )
     echo "$PROMPT" > ~/dotfiles/.api_keys
-    read -rp "Populate .api_keys file"
+    read -rp "Populate .api_keys file: https://platform.openai.com/api-keys https://console.anthropic.com/settings/keys https://app.clockify.me/user/preferences#advanced"
 fi
 
 # Create .screenshot_save_config
@@ -102,7 +102,6 @@ fi
 # Web Dev fnm (like nvm but faster to handle different versions of node.js), pnpm (npm but faster)
 if ! command -v fnm >/dev/null 2>&1; then
     curl -fsSL https://fnm.vercel.app/install | bash
-    read -rp "New fnm script is appended to .bashrc, merge with existing one."
     
     # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
     FNM_PATH="/home/adharsh/.local/share/fnm"
@@ -110,6 +109,7 @@ if ! command -v fnm >/dev/null 2>&1; then
         export PATH="$FNM_PATH:$PATH"
         eval "`fnm env`"
     fi
+    read -rp "New fnm script is appended to .bashrc, merge with existing one. Check if sourcing matches in .bashrc."
 
     fnm install --lts
     fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
@@ -119,7 +119,6 @@ if ! command -v pnpm >/dev/null 2>&1; then
     # pnpm global packages 
     ## Markdown to Anki custom plugin
     yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
-    read -rp "New pnpm script is appended to .bashrc, merge with existing one."
 fi
 
 # Install timer
@@ -162,8 +161,9 @@ if ! command -v mamba >/dev/null 2>&1; then
     ./Miniforge3-Linux-x86_64.sh -b
 
     # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
-    export MAMBA_ROOT_PREFIX="$HOME/miniforge3"
+    MAMBA_ROOT_PREFIX="$HOME/miniforge3"
     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+    read -rp "Check if sourcing matches in .bashrc."
 
     conda config --set auto_activate_base false
     mamba shell init
