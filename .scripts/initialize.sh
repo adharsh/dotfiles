@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run from home directory:
-# curl -O https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
+# wget -O initialize.sh https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
 if [ "$PWD" != "$HOME" ]; then
     echo "Error: Not in home directory. Current directory is $PWD"
     exit 1
@@ -11,18 +11,56 @@ fi
 set -ex
 
 # Update & upgrade apt repos
-sudo apt update
-sudo apt upgrade
+sudo apt update -y
+sudo apt upgrade -y
 
-# Install git
-sudo apt install -y git xclip vim vim-gtk3 stow # Installing vim-gtk3 so yanks go into clipboard
+# Install bare minimum utilities
+sudo apt install -y git xclip vim vim-gtk3 stow curl # Installing vim-gtk3 so yanks go into clipboard
+
+# Install Chrome
+if ! command -v google-chrome >/dev/null 2>&1; then
+    curl -o google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    sudo apt install -y ./google-chrome.deb
+    rm google-chrome.deb
+    # Dark Mode 
+    read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
+    # Light Mode profile / dev-profile
+    cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
+fi
+
+# Install VSCode
+if ! command -v /usr/bin/code >/dev/null 2>&1; then
+    wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+    sudo apt install -y ./vscode.deb
+    rm vscode.deb
+    # Custom CSS and JS Loader for pretty-ts-errors-hack.css
+    # Follow more details here: 
+    # - https://github.com/yoavbls/pretty-ts-errors/blob/HEAD/docs/hide-original-errors.md
+    # - https://marketplace.visualstudio.com/items?itemName=yoavbls.pretty-ts-errors
+    # - https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css
+    # Custom CSS and JS
+    # SPECIAL NOTE: If Visual Studio Code complains about that it is corrupted, simply click “Don't show again”.
+    # NOTE: Every time after Visual Studio Code is updated, please re-enable Custom CSS.
+    # NOTE: Every time you change the configuration, please re-enable Custom CSS.
+    sudo chown -R "$(whoami)" "$(which code)"
+    sudo chown -R "$(whoami)" /usr/share/code
+    read -rp "Activate command in VSCode: Reload Custom CSS and JS"
+fi
+
+# Setup ssh keys
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 git config --global core.editor "vim"
 if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
     cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
-    read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys."
+    read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys: https://github.com/settings/keys"
+fi
+
+# Install file-dark-mode for light mode profile / dev-profile
+if [ ! -d ~/Downloads/file-dark-mode ]; then
+    git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
+    read -rp "For light mode profile or dev-profile, install: https://github.com/adharsh/file-dark-mode/ in chrome://extensions"
 fi
 
 # Install dotfiles
@@ -30,8 +68,11 @@ if [ ! -d ~/dotfiles ]; then
     git clone git@github.com:adharsh/dotfiles.git ~/dotfiles
 fi
 
+# Check if passwords are being synced in chrome
+read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
+
 # Create .api_keys file
-if [ ! -f ~/.api_keys ]; then
+if [ ! -f ~/dotfiles/.api_keys ]; then
     PROMPT=$(cat <<EOM
 export OPENAI_API_KEY=
 export ANTHROPIC_API_KEY=
@@ -40,6 +81,7 @@ EOM
 )
     echo "$PROMPT" > ~/dotfiles/.api_keys
     read -rp "Populate .api_keys file: https://platform.openai.com/api-keys https://console.anthropic.com/settings/keys https://app.clockify.me/user/preferences#advanced"
+    source ~/dotfiles/.api_keys
 fi
 
 # Create .screenshot_save_config
@@ -51,20 +93,6 @@ cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
 stow .
 cd ..
-
-# Install Chrome
-if ! command -v google-chrome >/dev/null 2>&1; then
-    curl -o google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    sudo apt install ./google-chrome.deb
-    rm google-chrome.deb
-    # Dark Mode 
-    read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
-    # Light Mode profile / dev-profile
-    cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
-    git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
-    read -rp "For light mode, also install: https://github.com/adharsh/file-dark-mode/"
-    read -rp "If password sync is not working, run .scripts/restart_chrome_password_sync.sh"
-fi
 
 # Install general packages
 sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
@@ -134,25 +162,6 @@ if ! command -v copyq >/dev/null 2>&1; then
     sudo apt update
     sudo apt install -y copyq
 fi
-
-# Install VSCode
-if ! command -v /usr/bin/code >/dev/null 2>&1; then
-    wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
-    sudo apt install ./vscode.deb
-    rm vscode.deb
-    # Custom CSS and JS Loader for pretty-ts-errors-hack.css
-    # Follow more details here: 
-    # - https://github.com/yoavbls/pretty-ts-errors/blob/HEAD/docs/hide-original-errors.md
-    # - https://marketplace.visualstudio.com/items?itemName=yoavbls.pretty-ts-errors
-    # - https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css
-    # Custom CSS and JS
-    # SPECIAL NOTE: If Visual Studio Code complains about that it is corrupted, simply click “Don't show again”.
-    # NOTE: Every time after Visual Studio Code is updated, please re-enable Custom CSS.
-    # NOTE: Every time you change the configuration, please re-enable Custom CSS.
-    sudo chown -R "$(whoami)" "$(which code)"
-    sudo chown -R "$(whoami)" /usr/share/code
-    read -rp "Activate command in VSCode: Reload Custom CSS and JS"
-fi 
 
 # Installing mamba from miniforge
 if ! command -v mamba >/dev/null 2>&1; then
@@ -224,19 +233,22 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/latex_sympy_calculator" ]; then
     eval "$(mamba shell hook --shell bash)"
     mamba activate latex_sympy_calculator 
     mamba install -y pip
-    yes | pip install latex2sympy2 Flask 
+    yes | pip install latex2sympy2 Flask
     mamba deactivate
 fi
 
 ## Installing ML libraries: PyTorch
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     read -rp "Install CUDA first."
+    sudo apt install -y libcairo2-dev # for pycairo
     mamba create -n ml python=3.12 -y
     eval "$(mamba shell hook --shell bash)"
     mamba activate ml
     mamba install -y pip
     yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
-    python3 -c "import torch; exit(0 if not torch.cuda.is_available() else 1)" && read -rp "CUDA is not available"
+    if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
+        echo "CUDA is not available"
+    fi
     yes | pip install jupyterlab pandas tokenizers datasets altair triton
     yes | pip install jaxtyping pycairo
     git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
@@ -247,7 +259,6 @@ fi
 # Install docker
 ## Add Docker's official GPG key:
 if ! command -v docker >/dev/null 2>&1; then
-    sudo apt update
     sudo apt install -y ca-certificates curl
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -270,7 +281,6 @@ if ! command -v docker >/dev/null 2>&1; then
     ## Start docker (Done automatically default in Ubuntu)
     sudo systemctl enable docker.service
     sudo systemctl enable containerd.service
-    read -rp "Reboot so docker will work without sudo."
 fi
 
 # Install Bazel
