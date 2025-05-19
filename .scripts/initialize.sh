@@ -287,9 +287,8 @@ if ! command -v docker >/dev/null 2>&1; then
     ## Install latest
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     ## Linux post install
-    sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist
+    sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist (prints stuff out)
     sudo usermod -aG docker "$USER" # docker will only work without sudo after logout
-    newgrp docker
     ## Installation verification
     docker run hello-world | grep -q "Hello from Docker!"
     ## Start docker (Done automatically default in Ubuntu)
