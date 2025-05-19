@@ -30,6 +30,13 @@ if ! command -v nvidia-smi >/dev/null 2>&1; then
     exit 1
 fi
 
+# Install CUDA
+read -rp "Install CUDA: https://developer.nvidia.com/cuda-downloads"
+if ! command -v nvcc >/dev/null 2>&1; then
+    echo "Error: Cuda not installed or nvcc not found." >&2
+    exit 1
+fi
+
 # Install bare minimum utilities
 sudo apt install -y git xclip vim vim-gtk3 stow curl # Installing vim-gtk3 so yanks go into clipboard
 
@@ -253,7 +260,6 @@ fi
 
 ## Installing ML libraries: PyTorch
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
-    read -rp "Install CUDA first."
     sudo apt install -y libcairo2-dev # for pycairo
     mamba create -n ml python=3.12 -y
     eval "$(mamba shell hook --shell bash)"
@@ -261,7 +267,7 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     mamba install -y pip
     yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
-        echo "CUDA is not available"
+        read -rp "CUDA is not available."
     fi
     yes | pip install jupyterlab pandas tokenizers datasets altair triton
     yes | pip install jaxtyping pycairo
