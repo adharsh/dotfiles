@@ -14,6 +14,20 @@ set -ex
 sudo apt update -y
 sudo apt upgrade -y
 
+# Install Nvidia Driver
+read -rp $'Follow these steps to install correct Nvidia Driver:
+1. Get GPU name, if you already have it, can skip to step 2
+1.1 Settings -> Additional Drivers
+1.2 Install a (recent) driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
+1.3 Run nvidia-smi without rebooting to get GPU name
+2. Look up GPU name on https://www.nvidia.com/en-us/drivers/ and get driver info
+3. Go to Settings -> Additional Drivers and then install the right driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
+4. Verify that nvidia-smi works'
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "Error: NVIDIA driver not installed or nvidia-smi not found." >&2
+    exit 1
+fi
+
 # Install bare minimum utilities
 sudo apt install -y git xclip vim vim-gtk3 stow curl # Installing vim-gtk3 so yanks go into clipboard
 
