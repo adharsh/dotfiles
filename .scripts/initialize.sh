@@ -3,14 +3,14 @@
 # Run from home directory:
 # wget -O initialize.sh https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
 
+# Stop script if any command fails
+set -ex
+
 # Script must only run from home directory
 if [ "$PWD" != "$HOME" ]; then
     echo "Error: Not in home directory. Current directory is $PWD"
     exit 1
 fi
-
-# Stop script if any command fails
-set -ex
 
 # Update & upgrade apt repos
 sudo apt update -y
@@ -24,16 +24,10 @@ read -rp $'Follow these steps to install correct Nvidia Driver:
 1.3 Run nvidia-smi without rebooting to get GPU name
 2. Look up GPU name on https://www.nvidia.com/en-us/drivers/ and get driver info
 3. Go to Settings -> Additional Drivers and then install the right driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
-4. Verify that nvidia-smi works'
+4. Reboot
+5. Verify that nvidia-smi works'
 if ! command -v nvidia-smi >/dev/null 2>&1; then
     echo "Error: NVIDIA driver not installed or nvidia-smi not found." >&2
-    exit 1
-fi
-
-# Install CUDA
-read -rp "Install CUDA: https://developer.nvidia.com/cuda-downloads"
-if ! command -v nvcc >/dev/null 2>&1; then
-    echo "Error: Cuda not installed or nvcc not found." >&2
     exit 1
 fi
 
@@ -45,9 +39,9 @@ if ! command -v google-chrome >/dev/null 2>&1; then
     curl -o google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     sudo apt install -y ./google-chrome.deb
     rm google-chrome.deb
-    # Dark Mode 
-    read -rp "Assumes chrome is already installed. For default profile, set chrome://flags Auto Dark Mode for Web Contents to Enabled."
-    # Light Mode profile / dev-profile
+    # Dark Mode for default profile
+    read -rp $'1. Sign in and sync. \n2. Set chrome://flags Auto Dark Mode for Web Contents to Enabled.'
+    # Light Mode profile / dev-profile, only after signing in to default profile since that will be copied over
     cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
 fi
 
@@ -113,7 +107,14 @@ touch ~/dotfiles/.screenshot_save_config
 # Install configurations
 rm -f ~/.bashrc ~/.profile
 chmod +x ~/dotfiles/bin/*
-dfm link
+~/dotfiles/bin/dfm link
+
+# Install CUDA (after stowing .bashrc for updated PATH and LD_LIBRARY_PATH)
+read -rp $'1. Install CUDA: https://developer.nvidia.com/cuda-downloads \n2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
+if ! command -v nvcc >/dev/null 2>&1; then
+    echo "Error: Cuda not installed or nvcc not found." >&2
+    exit 1
+fi
 
 # Install general packages
 sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
@@ -193,7 +194,7 @@ if ! command -v mamba >/dev/null 2>&1; then
     # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
     MAMBA_ROOT_PREFIX="$HOME/miniforge3"
     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-    read -rp "Check if sourcing matches in .bashrc."
+    read -rp "Check if sourcing matches in .bashrc for mamba."
 
     conda config --set auto_activate_base false
     mamba shell init
@@ -276,32 +277,6 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     mamba deactivate
 fi
 
-# Install docker
-## Add Docker's official GPG key:
-if ! command -v docker >/dev/null 2>&1; then
-    sudo apt install -y ca-certificates curl
-    sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-    sudo chmod a+r /etc/apt/keyrings/docker.asc
-    ## Add the repository to Apt sources:
-    # shellcheck disable=SC1091
-    echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt update
-    ## Install latest
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    ## Linux post install
-    sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist (prints stuff out)
-    sudo usermod -aG docker "$USER" # docker will only work without sudo after logout
-    ## Installation verification
-    docker run hello-world | grep -q "Hello from Docker!"
-    ## Start docker (Done automatically default in Ubuntu)
-    sudo systemctl enable docker.service
-    sudo systemctl enable containerd.service
-fi
-
 # Install Bazel
 if [ ! -f ~/bin/bazel ]; then
     wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
@@ -340,6 +315,33 @@ if ! command -v anki >/dev/null 2>&1; then
     # Anki Leaderboard: Compete online
     read -rp "Adjust Display Order->New card gather order = Random cards"
     read -rp "Adjust Display Order->New card sort order = Order gathered"
+fi
+
+# Install docker
+## Add Docker's official GPG key:
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt install -y ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+    ## Add the repository to Apt sources:
+    # shellcheck disable=SC1091
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt update
+    ## Install latest
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    ## Linux post install
+    sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist (prints stuff out)
+    sudo usermod -aG docker "$USER" # docker will only work without sudo after logout
+    read -rp "Reboot to run docker without sudo."
+fi
+## Installation verification
+if ! docker run hello-world | grep -q "Hello from Docker!"; then
+    read -rp "Docker verification failed."
+    exit 1
 fi
 
 # Nsight Compute & Nsight Systems
