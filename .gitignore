@@ -10,6 +10,7 @@
 !/bin/subtasks
 !/bin/gsm
 !/bin/code
+!/bin/dfm
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config

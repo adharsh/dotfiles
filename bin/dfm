@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# dfm: Dotfiles Manager
+#
+# This script manages your dotfiles setup using GNU stow and custom logic
+# for .config files. It's designed to be run from your ~/dotfiles repo.
+#
+# Usage:
+#   dfm link    - Symlinks dotfiles into $HOME. Uses stow for everything
+#                 except .config/, which is processed file-by-file to avoid
+#                 symlinking folders that may include intermediate or
+#                 auto-generated files from each app (e.g. VSCode, CopyQ).
+#
+#   dfm unlink  - Removes all symlinks created by this script. It uses
+#                 'stow -D' to remove dotfile links and unlinks individual
+#                 .config files if they are symlinks.
+#
+# Default mode is 'link' if no argument is given.
+#
+# NOTE: Be sure to have '.stow-local-ignore' in your dotfiles root with '.config'
+#       listed so that stow ignores .config entirely.
+#
+
+set -e
+
+MODE="${1:-link}"  # Default to 'link' if no argument passed
+
+cd "${HOME}/dotfiles"  # Ensure we're in the dotfiles repo
+
+# Step 1: Run stow for everything except .config
+echo "==> Processing non-.config items with stow..."
+
+if [[ "$MODE" == "link" ]]; then
+    stow .
+elif [[ "$MODE" == "unlink" ]]; then
+    stow -D .
+else
+    echo "Usage: $0 [link|unlink]"
+    exit 1
+fi
+
+# Step 2: Handle .config file-by-file
+echo "==> Processing .config files..."
+
+find .config -type f | while read -r file; do
+    target="$HOME/$file"
+
+    if [[ "$MODE" == "link" ]]; then
+        mkdir -p "$(dirname "$target")"
+        ln -sf "$(realpath "$file")" "$target"
+        echo "Linked: $target"
+    elif [[ "$MODE" == "unlink" ]]; then
+        if [ -L "$target" ]; then
+            rm "$target"
+            echo "Unlinked: $target"
+        fi
+    fi
+done
