@@ -103,10 +103,8 @@ touch ~/dotfiles/.screenshot_save_config
 
 # Install configurations
 rm -f ~/.bashrc ~/.profile
-cd ~/dotfiles
 chmod +x ~/dotfiles/bin/*
-stow .
-cd ..
+dfm link
 
 # Install general packages
 sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
