@@ -2,6 +2,8 @@
 
 # Run from home directory:
 # wget -O initialize.sh https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
+
+# Script must only run from home directory
 if [ "$PWD" != "$HOME" ]; then
     echo "Error: Not in home directory. Current directory is $PWD"
     exit 1
