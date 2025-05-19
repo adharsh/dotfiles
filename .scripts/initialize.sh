@@ -337,6 +337,7 @@ if ! command -v anki >/dev/null 2>&1; then
 fi
 
 # Nsight Compute & Nsight Systems
-read -rp "Download and install Nsight Compute and Nsight Systems."
+read -rp "Download and install Nsight Compute: https://developer.nvidia.com/tools-overview/nsight-compute/get-started#latest"
+read -rp "Download and install Nsight Systems: https://developer.nvidia.com/nsight-systems/get-started"
 
 read -rp "Reboot to see changes."
