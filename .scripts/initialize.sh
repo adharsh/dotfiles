@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run from home directory:
-# wget -O initialize.sh https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
+# wget -vO initialize.sh https://raw.githubusercontent.com/adharsh/dotfiles/refs/heads/master/.scripts/initialize.sh && bash initialize.sh
 
 # Stop script if any command fails
 set -ex
