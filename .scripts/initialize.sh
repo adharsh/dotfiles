@@ -337,6 +337,7 @@ if ! command -v docker >/dev/null 2>&1; then
     sudo getent group docker || sudo groupadd docker # Create group only if group doesn't exist (prints stuff out)
     sudo usermod -aG docker "$USER" # docker will only work without sudo after logout
     read -rp "Reboot to run docker without sudo."
+    exit 1
 fi
 ## Installation verification
 if ! docker run hello-world | grep -q "Hello from Docker!"; then
