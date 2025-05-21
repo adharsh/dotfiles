@@ -75,12 +75,6 @@ if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys: https://github.com/settings/keys"
 fi
 
-# Install file-dark-mode for light mode profile / dev-profile
-if [ ! -d ~/Downloads/file-dark-mode ]; then
-    git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
-    read -rp "For light mode profile or dev-profile, install: https://github.com/adharsh/file-dark-mode/ in chrome://extensions"
-fi
-
 # Install dotfiles
 if [ ! -d ~/dotfiles ]; then
     git clone git@github.com:adharsh/dotfiles.git ~/dotfiles
@@ -344,6 +338,12 @@ fi
 if ! docker run hello-world | grep -q "Hello from Docker!"; then
     read -rp "Docker verification failed."
     exit 1
+fi
+
+# Install file-dark-mode for light mode profile / dev-profile
+if [ ! -d ~/Downloads/file-dark-mode ]; then
+    git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
+    read -rp "For light mode profile or dev-profile, install: https://github.com/adharsh/file-dark-mode/ in chrome://extensions"
 fi
 
 # Nsight Compute & Nsight Systems
