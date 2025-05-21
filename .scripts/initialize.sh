@@ -263,6 +263,7 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
         read -rp "CUDA is not available."
+        exit 1
     fi
     yes | pip install jupyterlab pandas tokenizers datasets altair triton
     yes | pip install jaxtyping pycairo
