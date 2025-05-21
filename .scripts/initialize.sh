@@ -107,6 +107,14 @@ if ! command -v nvcc >/dev/null 2>&1; then
     echo "Error: Cuda not installed or nvcc not found." >&2
     exit 1
 fi
+if ! command -v ncu-ui >/dev/null 2>&1; then
+    echo "Error: Nsight Compute not found." >&2
+    exit 1
+fi
+if ! command -v nsys-ui >/dev/null 2>&1; then
+    echo "Error: Nsight Systems not found." >&2
+    exit 1
+fi
 
 # Install general packages
 packages=(
@@ -348,9 +356,5 @@ if [ ! -d ~/Downloads/file-dark-mode ]; then
     git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
     read -rp "For light mode profile or dev-profile, install: https://github.com/adharsh/file-dark-mode/ in chrome://extensions"
 fi
-
-# Nsight Compute & Nsight Systems
-read -rp "Download and install Nsight Compute: https://developer.nvidia.com/tools-overview/nsight-compute/get-started#latest"
-read -rp "Download and install Nsight Systems: https://developer.nvidia.com/nsight-systems/get-started"
 
 read -rp "Reboot to see changes."
