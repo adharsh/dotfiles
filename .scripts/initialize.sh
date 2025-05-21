@@ -351,10 +351,4 @@ fi
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
-# Install file-dark-mode for light mode profile / dev-profile
-if [ ! -d ~/Downloads/file-dark-mode ]; then
-    git clone git@github.com:adharsh/file-dark-mode.git ~/Downloads/file-dark-mode/
-    read -rp "For light mode profile or dev-profile, install: https://github.com/adharsh/file-dark-mode/ in chrome://extensions"
-fi
-
 read -rp "Reboot to see changes."
