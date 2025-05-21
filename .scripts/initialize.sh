@@ -80,9 +80,6 @@ if [ ! -d ~/dotfiles ]; then
     git clone git@github.com:adharsh/dotfiles.git ~/dotfiles
 fi
 
-# Check if passwords are being synced in chrome
-read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
-
 # Create .api_keys file
 if [ ! -f ~/dotfiles/.api_keys ]; then
     PROMPT=$(cat <<EOM
@@ -341,6 +338,9 @@ if ! docker run hello-world | grep -q "Hello from Docker!"; then
     read -rp "Docker verification failed."
     exit 1
 fi
+
+# Check if passwords are being synced in chrome
+read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
 # Install file-dark-mode for light mode profile / dev-profile
 if [ ! -d ~/Downloads/file-dark-mode ]; then
