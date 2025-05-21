@@ -112,12 +112,14 @@ if ! command -v nvcc >/dev/null 2>&1; then
 fi
 
 # Install general packages
-sudo apt install -y gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
-sudo apt install -y i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
-sudo apt install -y valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
-sudo apt install -y stress-ng gnome-system-monitor ncdu
-sudo apt install -y cmake
-# sudo apt install -y pandoc texlive-latex-recommended wkhtmltopdf
+packages=(
+    gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
+    i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
+    valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
+    stress-ng gnome-system-monitor ncdu
+    cmake
+)
+sudo apt install -y "${packages[@]}"
 
 # Add $USER to video group so you don't need sudo to run brightnessctl
 sudo apt install -y brightnessctl
