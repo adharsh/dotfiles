@@ -123,6 +123,7 @@ packages=(
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
     cmake
+    cheese
 )
 sudo apt install -y "${packages[@]}"
 
