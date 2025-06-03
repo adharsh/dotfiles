@@ -349,6 +349,11 @@ if ! docker run hello-world | grep -q "Hello from Docker!"; then
     exit 1
 fi
 
+# (Optional) Install slack
+if ! command -v /usr/bin/slack >/dev/null 2>&1; then
+    read -rp "(optional) Slack isn't installed."
+fi
+
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 

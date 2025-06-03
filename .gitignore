@@ -11,6 +11,7 @@
 !/bin/gsm
 !/bin/code
 !/bin/dfm
+!/bin/slack
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config
