@@ -69,6 +69,7 @@ fi
 git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 git config --global core.editor "vim"
+git config --global init.defaultBranch master
 if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
     cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
