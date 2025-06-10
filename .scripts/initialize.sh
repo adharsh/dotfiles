@@ -72,7 +72,7 @@ git config --global core.editor "vim"
 git config --global init.defaultBranch master
 if [ ! -f ~/.ssh/id_ed25519.pub ]; then
     ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
-    cat ~/.ssh/id_ed25519.pub | xclip -selection clipboard
+    xclip -selection clipboard < ~/.ssh/id_ed25519.pub
     read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys: https://github.com/settings/keys"
 fi
 
