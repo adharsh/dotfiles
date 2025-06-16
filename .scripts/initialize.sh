@@ -119,10 +119,11 @@ fi
 
 # Install general packages
 packages=(
-    gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xournalpp
+    gnome-themes-extra xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect
     i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
+    xournalpp libreoffice
     cmake
     obs-studio cheese
 )
