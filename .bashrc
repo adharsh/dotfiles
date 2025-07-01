@@ -166,6 +166,11 @@ alias m=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 
+# Check if cuda is available
+p(){
+    /home/adharsh/miniforge3/envs/ml/bin/python -c "import torch; print('CUDA Available:', torch.cuda.is_available())"
+}
+
 # Restart copyq
 rcopyq() {
     pkill copyq
