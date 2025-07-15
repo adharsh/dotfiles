@@ -154,6 +154,10 @@ export NODE_PATH=$(pnpm root -g)
 # uv
 export PATH="/home/adharsh/.local/bin:$PATH"
 
+# flyctl
+export FLYCTL_INSTALL="/home/adharsh/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
 # CUDA
 export PATH=/usr/local/cuda/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}

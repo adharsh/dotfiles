@@ -127,6 +127,7 @@ packages=(
     xournalpp libreoffice
     cmake
     obs-studio cheese
+    gpg
 )
 sudo apt install -y "${packages[@]}"
 
@@ -356,6 +357,15 @@ fi
 if ! command -v /usr/bin/slack >/dev/null 2>&1; then
     read -rp "(optional) Slack isn't installed."
 fi
+
+# Install bruno
+sudo mkdir -p /etc/apt/keyrings
+sudo gpg --list-keys
+sudo gpg --no-default-keyring --keyring /etc/apt/keyrings/bruno.gpg --keyserver keyserver.ubuntu.com --recv-keys 9FA6017ECABE0266
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/bruno.gpg] http://debian.usebruno.com/ bruno stable" | sudo tee /etc/apt/sources.list.d/bruno.list
+sudo apt update && sudo apt install bruno
+# Install fly
+curl -L https://fly.io/install.sh | sh
 
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
