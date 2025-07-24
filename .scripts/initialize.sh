@@ -371,3 +371,11 @@ curl -L https://fly.io/install.sh | sh
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
 read -rp "Reboot to see changes."
+
+# How to uninstall CUDA and Nvidia Driver
+# https://askubuntu.com/a/206289
+# sudo apt remove --purge 'libnvidia-*' 'cuda-*' 'nsight-*' 'nvidia-*'
+# sudo apt autoremove
+# sudo rm -rf /var/cuda-repo-ubuntu2204-12-9-local/
+# sudo rm /etc/apt/sources.list.d/cuda-ubuntu2204-12-9-local.list
+# sudo apt update
