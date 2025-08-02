@@ -128,6 +128,7 @@ packages=(
     cmake
     obs-studio cheese
     gpg
+    apt-get install build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc # For rbenv
 )
 sudo apt install -y "${packages[@]}"
 
@@ -371,6 +372,15 @@ curl -L https://fly.io/install.sh | sh
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
 read -rp "Reboot to see changes."
+
+# Install rbenv
+git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+~/.rbenv/bin/rbenv init
+git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
+latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
+rbenv install "$latest_version"
+rbenv global "$latest_version"
+gem install bundler
 
 # How to uninstall CUDA and Nvidia Driver
 # https://askubuntu.com/a/206289
