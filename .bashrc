@@ -148,6 +148,10 @@ case ":$PATH:" in
 esac
 # pnpm end
 
+# rbenv
+# Added by `rbenv init` on Fri Aug  1 08:02:32 PM PDT 2025
+eval "$(~/.rbenv/bin/rbenv init - --no-rehash bash)"
+
 # NODE_PATH
 export NODE_PATH=$(pnpm root -g)
 
