@@ -167,6 +167,7 @@ export CUDA_HOME=/usr/local/cuda
 alias md="m deactivate"
 alias ma="md && m activate"
 alias m=mamba
+alias conda="mamba"
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 
