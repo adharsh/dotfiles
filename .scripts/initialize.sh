@@ -248,12 +248,12 @@ fi
 
 ## Installing aider
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/aider" ]; then
-    mamba create -n aider python -y
+    mamba create -n aider python=3.12 -y
     eval "$(mamba shell hook --shell bash)"
     mamba activate aider
     mamba install -y pip
-    yes | pip install aider-install
-    aider-install
+    yes | pip install uv
+    uv tool install --force --python python3.12 --with pip aider-chat@latest
     mamba deactivate
 fi
 
@@ -274,7 +274,7 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
     eval "$(mamba shell hook --shell bash)"
     mamba activate ml
     mamba install -y pip
-    yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair
+    yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair kernel_tuner[cuda]
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
         read -rp "CUDA is not available."
         exit 1
