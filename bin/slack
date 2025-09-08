@@ -1,2 +1,2 @@
 #!/bin/bash
-/usr/bin/slack --force-device-scale-factor=2 "$@"
+/usr/lib/slack/slack --force-device-scale-factor=2 "$@"
