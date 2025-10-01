@@ -394,6 +394,18 @@ rbenv install "$latest_version"
 rbenv global "$latest_version"
 gem install bundler
 
+# Install LLVM 21, update if needed
+curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+chmod +x /tmp/llvm.sh
+sudo /tmp/llvm.sh 21 all
+rm -f /tmp/llvm.sh
+## Register as defaults
+sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-21   100
+sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 100
+### (optional) also clang/clang++ if you want
+sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-21   100
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
+
 # How to uninstall CUDA and Nvidia Driver
 # https://askubuntu.com/a/206289
 # sudo apt remove --purge 'libnvidia-*' 'cuda-*' 'nsight-*' 'nvidia-*'
