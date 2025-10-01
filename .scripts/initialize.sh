@@ -303,6 +303,12 @@ if [ ! -f ~/bin/bazel ]; then
     wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
     chmod +x ~/bin/bazel
 fi
+# Install buildifier
+if ! command -v buildifier >/dev/null 2>&1; then
+    curl -L https://github.com/bazelbuild/buildtools/releases/latest/download/buildifier-linux-amd64 -o buildifier
+    chmod +x buildifier
+    sudo mv buildifier /usr/local/bin/
+fi
 
 # Scrcpy, screen capture for Android
 if ! command -v scrcpy >/dev/null 2>&1; then
@@ -372,39 +378,48 @@ if ! command -v /usr/bin/slack >/dev/null 2>&1; then
 fi
 
 # Install bruno
-sudo mkdir -p /etc/apt/keyrings
-sudo gpg --list-keys
-sudo gpg --no-default-keyring --keyring /etc/apt/keyrings/bruno.gpg --keyserver keyserver.ubuntu.com --recv-keys 9FA6017ECABE0266
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/bruno.gpg] http://debian.usebruno.com/ bruno stable" | sudo tee /etc/apt/sources.list.d/bruno.list
-sudo apt update && sudo apt install bruno
+if ! command -v bruno >/dev/null 2>&1; then
+    sudo mkdir -p /etc/apt/keyrings
+    sudo gpg --list-keys
+    sudo gpg --no-default-keyring --keyring /etc/apt/keyrings/bruno.gpg --keyserver keyserver.ubuntu.com --recv-keys 9FA6017ECABE0266
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/bruno.gpg] http://debian.usebruno.com/ bruno stable" | sudo tee /etc/apt/sources.list.d/bruno.list
+    sudo apt update && sudo apt install bruno
+fi
 # Install fly
-curl -L https://fly.io/install.sh | sh
+if ! command -v flyctl >/dev/null 2>&1; then
+    curl -L https://fly.io/install.sh | sh
+fi
+
+# Install rbenv
+if ! command -v rbenv >/dev/null 2>&1; then
+    git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+    ~/.rbenv/bin/rbenv init
+    git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
+    latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
+    rbenv install "$latest_version"
+    rbenv global "$latest_version"
+    gem install bundler
+fi
+
+# Install LLVM 21, update if needed
+if ! command -v clang-tidy-21 >/dev/null 2>&1; then
+    curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+    chmod +x /tmp/llvm.sh
+    sudo /tmp/llvm.sh 21 all
+    rm -f /tmp/llvm.sh
+    ## Register as defaults
+    sudo update-alternatives --install /usr/bin/clangd       clangd       /usr/bin/clangd-21       100
+    sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-21   100
+    sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 100
+    ### (optional) also clang/clang++ if you want
+    sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-21   100
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
+fi
 
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
 read -rp "Reboot to see changes."
-
-# Install rbenv
-git clone https://github.com/rbenv/rbenv.git ~/.rbenv
-~/.rbenv/bin/rbenv init
-git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
-latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
-rbenv install "$latest_version"
-rbenv global "$latest_version"
-gem install bundler
-
-# Install LLVM 21, update if needed
-curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
-chmod +x /tmp/llvm.sh
-sudo /tmp/llvm.sh 21 all
-rm -f /tmp/llvm.sh
-## Register as defaults
-sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-21   100
-sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 100
-### (optional) also clang/clang++ if you want
-sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-21   100
-sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
 
 # How to uninstall CUDA and Nvidia Driver
 # https://askubuntu.com/a/206289
