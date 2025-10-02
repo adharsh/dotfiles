@@ -416,6 +416,15 @@ if ! command -v clang-tidy-21 >/dev/null 2>&1; then
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
 fi
 
+# Install codex
+if ! command -v codex >/dev/null 2>&1; then
+    pnpm i -g @openai/codex
+fi
+# Install claude-code
+if ! command -v claude >/dev/null 2>&1; then
+    pnpm install -g @anthropic-ai/claude-code
+fi
+
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
