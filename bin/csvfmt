@@ -108,8 +108,9 @@ def main() -> None:
         description="Format CSV files with dynamic column alignment"
     )
     parser.add_argument(
-        "input_file",
-        help="Input CSV file to format"
+        "input_files",
+        nargs="+",
+        help="Input CSV file(s) to format"
     )
     parser.add_argument(
         "-o", "--output",
@@ -123,7 +124,15 @@ def main() -> None:
     )
     
     args = parser.parse_args()
-    format_csv(args.input_file, args.output, args.preview)
+    if len(args.input_files) > 1 and args.output:
+        parser.error("--output cannot be used when formatting multiple files")
+
+    for input_file in args.input_files:
+        format_csv(
+            input_file,
+            args.output if args.output and len(args.input_files) == 1 else None,
+            args.preview,
+        )
 
 if __name__ == "__main__":
     main()
