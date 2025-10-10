@@ -1,92 +1,102 @@
 #!/usr/bin/env python3
 
 import argparse
-from typing import List, Tuple
+import csv
+from typing import List
 import sys
 import tempfile
 import shutil
 import os
 
-def normalize_row_length(rows: List[str]) -> List[str]:
+def format_field(value: str) -> str:
     """
-    Ensure all rows have consistent formatting.
+    Prepare the CSV field for display, quoting and escaping as needed.
     """
-    return [row if row else '' for row in rows]
+    needs_quotes = False
+    if '"' in value:
+        value = value.replace('"', '""')
+        needs_quotes = True
 
-def get_column_widths(file_path: str) -> Tuple[List[int], List[str]]:
+    if not needs_quotes:
+        needs_quotes = any(ch in value for ch in {',', '\n'})
+
+    if not needs_quotes:
+        needs_quotes = value.startswith(' ') or value.endswith(' ')
+
+    return f'"{value}"' if needs_quotes else value
+
+def read_csv_rows(file_path: str) -> List[List[str]]:
     """
-    Read the file line by line to preserve original commas and determine column widths.
-    Returns the list of column widths and the original lines.
+    Parse the CSV file while respecting quoted fields.
     """
-    max_widths: List[int] = []
-    original_lines: List[str] = []
-    
     try:
-        with open(file_path, 'r') as file:
-            for line in file:
-                line = line.rstrip('\n')
-                original_lines.append(line)
-                
-                if not line.strip():
-                    continue
-                    
-                # Split on comma but keep the comma with the preceding field
-                parts = [p.strip() for p in line.split(',')]
-                
-                # Initialize max_widths if this is the first line with content
-                if not max_widths and parts:
-                    max_widths = [0] * len(parts)
-                
-                # Update maximum widths
-                for i, part in enumerate(parts):
-                    if i < len(max_widths):
-                        current_width = len(part.strip()) + (1 if i < len(parts)-1 else 0)  # +1 for comma
-                        max_widths[i] = max(max_widths[i], current_width)
-    
+        with open(file_path, newline='') as file:
+            reader = csv.reader(file, skipinitialspace=True)
+            return [row for row in reader]
     except FileNotFoundError:
         print(f"Error: File '{file_path}' not found.", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:
-        print(f"Error reading file: {str(e)}", file=sys.stderr)
+    except csv.Error as e:
+        print(f"Error parsing CSV in '{file_path}': {e}", file=sys.stderr)
         sys.exit(1)
-        
-    return max_widths, original_lines
+    except Exception as e:
+        print(f"Error reading file '{file_path}': {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+def get_column_widths(rows: List[List[str]]) -> List[int]:
+    """
+    Determine the maximum display width for each column.
+    """
+    max_widths: List[int] = []
+    for row in rows:
+        if not row:
+            continue
+
+        if len(max_widths) < len(row):
+            max_widths.extend([0] * (len(row) - len(max_widths)))
+
+        for index, value in enumerate(row):
+            formatted = format_field(value)
+            max_widths[index] = max(max_widths[index], len(formatted))
+
+    return max_widths
 
 def format_csv(input_file: str, output_file: str | None = None, preview: bool = False) -> None:
     """
     Format the file with proper alignment, preserving original commas.
     """
-    max_widths, original_lines = get_column_widths(input_file)
-    
+    rows = read_csv_rows(input_file)
+    max_widths = get_column_widths(rows)
+
     # Prepare formatted content
     formatted_rows = []
-    for line in original_lines:
-        if not line.strip():  # Preserve empty lines
+    for row in rows:
+        if not row:
             formatted_rows.append('')
             continue
-            
-        parts = line.split(',')
+
         formatted_parts = []
-        
-        for i, part in enumerate(parts):
-            part = part.strip()
-            if i < len(max_widths):  # Only process within known columns
-                padding = max_widths[i] - len(part)
-                if i < len(parts) - 1:  # If not the last field, include the comma
-                    formatted_parts.append(f"{part}," + " " * padding)
-                else:  # Last field doesn't need padding
-                    formatted_parts.append(part)
-        
+
+        for i, value in enumerate(row):
+            formatted_value = format_field(value)
+            column_width = max_widths[i] if i < len(max_widths) else len(formatted_value)
+            padding = max(column_width - len(formatted_value), 0)
+
+            if i < len(row) - 1:
+                formatted_parts.append(f"{formatted_value}," + " " * (padding + 1))
+            else:
+                formatted_parts.append(formatted_value)
+
         formatted_rows.append("".join(formatted_parts))
-    
+
     formatted_content = "\n".join(formatted_rows)
-    
+
     if preview:
         print(formatted_content)
         return
-        
+
     output_path = output_file if output_file is not None else input_file
-    
+
     # Create a temporary file
     fd, temp_path = tempfile.mkstemp(text=True)
     try:
