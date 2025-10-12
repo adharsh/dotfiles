@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /usr/bin/brave-browser-stable --force-device-scale-factor=2 "$@"
