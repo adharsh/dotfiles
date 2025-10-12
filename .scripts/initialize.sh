@@ -425,6 +425,11 @@ if ! command -v claude >/dev/null 2>&1; then
     pnpm install -g @anthropic-ai/claude-code
 fi
 
+# Install brave browser (to block youtube ads)
+if ! command -v brave-browser-stable >/dev/null 2>&1; then
+    curl -fsS https://dl.brave.com/install.sh | sh
+fi
+
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
