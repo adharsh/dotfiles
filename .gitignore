@@ -13,6 +13,7 @@
 !/bin/dfm
 !/bin/slack
 !/bin/brave
+!/bin/swap
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# swap — swap multiple workspace pairs in i3
+# Usage examples:
+#   swap               # defaults to 24 35
+#   swap 24 35         # swap (2↔4) and (3↔5)
+#   swap 18 29 57      # swap (1↔8), (2↔9), (5↔7)
+
+set -euo pipefail
+
+# If no args, default to 24 35
+if (( $# == 0 )); then
+  set -- 24 35
+fi
+
+# Now PAIRS is a proper array, one token per pair
+PAIRS=("$@")
+
+swap_pair() {
+  local A="$1" B="$2"
+  local TMP="swap-tmp-$A-$B-$(date +%s%N)"
+
+  i3-msg "rename workspace \"$A\" to \"$TMP\"" >/dev/null
+  i3-msg "rename workspace \"$B\" to \"$A\""   >/dev/null
+  i3-msg "rename workspace \"$TMP\" to \"$B\"" >/dev/null
+}
+
+# Store the currently focused workspace (by name)
+FOCUSED="$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused).name')"
+
+# Debug: show parsed pairs (one per token)
+# echo "Pairs: ${PAIRS[*]}"
+
+for PAIR in "${PAIRS[@]}"; do
+  if [[ "$PAIR" =~ ^([0-9])([0-9])$ ]]; then
+    A="${BASH_REMATCH[1]}"
+    B="${BASH_REMATCH[2]}"
+    echo "Swapping workspaces $A and $B..."
+    swap_pair "$A" "$B"
+  else
+    echo "Invalid pair '$PAIR' (must be two digits, e.g., 24)"
+  fi
+done
+
+# Restore focus if the original workspace still exists
+if i3-msg -t get_workspaces | jq -e --arg n "$FOCUSED" '.[] | select(.name==$n)' >/dev/null; then
+  i3-msg "workspace --no-auto-back-and-forth \"$FOCUSED\"" >/dev/null
+fi
