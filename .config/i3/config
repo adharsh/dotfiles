@@ -231,11 +231,11 @@ bindsym $mod+c exec copyq show
 bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
 
 # Chrome: https://superuser.com/a/377195
-bindsym $mod+g exec ~/dotfiles/.scripts/reset_scale.sh google-chrome-stable --profile-directory=Default --password-store=gnome
-bindsym $mod+Shift+g exec ~/dotfiles/.scripts/reset_scale.sh google-chrome-stable --profile-directory=Default --incognito
+bindsym $mod+g exec google-chrome-stable --force-device-scale-factor=2 --profile-directory=Default --password-store=gnome
+bindsym $mod+Shift+g exec google-chrome-stable --force-device-scale-factor=2 --profile-directory=Default --incognito
 
 # Chrome for development (with sign-in)
-bindsym $mod+Shift+n exec ~/dotfiles/.scripts/reset_scale.sh /opt/google/chrome/chrome \
+bindsym $mod+Shift+n exec /opt/google/chrome/chrome --force-device-scale-factor=2 \
   --user-data-dir=$HOME/.config/google-chrome/dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \
@@ -252,7 +252,7 @@ bindsym $mod+Shift+n exec ~/dotfiles/.scripts/reset_scale.sh /opt/google/chrome/
   --remote-debugging-port=9222
 
 # Chrome for development (without sign-in)
-bindsym $mod+Shift+d exec ~/dotfiles/.scripts/reset_scale.sh /opt/google/chrome/chrome \
+bindsym $mod+Shift+d exec /opt/google/chrome/chrome --force-device-scale-factor=2 \
   --user-data-dir=/tmp/chrome-dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \

@@ -1,2 +1,2 @@
 #!/bin/bash
-~/dotfiles/.scripts/reset_scale.sh /usr/bin/code "$@"
+/usr/bin/code --force-device-scale-factor=2 "$@"
