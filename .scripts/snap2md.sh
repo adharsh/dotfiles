@@ -9,9 +9,7 @@ set -f
 
 # Define the detailed prompt
 read -r -d '' PROMPT << EOM
-Transcribe the text in the provided image to markdown format, with the following specifications:
-- Use standard markdown syntax for headings, lists, bold, italics, etc.
-- For mathematical expressions, use KaTeX syntax.
+Transcribe the text in the provided image as is. If and only if there's math, use katex with the following specifications:
 - For inline (non-centered) mathematical expressions, use single dollar signs: $...$
 - For block (centered) mathematical expressions, use double dollar signs: $$...$$
 - When using dollar signs, place entire expression into a single line, examples:
