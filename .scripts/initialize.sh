@@ -129,6 +129,7 @@ packages=(
     gpg
     apt-get install build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc # For rbenv
     ca-certificates gpg wget
+    shellcheck
 )
 sudo apt install -y "${packages[@]}"
 
