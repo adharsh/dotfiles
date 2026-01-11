@@ -65,31 +65,28 @@ base64 "$TEMP_IMAGE" > "$TEMP_BASE64"
 
 # Create the JSON payload using jq, reading the base64 image from the file
 jq -n \
-  --arg model "chatgpt-4o-latest" \
+  --arg model "gpt-5.1" \
   --arg prompt "$PROMPT" \
   --rawfile image "$TEMP_BASE64" \
   '{
     model: $model,
-    messages: [
+    input: [
       {
         role: "user",
         content: [
-            {type: "text", text: $prompt},
-            {
-                type: "image_url", 
-                image_url: {
-                    url: "data:image/png;base64,\($image)", 
-                    "detail": "high"
-                }
-            }
+          {type: "input_text", text: $prompt},
+          {
+            type: "input_image",
+            image_url: "data:image/png;base64,\($image)"
+          }
         ]
       }
     ],
-    max_tokens: 4096
+    max_output_tokens: 4096
   }' > "$TEMP_JSON"
 
 # Send the image to OpenAI API for analysis
-RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+RESPONSE=$(curl -s https://api.openai.com/v1/responses \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d @"$TEMP_JSON")
@@ -98,7 +95,7 @@ RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
 rm "$TEMP_IMAGE" "$TEMP_BASE64" "$TEMP_JSON"
 
 # Extract the markdown text from API response (glob pattern matching disabled)
-MARKDOWN=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+MARKDOWN=$(echo "$RESPONSE" | jq -r '.output[0].content[0].text')
 
 # Echo the full response for debugging
 echo "Full API Response:"
