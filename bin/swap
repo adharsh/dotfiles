@@ -62,7 +62,7 @@ echo "Swapping workspaces $A2 and $B2..."
 swap_pair "$A2" "$B2"
 
 # Restore focus on original workspaces
-for i in "${!OUTS[@]}"; do
+for (( i=${#OUTS[@]}-1; i>=0; i-- )); do
   out="${OUTS[$i]}"
   ws="${WSS[$i]}"
   i3-msg "focus output \"$out\"; workspace --no-auto-back-and-forth \"$ws\"" >/dev/null
