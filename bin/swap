@@ -44,20 +44,22 @@ swap_pair() {
 A1="${LEFT:0:1}";  B1="${RIGHT:0:1}"
 A2="${LEFT:1:1}";  B2="${RIGHT:1:1}"
 
+# Record current visible workspace per output (right before swaps)
 # One visible workspace per output in i3.
 declare -a OUTS=()
 declare -a WSS=()
-
-# Record current visible workspace per output (right before swaps)
 while IFS=$'\t' read -r out ws; do
   OUTS+=("$out")
   WSS+=("$ws")
 done < <(i3-msg -t get_workspaces | jq -r '.[] | select(.visible) | (.output + "\t" + .name)')
 
+# record focused (cursor location)
+FOCUSED_OUT="$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused) | .output')"
+FOCUSED_WS="$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused) | .name')"
+
 # Swap workspace pairs
 echo "Swapping workspaces $A1 and $B1..."
 swap_pair "$A1" "$B1"
-
 echo "Swapping workspaces $A2 and $B2..."
 swap_pair "$A2" "$B2"
 
@@ -67,3 +69,6 @@ for (( i=${#OUTS[@]}-1; i>=0; i-- )); do
   ws="${WSS[$i]}"
   i3-msg "focus output \"$out\"; workspace --no-auto-back-and-forth \"$ws\"" >/dev/null
 done
+
+# final: restore cursor/focus exactly
+i3-msg "focus output \"$FOCUSED_OUT\"; workspace --no-auto-back-and-forth \"$FOCUSED_WS\"" >/dev/null
