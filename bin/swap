@@ -1,19 +1,35 @@
 #!/usr/bin/env bash
-# swap — swap multiple workspace pairs in i3
-# Usage examples:
-#   swap               # defaults to 24 35
-#   swap 24 35         # swap (2↔4) and (3↔5)
-#   swap 18 29 57      # swap (1↔8), (2↔9), (5↔7)
+# swap — swap exactly two workspace pairs in i3
+# Usage:
+#   swap            -> defaults to: swap 23 45  => (2↔4), (3↔5)
+#   swap 23 45      -> (2↔4), (3↔5)
+#   swap 23 89      -> (2↔8), (3↔9)
 
 set -euo pipefail
 
-# If no args, default to 24 35
+# Default args
 if (( $# == 0 )); then
-  set -- 24 35
+  set -- 23 45
 fi
 
-# Now PAIRS is a proper array, one token per pair
-PAIRS=("$@")
+# Must be exactly two args
+if (( $# != 2 )); then
+  echo "Usage: swap AB CD   (exactly two args, each 2 digits; e.g. swap 23 45)"
+  exit 1
+fi
+
+LEFT="$1"
+RIGHT="$2"
+
+# Validate: exactly two digits each
+if [[ ! "$LEFT" =~ ^[0-9]{2}$ ]]; then
+  echo "Invalid LEFT '$LEFT' (must be exactly two digits, e.g. 23)"
+  exit 1
+fi
+if [[ ! "$RIGHT" =~ ^[0-9]{2}$ ]]; then
+  echo "Invalid RIGHT '$RIGHT' (must be exactly two digits, e.g. 45)"
+  exit 1
+fi
 
 swap_pair() {
   local A="$1" B="$2"
@@ -24,24 +40,30 @@ swap_pair() {
   i3-msg "rename workspace \"$TMP\" to \"$B\"" >/dev/null
 }
 
-# Store the currently focused workspace (by name)
-FOCUSED="$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused).name')"
+# Exactly two swaps total: position 0 and 1
+A1="${LEFT:0:1}";  B1="${RIGHT:0:1}"
+A2="${LEFT:1:1}";  B2="${RIGHT:1:1}"
 
-# Debug: show parsed pairs (one per token)
-# echo "Pairs: ${PAIRS[*]}"
+# One visible workspace per output in i3.
+declare -a OUTS=()
+declare -a WSS=()
 
-for PAIR in "${PAIRS[@]}"; do
-  if [[ "$PAIR" =~ ^([0-9])([0-9])$ ]]; then
-    A="${BASH_REMATCH[1]}"
-    B="${BASH_REMATCH[2]}"
-    echo "Swapping workspaces $A and $B..."
-    swap_pair "$A" "$B"
-  else
-    echo "Invalid pair '$PAIR' (must be two digits, e.g., 24)"
-  fi
+# Record current visible workspace per output (right before swaps)
+while IFS=$'\t' read -r out ws; do
+  OUTS+=("$out")
+  WSS+=("$ws")
+done < <(i3-msg -t get_workspaces | jq -r '.[] | select(.visible) | (.output + "\t" + .name)')
+
+# Swap workspace pairs
+echo "Swapping workspaces $A1 and $B1..."
+swap_pair "$A1" "$B1"
+
+echo "Swapping workspaces $A2 and $B2..."
+swap_pair "$A2" "$B2"
+
+# Restore focus on original workspaces
+for i in "${!OUTS[@]}"; do
+  out="${OUTS[$i]}"
+  ws="${WSS[$i]}"
+  i3-msg "focus output \"$out\"; workspace --no-auto-back-and-forth \"$ws\"" >/dev/null
 done
-
-# Restore focus if the original workspace still exists
-if i3-msg -t get_workspaces | jq -e --arg n "$FOCUSED" '.[] | select(.name==$n)' >/dev/null; then
-  i3-msg "workspace --no-auto-back-and-forth \"$FOCUSED\"" >/dev/null
-fi
