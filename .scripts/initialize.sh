@@ -85,7 +85,6 @@ fi
 if [ ! -f ~/dotfiles/.api_keys ]; then
     PROMPT=$(cat <<EOM
 export OPENAI_API_KEY=
-export ANTHROPIC_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
 )
