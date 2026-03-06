@@ -184,13 +184,21 @@ export PATH="$CUDA_HOME/bin${PATH:+:${PATH}}"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 # Others
-alias npx="pnpm dlx"
-alias tm='task-master'
-alias taskmaster='task-master'
-alias c=conda
+alias co="conda"
 alias ca="conda activate"
 alias cda="conda deactivate"
+sa() {
+    if [ -f ".venv/bin/activate" ]; then
+        source .venv/bin/activate
+    else
+        echo "No .venv found in current directory"
+        return 1
+    fi
+}
 alias d="deactivate" # for uv's virtualenvs
+alias npx="pnpm dlx"
+alias tm="task-master"
+alias taskmaster="task-master"
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 
@@ -256,9 +264,9 @@ bind -x '"\C-s": _sgpt_bash'
 # Shell-GPT integration BASH v0.2
 
 # Clipboard
-## Usage: c                 - Copies the last run command to clipboard
-## Usage: echo "text" | c   - Copies piped input to clipboard
-c() {
+## Usage: cl                 - Copies the last run command to clipboard
+## Usage: echo "text" | cl   - Copies piped input to clipboard
+cl() {
     if [ -t 0 ] && [ $# -eq 0 ]; then
         # If nothing is piped in and no arguments are provided
         fc -ln -1 | sed 's/^\s*//' | tee >(xclip -selection clipboard)
