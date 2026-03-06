@@ -217,7 +217,8 @@ fi
 
 
 # Installing conda via Miniforge
-if ! command -v conda >/dev/null 2>&1; then
+CONDA_BIN="$HOME/miniforge3/bin/conda"
+if [ ! -x "$CONDA_BIN" ]; then
     curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
     read -rp "Proceed with initialization? [yes|no] -> type yes."
     bash Miniforge3-Linux-x86_64.sh
@@ -225,12 +226,14 @@ if ! command -v conda >/dev/null 2>&1; then
     read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
     exit 0
 fi
-conda config --set auto_activate_base false
+"$CONDA_BIN" config --set auto_activate_base false
+
+# Initialize conda for this script (lazy-loaded in .bashrc, so we do it explicitly here)
+eval "$("$CONDA_BIN" shell.bash hook)"
 
 ## Basic
-if [ ! -d "$(conda info --base)/envs/basic" ]; then
+if [ ! -d "$("$CONDA_BIN" info --base)/envs/basic" ]; then
     conda create -n basic python -y
-    eval "$(conda shell.bash hook)"
     conda activate basic
     pip_packages=(
         jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
@@ -243,9 +246,8 @@ if [ ! -d "$(conda info --base)/envs/basic" ]; then
 fi
 
 ## Installing cling: C++ jupyter kernel
-if [ ! -d "$(conda info --base)/envs/cling" ]; then
+if [ ! -d "$("$CONDA_BIN" info --base)/envs/cling" ]; then
     conda create -n cling python -y
-    eval "$(conda shell.bash hook)"
     conda activate cling
     conda install -y xeus-cling -c conda-forge
     uv pip install jupyterlab
@@ -253,9 +255,8 @@ if [ ! -d "$(conda info --base)/envs/cling" ]; then
 fi
 
 ## Installing sgpt
-if [ ! -d "$(conda info --base)/envs/sgpt" ]; then
+if [ ! -d "$("$CONDA_BIN" info --base)/envs/sgpt" ]; then
     conda create -n sgpt python -y
-    eval "$(conda shell.bash hook)"
     conda activate sgpt
     uv pip install shell-gpt litellm
     sgpt --install-integration
@@ -266,19 +267,17 @@ if [ ! -d "$(conda info --base)/envs/sgpt" ]; then
 fi
 
 ## For VSCode Extension: Latex Sympy Calculator
-if [ ! -d "$(conda info --base)/envs/latex_sympy_calculator" ]; then
+if [ ! -d "$("$CONDA_BIN" info --base)/envs/latex_sympy_calculator" ]; then
     conda create -n latex_sympy_calculator python=3.11 -y
-    eval "$(conda shell.bash hook)"
-    conda activate latex_sympy_calculator 
+    conda activate latex_sympy_calculator
     uv pip install latex2sympy2 Flask
     conda deactivate
 fi
 
 ## Installing ML libraries: PyTorch
-if [ ! -d "$(conda info --base)/envs/ml" ]; then
+if [ ! -d "$("$CONDA_BIN" info --base)/envs/ml" ]; then
     sudo apt install -y libcairo2-dev # for pycairo
     conda create -n ml python=3.12 -y
-    eval "$(conda shell.bash hook)"
     conda activate ml
     uv pip install torch
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
