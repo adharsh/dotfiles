@@ -405,6 +405,9 @@ if ! command -v clang-tidy-21 >/dev/null 2>&1; then
     chmod +x /tmp/llvm.sh
     sudo /tmp/llvm.sh 21 all
     rm -f /tmp/llvm.sh
+    ## Fix known LLVM packaging issue where files move between sub-packages across versions
+    sudo dpkg --configure -a
+    sudo apt install -y --fix-broken -o Dpkg::Options::="--force-overwrite"
     ## Register as defaults
     sudo update-alternatives --install /usr/bin/clangd       clangd       /usr/bin/clangd-21       100
     sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-21   100
