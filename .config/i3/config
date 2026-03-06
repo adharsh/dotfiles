@@ -61,10 +61,10 @@ bindsym $mod+d exec --no-startup-id dmenu_run
 # bindcode $mod+40 exec --no-startup-id i3-dmenu-desktop
 
 # change focus
-bindsym $mod+h focus left; exec --no-startup-id ~/dotfiles/.scripts/center_mouse.sh
-bindsym $mod+j focus down; exec --no-startup-id ~/dotfiles/.scripts/center_mouse.sh
-bindsym $mod+k focus up; exec --no-startup-id ~/dotfiles/.scripts/center_mouse.sh
-bindsym $mod+l focus right; exec --no-startup-id ~/dotfiles/.scripts/center_mouse.sh
+bindsym $mod+h focus left; exec --no-startup-id $HOME/dotfiles/.scripts/center_mouse.sh
+bindsym $mod+j focus down; exec --no-startup-id $HOME/dotfiles/.scripts/center_mouse.sh
+bindsym $mod+k focus up; exec --no-startup-id $HOME/dotfiles/.scripts/center_mouse.sh
+bindsym $mod+l focus right; exec --no-startup-id $HOME/dotfiles/.scripts/center_mouse.sh
 
 # alternatively, you can use the cursor keys:
 # bindsym $mod+Left focus left
@@ -214,12 +214,12 @@ bindsym Print exec --no-startup-id "maim -s --hidecursor | xclip -selection clip
 bindsym Shift+Print exec --no-startup-id "maim -s --hidecursor -d 5 | xclip -selection clipboard -t image/png && notify-send 'Screenshot captured' 'A screenshot has been captured and saved to the clipboard.' -t 5000"
 
 # Select area for screenshot and quick save to file
-bindsym $mod+Shift+s exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_image.sh -q
+bindsym $mod+Shift+s exec --no-startup-id $HOME/dotfiles/.scripts/save_clipboard_image.sh -q
 # Select area for screenshot and save to file with GUI
-bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/.scripts/save_clipboard_image.sh
+bindsym $mod+Shift+w exec --no-startup-id $HOME/dotfiles/.scripts/save_clipboard_image.sh
 
 # Convert snapshot to markdown with katex
-bindsym $mod+Shift+m exec --no-startup-id ~/dotfiles/.scripts/snap2md.sh
+bindsym $mod+Shift+m exec --no-startup-id $HOME/dotfiles/.scripts/snap2md.sh
 
 # Process ID notification
 bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdotool getwindowfocus) _NET_WM_PID | sed 's/_NET_WM_PID(CARDINAL) = //')"
@@ -228,7 +228,7 @@ bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdoto
 bindsym $mod+c exec copyq show
 
 # Dynamic monitors binding
-bindsym $mod+m exec --no-startup-id ~/dotfiles/.scripts/dynamic_monitors.sh
+bindsym $mod+m exec --no-startup-id $HOME/dotfiles/.scripts/dynamic_monitors.sh
 
 # Chrome: https://superuser.com/a/377195
 bindsym $mod+g exec google-chrome-stable --force-device-scale-factor=2 --profile-directory=Default --password-store=gnome

@@ -1,5 +1,5 @@
 #!/bin/bash
-exec >~/log_xsessionrc.txt 2>&1
+exec >"$HOME/log_xsessionrc.txt" 2>&1
 echo "~/.xsessionrc is run by user: $(whoami)"
 echo "Log stored at: ~/log_xsessionrc.txt" 
 
@@ -19,7 +19,7 @@ xinput set-prop "$id" "libinput Tapping Drag Lock Enabled" 1
 xinput set-prop "$id" "libinput Natural Scrolling Enabled" 1
 
 # Low battery popup notifications
-source ~/dotfiles/.scripts/i3-battery-popup.sh -n -D -L 15 -l 10 &
+source "$HOME/dotfiles/.scripts/i3-battery-popup.sh" -n -D -L 15 -l 10 &
 
 # Bind capslock to ctrl when chorded and tap ctrl or capslock for escape
 # https://github.com/alols/xcape
