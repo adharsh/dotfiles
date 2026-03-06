@@ -252,7 +252,6 @@ gex() {
 # Disable ctrl+s (which freezes output) to allow Shell-GPT integration
 stty -ixon
 # To revert: stty ixon
-
 # Shell-GPT integration BASH v0.2
 _sgpt_bash() {
 if [[ -n "$READLINE_LINE" ]]; then
