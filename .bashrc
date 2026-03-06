@@ -168,9 +168,12 @@ export PATH="$CUDA_HOME/bin${PATH:+:${PATH}}"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 # Others
-alias md="m deactivate"
-alias ma="md && m activate"
+alias npx="pnpm dlx"
+alias tm='task-master'
+alias taskmaster='task-master'
 alias m=mamba
+alias ma="md && m activate"
+alias md="m deactivate"
 alias conda=mamba
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
