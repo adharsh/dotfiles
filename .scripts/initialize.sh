@@ -6,6 +6,7 @@
 
 # Stop script if any command fails
 set -ex
+trap 'echo "Error on line $LINENO (exit code $?)"' ERR
 
 # Script must only run from home directory
 if [ "$PWD" != "$HOME" ]; then
