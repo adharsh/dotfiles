@@ -287,6 +287,8 @@ if [ ! -d "$(conda info --base)/envs/ml" ]; then
         jaxtyping pycairo
     )
     uv pip install "${pip_packages[@]}"
+
+    [ -d ~/.triton-viz ] && rm -rf ~/.triton-viz
     git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
     (cd .triton-viz && uv pip install -e .)
     conda deactivate
