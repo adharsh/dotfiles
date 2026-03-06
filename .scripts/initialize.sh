@@ -127,8 +127,8 @@ packages=(
     xournalpp libreoffice
     obs-studio cheese
     gpg
-    apt-get install build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc # For rbenv
-    ca-certificates gpg wget
+    build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc # For rbenv
+    ca-certificates wget
     shellcheck
 )
 sudo apt install -y "${packages[@]}"
