@@ -185,7 +185,11 @@ if ! command -v fnm >/dev/null 2>&1; then
     fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
 fi
 if ! command -v pnpm >/dev/null 2>&1; then
+    npm install -g corepack@latest 
     corepack enable pnpm
+    pnpm setup
+
+    read -rp "source ~/.bashrc then proceed."
     # pnpm global packages 
     ## Markdown to Anki custom plugin
     yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
@@ -418,11 +422,18 @@ fi
 
 # Install codex
 if ! command -v codex >/dev/null 2>&1; then
-    pnpm i -g @openai/codex
+    yes | pnpm i -g @openai/codex
 fi
 # Install claude-code
 if ! command -v claude >/dev/null 2>&1; then
-    pnpm install -g @anthropic-ai/claude-code
+    curl -fsSL https://claude.ai/install.sh | bash
+
+    # ruflo
+    yes | pnpm add -g ruflo@latest
+
+    # task master ai
+    yes | pnpm add -g task-master-ai@latest
+    claude mcp add taskmaster-ai -- npx -y task-master-ai
 fi
 
 # Install brave browser (to block youtube ads)
