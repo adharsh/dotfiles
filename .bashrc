@@ -120,34 +120,44 @@ fi
 # fzf
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/adharsh/miniforge3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/adharsh/miniforge3/etc/profile.d/conda.sh" ]; then
-        . "/home/adharsh/miniforge3/etc/profile.d/conda.sh"
+# >>> conda/mamba lazy initialize >>>
+# Deferred to first use to save ~200ms on shell startup
+_conda_lazy_init() {
+    unset -f conda mamba _conda_lazy_init
+    unalias co ca cda 2>/dev/null
+
+    __conda_setup="$('/home/adharsh/miniforge3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
     else
-        export PATH="/home/adharsh/miniforge3/bin:$PATH"
+        if [ -f "/home/adharsh/miniforge3/etc/profile.d/conda.sh" ]; then
+            . "/home/adharsh/miniforge3/etc/profile.d/conda.sh"
+        else
+            export PATH="/home/adharsh/miniforge3/bin:$PATH"
+        fi
     fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
+    unset __conda_setup
 
+    export MAMBA_EXE='/home/adharsh/miniforge3/bin/mamba'
+    export MAMBA_ROOT_PREFIX='/home/adharsh/miniforge3'
+    __mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__mamba_setup"
+    else
+        alias mamba="$MAMBA_EXE"
+    fi
+    unset __mamba_setup
 
-# >>> mamba initialize >>>
-# !! Contents within this block are managed by 'mamba shell init' !!
-export MAMBA_EXE='/home/adharsh/miniforge3/bin/mamba';
-export MAMBA_ROOT_PREFIX='/home/adharsh/miniforge3';
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-else
-    alias mamba="$MAMBA_EXE"  # Fallback on help from mamba activate
-fi
-unset __mamba_setup
-# <<< mamba initialize <<<
+    alias co="conda"
+    alias ca="conda activate"
+    alias cda="conda deactivate"
+}
+conda() { _conda_lazy_init; conda "$@"; }
+mamba() { _conda_lazy_init; mamba "$@"; }
+alias co="conda"
+alias ca="conda activate"
+alias cda="conda deactivate"
+# <<< conda/mamba lazy initialize <<<
 
 # fnm
 FNM_PATH="/home/adharsh/.local/share/fnm"
@@ -168,8 +178,8 @@ esac
 # Added by `rbenv init` on Fri Aug  1 08:02:32 PM PDT 2025
 eval "$(~/.rbenv/bin/rbenv init - --no-rehash bash)"
 
-# NODE_PATH
-export NODE_PATH=$(pnpm root -g)
+# NODE_PATH (glob is ~2ms vs 205ms for `pnpm root -g`, and future-proof unlike hardcoding)
+export NODE_PATH="$(echo /home/adharsh/.local/share/pnpm/global/*/node_modules)"
 
 # uv
 export PATH="/home/adharsh/.local/bin:$PATH"
