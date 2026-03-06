@@ -214,6 +214,7 @@ fi
 # Installing conda via Miniforge
 if ! command -v conda >/dev/null 2>&1; then
     curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+    read -rp "Proceed with initialization? [yes|no] -> type yes."
     bash Miniforge3-Linux-x86_64.sh
     rm Miniforge3-Linux-x86_64.sh
     read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
@@ -226,25 +227,23 @@ if [ ! -d "$(conda info --base)/envs/basic" ]; then
     conda create -n basic python -y
     eval "$(conda shell.bash hook)"
     conda activate basic
-    conda install -y pip
     pip_packages=(
         jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
         google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
         nvitop
     )
-    yes | pip install "${pip_packages[@]}"
+    uv pip install "${pip_packages[@]}"
     nbdime config-git --enable --global
     conda deactivate
 fi
 
 ## Installing cling: C++ jupyter kernel
 if [ ! -d "$(conda info --base)/envs/cling" ]; then
-    conda create -n cling -y
+    conda create -n cling python -y
     eval "$(conda shell.bash hook)"
     conda activate cling
     conda install -y xeus-cling -c conda-forge
-    conda install -y pip
-    yes | pip install jupyterlab
+    uv pip install jupyterlab
     conda deactivate
 fi
 
@@ -253,8 +252,7 @@ if [ ! -d "$(conda info --base)/envs/sgpt" ]; then
     conda create -n sgpt python -y
     eval "$(conda shell.bash hook)"
     conda activate sgpt
-    conda install -y pip
-    yes | pip install shell-gpt litellm
+    uv pip install shell-gpt litellm
     sgpt --install-integration
     sgpt --install-functions
     read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history lines) before continuing."
@@ -267,8 +265,7 @@ if [ ! -d "$(conda info --base)/envs/latex_sympy_calculator" ]; then
     conda create -n latex_sympy_calculator python=3.11 -y
     eval "$(conda shell.bash hook)"
     conda activate latex_sympy_calculator 
-    conda install -y pip
-    yes | pip install latex2sympy2 Flask
+    uv pip install latex2sympy2 Flask
     conda deactivate
 fi
 
@@ -278,8 +275,7 @@ if [ ! -d "$(conda info --base)/envs/ml" ]; then
     conda create -n ml python=3.12 -y
     eval "$(conda shell.bash hook)"
     conda activate ml
-    conda install -y pip
-    yes | pip install torch
+    uv pip install torch
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
         read -rp "CUDA is not available."
         exit 1
@@ -290,9 +286,9 @@ if [ ! -d "$(conda info --base)/envs/ml" ]; then
         jupyterlab pandas tokenizers datasets altair
         jaxtyping pycairo
     )
-    yes | pip install "${pip_packages[@]}"
+    uv pip install "${pip_packages[@]}"
     git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
-    (cd .triton-viz && pip install -e .)
+    (cd .triton-viz && uv pip install -e .)
     conda deactivate
 fi
 
