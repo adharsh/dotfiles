@@ -399,12 +399,9 @@ if ! command -v rbenv >/dev/null 2>&1; then
 fi
 
 # Install latest LLVM
-LLVM_VERSION=$(curl -fsSL --compressed https://apt.llvm.org/ 2>/dev/null | grep -oP '(?:LLVM|clang)[- ][0-9]+' | grep -oP '[0-9]+' | sort -n | tail -1)
-if [ -z "$LLVM_VERSION" ]; then
-    echo "Error: Could not detect latest LLVM version from apt.llvm.org" >&2
-    exit 1
-fi
-echo "Latest LLVM version: $LLVM_VERSION"
+read -rp "Read https://apt.llvm.org/ to check latest LLVM version specifically for Ubuntu 22.04 Jammy and update LLVM_VERSION below."
+LLVM_VERSION=21
+echo "LLVM version: $LLVM_VERSION"
 if ! command -v "clang-tidy-$LLVM_VERSION" >/dev/null 2>&1; then
     curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
     chmod +x /tmp/llvm.sh
