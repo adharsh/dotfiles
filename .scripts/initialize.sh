@@ -209,6 +209,11 @@ if ! command -v copyq >/dev/null 2>&1; then
     sudo apt install -y copyq
 fi
 
+# Install uv
+if ! command -v uv >/dev/null 2>&1; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
 # Installing mamba from miniforge
 if ! command -v mamba >/dev/null 2>&1; then
     wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
