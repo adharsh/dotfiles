@@ -399,22 +399,27 @@ if ! command -v rbenv >/dev/null 2>&1; then
     gem install bundler
 fi
 
-# Install LLVM 21, update if needed
-if ! command -v clang-tidy-21 >/dev/null 2>&1; then
+# Install latest LLVM
+LLVM_VERSION=$(curl -fsSL --compressed https://apt.llvm.org/ 2>/dev/null | grep -oP '(?:LLVM|clang)[- ][0-9]+' | grep -oP '[0-9]+' | sort -n | tail -1)
+if [ -z "$LLVM_VERSION" ]; then
+    echo "Error: Could not detect latest LLVM version from apt.llvm.org" >&2
+    exit 1
+fi
+echo "Latest LLVM version: $LLVM_VERSION"
+if ! command -v "clang-tidy-$LLVM_VERSION" >/dev/null 2>&1; then
     curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
     chmod +x /tmp/llvm.sh
-    sudo /tmp/llvm.sh 21 all
+    sudo /tmp/llvm.sh "$LLVM_VERSION" all
     rm -f /tmp/llvm.sh
     ## Fix known LLVM packaging issue where files move between sub-packages across versions
     sudo dpkg --configure -a
     sudo apt install -y --fix-broken -o Dpkg::Options::="--force-overwrite"
     ## Register as defaults
-    sudo update-alternatives --install /usr/bin/clangd       clangd       /usr/bin/clangd-21       100
-    sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-21   100
-    sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 100
-    ### (optional) also clang/clang++ if you want
-    sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-21   100
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
+    sudo update-alternatives --install /usr/bin/clangd       clangd       "/usr/bin/clangd-$LLVM_VERSION"       100
+    sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   "/usr/bin/clang-tidy-$LLVM_VERSION"   100
+    sudo update-alternatives --install /usr/bin/clang-format clang-format "/usr/bin/clang-format-$LLVM_VERSION" 100
+    sudo update-alternatives --install /usr/bin/clang   clang   "/usr/bin/clang-$LLVM_VERSION"   100
+    sudo update-alternatives --install /usr/bin/clang++ clang++ "/usr/bin/clang++-$LLVM_VERSION" 100
 fi
 
 # Install brave browser (to block youtube ads)
