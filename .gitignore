@@ -2,7 +2,6 @@
 /bin/*
 
 # But don't ignore these specific files
-!/bin/aider
 !/bin/cl
 !/bin/csvfmt
 !/bin/deadlines
