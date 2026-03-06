@@ -117,19 +117,6 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# >>> mamba initialize >>>
-# !! Contents within this block are managed by 'mamba shell init' !!
-export MAMBA_EXE='/home/adharsh/miniforge3/bin/mamba';
-export MAMBA_ROOT_PREFIX='/home/adharsh/miniforge3';
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-else
-    alias mamba="$MAMBA_EXE"  # Fallback on help from mamba activate
-fi
-unset __mamba_setup
-# <<< mamba initialize <<<
-
 # fzf
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
@@ -171,10 +158,10 @@ export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 alias npx="pnpm dlx"
 alias tm='task-master'
 alias taskmaster='task-master'
-alias m=mamba
-alias ma="md && m activate"
-alias md="m deactivate"
-alias conda=mamba
+alias c=conda
+alias ca="conda activate"
+alias cda="conda deactivate"
+alias d="deactivate" # for uv's virtualenvs
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 
