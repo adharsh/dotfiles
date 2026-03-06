@@ -44,7 +44,7 @@ if ! command -v google-chrome >/dev/null 2>&1; then
     # Dark Mode for default profile
     read -rp $'1. Sign in and sync. \n2. Set chrome://flags Auto Dark Mode for Web Contents to Enabled.'
     # Light Mode profile / dev-profile, only after signing in to default profile since that will be copied over
-    cp -r ~/.config/google-chrome/Default ~/.config/google-chrome/dev-profile
+    cp -r "$HOME/.config/google-chrome/Default" "$HOME/.config/google-chrome/dev-profile"
 fi
 
 # Install VSCode
@@ -71,36 +71,36 @@ git config --global user.email "adharsh.babu@gmail.com"
 git config --global user.name "Adharsh Babu"
 git config --global core.editor "vim"
 git config --global init.defaultBranch master
-if [ ! -f ~/.ssh/id_ed25519.pub ]; then
-    ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f ~/.ssh/id_ed25519 -N "" < /dev/null
-    xclip -selection clipboard < ~/.ssh/id_ed25519.pub
+if [ ! -f "$HOME/.ssh/id_ed25519.pub" ]; then
+    ssh-keygen -t ed25519 -C "adharsh.babu@gmail.com" -f "$HOME/.ssh/id_ed25519" -N "" < /dev/null
+    xclip -selection clipboard < "$HOME/.ssh/id_ed25519.pub"
     read -rp "Public ssh key copied to clipboard. Paste into Github ssh keys: https://github.com/settings/keys"
 fi
 
 # Install dotfiles
-if [ ! -d ~/dotfiles ]; then
-    git clone git@github.com:adharsh/dotfiles.git ~/dotfiles
+if [ ! -d "$HOME/dotfiles" ]; then
+    git clone git@github.com:adharsh/dotfiles.git "$HOME/dotfiles"
 fi
 
 # Create .api_keys file
-if [ ! -f ~/dotfiles/.api_keys ]; then
+if [ ! -f "$HOME/dotfiles/.api_keys" ]; then
     PROMPT=$(cat <<EOM
 export OPENAI_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
 )
-    echo "$PROMPT" > ~/dotfiles/.api_keys
+    echo "$PROMPT" > "$HOME/dotfiles/.api_keys"
     read -rp "Populate .api_keys file: https://platform.openai.com/api-keys https://console.anthropic.com/settings/keys https://app.clockify.me/user/preferences#advanced"
-    source ~/dotfiles/.api_keys
+    source "$HOME/dotfiles/.api_keys"
 fi
 
 # Create .screenshot_save_config
-touch ~/dotfiles/.screenshot_save_config
+touch "$HOME/dotfiles/.screenshot_save_config"
 
 # Install configurations
-rm -f ~/.bashrc ~/.profile
-chmod +x ~/dotfiles/bin/*
-~/dotfiles/bin/dfm link
+rm -f "$HOME/.bashrc" "$HOME/.profile"
+chmod +x "$HOME/dotfiles/bin/"*
+"$HOME/dotfiles/bin/dfm" link
 
 # Install CUDA (after stowing .bashrc for updated PATH and LD_LIBRARY_PATH)
 if ! command -v nvcc >/dev/null 2>&1; then
@@ -159,20 +159,20 @@ sudo usermod -aG video "$USER"
 # Windows: https://gist.github.com/tanyuan/55bca522bf50363ae4573d4bdcf06e2e
 if ! command -v xcape >/dev/null 2>&1; then
     sudo apt install -y gcc make pkg-config libx11-dev libxtst-dev libxi-dev
-    git clone https://github.com/alols/xcape.git ~/.xcape
-    (cd ~/.xcape && make && sudo make install)
+    git clone https://github.com/alols/xcape.git "$HOME/.xcape"
+    (cd "$HOME/.xcape" && make && sudo make install)
 fi
 
 # fzf: https://github.com/junegunn/fzf#using-git
 if ! command -v fzf >/dev/null 2>&1; then
-    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 
-    yes | ~/.fzf/install
+    git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+    yes | "$HOME/.fzf/install"
 fi
 
 # caffeine, activate on start
 if ! command -v caffeine >/dev/null 2>&1; then
     sudo apt install -y caffeine
-    bash ~/dotfiles/.scripts/caffeine-indicator-fix.sh
+    bash "$HOME/dotfiles/.scripts/caffeine-indicator-fix.sh"
 fi
 
 # Web Dev fnm (like nvm but faster to handle different versions of node.js), pnpm (npm but faster)
@@ -292,16 +292,16 @@ if [ ! -d "$("$CONDA_BIN" info --base)/envs/ml" ]; then
     )
     uv pip install "${pip_packages[@]}"
 
-    [ -d ~/.triton-viz ] && rm -rf ~/.triton-viz
-    git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
+    [ -d "$HOME/.triton-viz" ] && rm -rf "$HOME/.triton-viz"
+    git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git "$HOME/.triton-viz"
     (cd .triton-viz && uv pip install -e .)
     conda deactivate
 fi
 
 # Install Bazel
-if [ ! -f ~/bin/bazel ]; then
-    wget -O ~/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
-    chmod +x ~/bin/bazel
+if [ ! -f "$HOME/bin/bazel" ]; then
+    wget -O "$HOME/bin/bazel" https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+    chmod +x "$HOME/bin/bazel"
 fi
 # Install buildifier
 if ! command -v buildifier >/dev/null 2>&1; then
@@ -316,8 +316,8 @@ if ! command -v scrcpy >/dev/null 2>&1; then
                     gcc git pkg-config meson ninja-build libsdl2-dev \
                     libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
                     libswresample-dev libusb-1.0-0 libusb-1.0-0-dev
-    git clone https://github.com/Genymobile/scrcpy ~/.scrcpy
-    (cd ~/.scrcpy && ./install_release.sh)
+    git clone https://github.com/Genymobile/scrcpy "$HOME/.scrcpy"
+    (cd "$HOME/.scrcpy" && ./install_release.sh)
 fi
 
 # Install anki
@@ -393,8 +393,8 @@ fi
 
 # Install rbenv
 if ! command -v rbenv >/dev/null 2>&1; then
-    git clone https://github.com/rbenv/rbenv.git ~/.rbenv
-    ~/.rbenv/bin/rbenv init
+    git clone https://github.com/rbenv/rbenv.git "$HOME/.rbenv"
+    "$HOME/.rbenv/bin/rbenv" init
     git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
     latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
     rbenv install "$latest_version"
@@ -445,7 +445,7 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 
 # Check if passwords are being synced in chrome
-read -rp "If password sync is not working (check chrome://sync-internals), then run bash ~/dotfiles/.scripts/restart_chrome_password_sync.sh"
+read -rp "If password sync is not working (check chrome://sync-internals), then run bash \$HOME/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
 read -rp "Reboot to see changes."
 
