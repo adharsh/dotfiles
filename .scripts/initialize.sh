@@ -19,17 +19,17 @@ sudo apt update -y
 sudo apt upgrade -y
 
 # Install Nvidia Driver
-read -rp $'Follow these steps to install correct Nvidia Driver:
-1. Get GPU name, if you already have it, can skip to step 2
-1.1 Settings -> Additional Drivers
-1.2 Install a (recent) driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
-1.3 Run nvidia-smi without rebooting to get GPU name
-2. Look up GPU name on https://www.nvidia.com/en-us/drivers/ and get driver info
-3. Go to Settings -> Additional Drivers and then install the right driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
-4. Reboot
-5. Verify that nvidia-smi works'
 if ! command -v nvidia-smi >/dev/null 2>&1; then
-    echo "Error: NVIDIA driver not installed or nvidia-smi not found." >&2
+    read -rp $'Error: NVIDIA driver not installed or nvidia-smi not found.
+    Follow these steps to install correct Nvidia Driver:
+    1. Get GPU name, if you already have it, can skip to step 2
+    1.1 Settings -> Additional Drivers
+    1.2 Install a (recent) driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
+    1.3 Run nvidia-smi without rebooting to get GPU name
+    2. Look up GPU name on https://www.nvidia.com/en-us/drivers/ and get driver info
+    3. Go to Settings -> Additional Drivers and then install the right driver of the form: Using NVIDIA driver metapackage from nvidia-driver-* (proprietary)
+    4. Reboot
+    5. Verify that nvidia-smi works'
     exit 1
 fi
 
@@ -103,17 +103,22 @@ chmod +x ~/dotfiles/bin/*
 ~/dotfiles/bin/dfm link
 
 # Install CUDA (after stowing .bashrc for updated PATH and LD_LIBRARY_PATH)
-read -rp $'1. Install CUDA: https://developer.nvidia.com/cuda-downloads \n2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
 if ! command -v nvcc >/dev/null 2>&1; then
-    echo "Error: Cuda not installed or nvcc not found." >&2
+    read -rp $'Error: Cuda not installed or nvcc not found.
+    1. Install CUDA: https://developer.nvidia.com/cuda-downloads 
+    2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
     exit 1
 fi
 if ! command -v ncu-ui >/dev/null 2>&1; then
-    echo "Error: Nsight Compute not found." >&2
+    read -rp $'Error: Nsight Compute not found.
+    1. Install CUDA: https://developer.nvidia.com/cuda-downloads 
+    2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
     exit 1
 fi
 if ! command -v nsys-ui >/dev/null 2>&1; then
-    echo "Error: Nsight Systems not found." >&2
+    read -rp $'Error: Nsight Systems not found.
+    1. Install CUDA: https://developer.nvidia.com/cuda-downloads 
+    2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
     exit 1
 fi
 
