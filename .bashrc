@@ -124,8 +124,6 @@ fi
 # Deferred to first use to save ~200ms on shell startup
 _conda_lazy_init() {
     unset -f conda mamba _conda_lazy_init
-    unalias co ca cda 2>/dev/null
-
     __conda_setup="$('/home/adharsh/miniforge3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
     if [ $? -eq 0 ]; then
         eval "$__conda_setup"
@@ -148,15 +146,9 @@ _conda_lazy_init() {
     fi
     unset __mamba_setup
 
-    alias co="conda"
-    alias ca="conda activate"
-    alias cda="conda deactivate"
 }
 conda() { _conda_lazy_init; conda "$@"; }
 mamba() { _conda_lazy_init; mamba "$@"; }
-alias co="conda"
-alias ca="conda activate"
-alias cda="conda deactivate"
 # <<< conda/mamba lazy initialize <<<
 
 # fnm
