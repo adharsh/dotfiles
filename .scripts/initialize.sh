@@ -172,28 +172,23 @@ fi
 # Web Dev fnm (like nvm but faster to handle different versions of node.js), pnpm (npm but faster)
 if ! command -v fnm >/dev/null 2>&1; then
     curl -fsSL https://fnm.vercel.app/install | bash
-    
-    # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
-    FNM_PATH="/home/adharsh/.local/share/fnm"
-    if [ -d "$FNM_PATH" ]; then
-        export PATH="$FNM_PATH:$PATH"
-        eval "`fnm env`"
-    fi
-    read -rp "New fnm script is appended to .bashrc, merge with existing one. Check if sourcing matches in .bashrc."
-
-    fnm install --lts
-    fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
+    read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
+    exit 0
 fi
+fnm install --lts
+fnm default "$(fnm list | grep lts | tail -n1 | awk '{print $2}' | sed 's/^v//')"
+
 if ! command -v pnpm >/dev/null 2>&1; then
     npm install -g corepack@latest 
     corepack enable pnpm
     pnpm setup
 
-    read -rp "source ~/.bashrc then proceed."
-    # pnpm global packages 
-    ## Markdown to Anki custom plugin
-    yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
+    read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
+    exit 0
 fi
+# pnpm global packages 
+## Markdown to Anki custom plugin
+yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
 
 # Install timer
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
@@ -214,21 +209,16 @@ if ! command -v uv >/dev/null 2>&1; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-# Installing mamba from miniforge
-if ! command -v mamba >/dev/null 2>&1; then
-    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-    chmod +x Miniforge3-Linux-x86_64.sh
-    ./Miniforge3-Linux-x86_64.sh -b
 
-    # Equivalent of source ~/.bashrc (update if needed in future since copied from ~/.bashrc)
-    MAMBA_ROOT_PREFIX="$HOME/miniforge3"
-    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-    read -rp "Check if sourcing matches in .bashrc for mamba."
-
-    conda config --set auto_activate_base false
-    mamba shell init
+# Installing conda via Miniforge
+if ! command -v conda >/dev/null 2>&1; then
+    curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+    bash Miniforge3-Linux-x86_64.sh
     rm Miniforge3-Linux-x86_64.sh
+    read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
+    exit 0
 fi
+conda config --set auto_activate_base false
 
 ## Basic
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/basic" ]; then
@@ -264,6 +254,7 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/sgpt" ]; then
     sgpt --install-integration
     sgpt --install-functions
     read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history lines) before continuing."
+    exit 0
     mamba deactivate
 fi
 
@@ -383,6 +374,7 @@ if ! command -v bruno >/dev/null 2>&1; then
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/bruno.gpg] http://debian.usebruno.com/ bruno stable" | sudo tee /etc/apt/sources.list.d/bruno.list
     sudo apt update && sudo apt install bruno
 fi
+
 # Install fly
 if ! command -v flyctl >/dev/null 2>&1; then
     curl -L https://fly.io/install.sh | sh
@@ -414,10 +406,16 @@ if ! command -v clang-tidy-21 >/dev/null 2>&1; then
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
 fi
 
+# Install brave browser (to block youtube ads)
+if ! command -v brave-browser-stable >/dev/null 2>&1; then
+    curl -fsS https://dl.brave.com/install.sh | sh
+fi
+
 # Install codex
 if ! command -v codex >/dev/null 2>&1; then
     yes | pnpm i -g @openai/codex
 fi
+
 # Install claude-code
 if ! command -v claude >/dev/null 2>&1; then
     curl -fsSL https://claude.ai/install.sh | bash
@@ -428,11 +426,6 @@ if ! command -v claude >/dev/null 2>&1; then
     # task master ai
     yes | pnpm add -g task-master-ai@latest
     claude mcp add taskmaster-ai -- npx -y task-master-ai
-fi
-
-# Install brave browser (to block youtube ads)
-if ! command -v brave-browser-stable >/dev/null 2>&1; then
-    curl -fsS https://dl.brave.com/install.sh | sh
 fi
 
 # Check if passwords are being synced in chrome
