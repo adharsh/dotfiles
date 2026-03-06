@@ -221,70 +221,78 @@ fi
 conda config --set auto_activate_base false
 
 ## Basic
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/basic" ]; then
-    mamba create -n basic python -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate basic
-    mamba install -y pip
-    yes | pip install jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
-    yes | pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
-    yes | pip install nvitop
+if [ ! -d "$(conda info --base)/envs/basic" ]; then
+    conda create -n basic python -y
+    eval "$(conda shell.bash hook)"
+    conda activate basic
+    conda install -y pip
+    pip_packages=(
+        jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
+        google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
+        nvitop
+    )
+    yes | pip install "${pip_packages[@]}"
     nbdime config-git --enable --global
-    mamba deactivate
+    conda deactivate
 fi
 
 ## Installing cling: C++ jupyter kernel
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/cling" ]; then
-    mamba create -n cling -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate cling
-    mamba install -y xeus-cling -c conda-forge
-    mamba install -y pip
+if [ ! -d "$(conda info --base)/envs/cling" ]; then
+    conda create -n cling -y
+    eval "$(conda shell.bash hook)"
+    conda activate cling
+    conda install -y xeus-cling -c conda-forge
+    conda install -y pip
     yes | pip install jupyterlab
-    mamba deactivate
+    conda deactivate
 fi
 
 ## Installing sgpt
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/sgpt" ]; then
-    mamba create -n sgpt python -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate sgpt
-    mamba install -y pip
+if [ ! -d "$(conda info --base)/envs/sgpt" ]; then
+    conda create -n sgpt python -y
+    eval "$(conda shell.bash hook)"
+    conda activate sgpt
+    conda install -y pip
     yes | pip install shell-gpt litellm
     sgpt --install-integration
     sgpt --install-functions
     read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history lines) before continuing."
+    conda deactivate
     exit 0
-    mamba deactivate
 fi
 
 ## For VSCode Extension: Latex Sympy Calculator
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/latex_sympy_calculator" ]; then
-    mamba create -n latex_sympy_calculator python=3.11 -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate latex_sympy_calculator 
-    mamba install -y pip
+if [ ! -d "$(conda info --base)/envs/latex_sympy_calculator" ]; then
+    conda create -n latex_sympy_calculator python=3.11 -y
+    eval "$(conda shell.bash hook)"
+    conda activate latex_sympy_calculator 
+    conda install -y pip
     yes | pip install latex2sympy2 Flask
-    mamba deactivate
+    conda deactivate
 fi
 
 ## Installing ML libraries: PyTorch
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/ml" ]; then
+if [ ! -d "$(conda info --base)/envs/ml" ]; then
     sudo apt install -y libcairo2-dev # for pycairo
-    mamba create -n ml python=3.12 -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate ml
-    mamba install -y pip
-    yes | pip install torch torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler jupyterlab pandas tokenizers datasets altair kernel_tuner[cuda]
+    conda create -n ml python=3.12 -y
+    eval "$(conda shell.bash hook)"
+    conda activate ml
+    conda install -y pip
+    yes | pip install torch
     if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
         read -rp "CUDA is not available."
         exit 1
     fi
-    yes | pip install jupyterlab pandas tokenizers datasets altair triton
-    yes | pip install jaxtyping pycairo
+    pip_packages=(
+        torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler
+        triton "kernel_tuner[cuda]"
+        jupyterlab pandas tokenizers datasets altair
+        jaxtyping pycairo
+    )
+    yes | pip install "${pip_packages[@]}"
     git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git ~/.triton-viz
     (cd .triton-viz && pip install -e .)
-    mamba deactivate
+    conda deactivate
 fi
 
 # Install Bazel
