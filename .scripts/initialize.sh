@@ -262,17 +262,6 @@ if [ ! -d "$MAMBA_ROOT_PREFIX/envs/sgpt" ]; then
     mamba deactivate
 fi
 
-## Installing aider
-if [ ! -d "$MAMBA_ROOT_PREFIX/envs/aider" ]; then
-    mamba create -n aider python=3.12 -y
-    eval "$(mamba shell hook --shell bash)"
-    mamba activate aider
-    mamba install -y pip
-    yes | pip install uv
-    uv tool install --force --python python3.12 --with pip aider-chat@latest
-    mamba deactivate
-fi
-
 ## For VSCode Extension: Latex Sympy Calculator
 if [ ! -d "$MAMBA_ROOT_PREFIX/envs/latex_sympy_calculator" ]; then
     mamba create -n latex_sympy_calculator python=3.11 -y
