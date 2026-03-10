@@ -135,6 +135,7 @@ packages=(
     build-essential autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc # For rbenv
     ca-certificates wget
     shellcheck
+    tmux
 )
 sudo apt install -y "${packages[@]}"
 
