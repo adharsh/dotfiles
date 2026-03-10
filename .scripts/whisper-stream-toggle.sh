@@ -1,6 +1,6 @@
 #!/bin/bash
 # Push-to-talk whisper transcription with live floating terminal
-# Usage: whisper-stream-toggle.sh start|stop
+# Usage: whisper-stream-toggle.sh start|stop [--notify]
 # Press $mod+t to start live transcription, release to stop and type result
 
 WHISPER_DIR="$HOME/whisper.cpp"
@@ -16,6 +16,7 @@ LIB_PATH="$WHISPER_DIR/build/src:$WHISPER_DIR/build/ggml/src:$WHISPER_DIR/build/
 PIDFILE="/tmp/whisper-stream.pid"
 OUTFILE="/tmp/whisper-stream.txt"
 TERM_TITLE="whisper-live"
+NOTIFY=false
 
 start() {
     # Skip if already running
@@ -79,17 +80,24 @@ stop() {
         rm -f "$OUTFILE"
 
         if [ -n "$text" ]; then
-            printf '%s' "$text" | xclip -selection clipboard
             xdotool type --delay 0 -- "$text"
-            notify-send -t 2000 "Whisper" "$text"
+            $NOTIFY && notify-send -t 2000 "Whisper" "$text"
         else
-            notify-send -t 1000 "Whisper" "No speech detected"
+            $NOTIFY && notify-send -t 1000 "Whisper" "No speech detected"
         fi
     fi
 }
 
-case "$1" in
+ACTION=""
+for arg in "$@"; do
+    case "$arg" in
+        start|stop) ACTION="$arg" ;;
+        --notify)   NOTIFY=true ;;
+    esac
+done
+
+case "$ACTION" in
     start) start ;;
     stop)  stop  ;;
-    *)     echo "Usage: $0 start|stop" ;;
+    *)     echo "Usage: $0 start|stop [--notify]" ;;
 esac
