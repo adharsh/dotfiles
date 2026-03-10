@@ -452,6 +452,10 @@ if [ ! -x "$HOME/whisper.cpp/build/bin/whisper-cli" ]; then
     (cd "$HOME/whisper.cpp" && sh ./models/download-ggml-model.sh base.en)
     (cd "$HOME/whisper.cpp" && cmake -B build -DGGML_CUDA=1 -DWHISPER_SDL2=ON)
     (cd "$HOME/whisper.cpp" && cmake --build build -j"$(nproc)" --config Release)
+    LD_LIBRARY_PATH="$HOME/whisper.cpp/build/src:$HOME/whisper.cpp/build/ggml/src:$HOME/whisper.cpp/build/ggml/src/ggml-cuda" \
+        "$HOME/whisper.cpp/build/bin/whisper-quantize" \
+        "$HOME/whisper.cpp/models/ggml-base.en.bin" \
+        "$HOME/whisper.cpp/models/ggml-base.en-q5_0.bin" q5_0
 fi
 
 # Check if passwords are being synced in chrome

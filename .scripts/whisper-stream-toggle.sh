@@ -5,7 +5,12 @@
 
 WHISPER_DIR="$HOME/whisper.cpp"
 WHISPER_STREAM="$WHISPER_DIR/build/bin/whisper-stream"
-MODEL="$WHISPER_DIR/models/ggml-base.en.bin"
+USE_QUANTIZED=true  # Set to false to use the original model
+if $USE_QUANTIZED; then
+    MODEL="$WHISPER_DIR/models/ggml-base.en-q5_0.bin"
+else
+    MODEL="$WHISPER_DIR/models/ggml-base.en.bin"
+fi
 LIB_PATH="$WHISPER_DIR/build/src:$WHISPER_DIR/build/ggml/src:$WHISPER_DIR/build/ggml/src/ggml-cuda"
 
 PIDFILE="/tmp/whisper-stream.pid"
