@@ -447,7 +447,7 @@ fi
 
 # Install whisper.cpp (speech-to-text)
 if [ ! -x "$HOME/whisper.cpp/build/bin/whisper-cli" ]; then
-    sudo apt install -y libsdl2-dev xdotool cmake build-essential
+    sudo apt install -y libsdl2-dev xdotool xterm wmctrl cmake build-essential
     git clone https://github.com/ggml-org/whisper.cpp.git "$HOME/whisper.cpp"
     (cd "$HOME/whisper.cpp" && sh ./models/download-ggml-model.sh base.en)
     (cd "$HOME/whisper.cpp" && cmake -B build -DGGML_CUDA=1 -DWHISPER_SDL2=ON)
