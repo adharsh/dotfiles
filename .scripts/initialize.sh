@@ -445,6 +445,15 @@ if ! command -v claude >/dev/null 2>&1; then
     claude mcp add taskmaster-ai -- npx -y task-master-ai
 fi
 
+# Install whisper.cpp (speech-to-text)
+if [ ! -x "$HOME/whisper.cpp/build/bin/whisper-cli" ]; then
+    sudo apt install -y libsdl2-dev xdotool cmake build-essential
+    git clone https://github.com/ggml-org/whisper.cpp.git "$HOME/whisper.cpp"
+    (cd "$HOME/whisper.cpp" && sh ./models/download-ggml-model.sh base.en)
+    (cd "$HOME/whisper.cpp" && cmake -B build -DGGML_CUDA=1 -DWHISPER_SDL2=ON)
+    (cd "$HOME/whisper.cpp" && cmake --build build -j"$(nproc)" --config Release)
+fi
+
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash \$HOME/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
