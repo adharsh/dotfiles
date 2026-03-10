@@ -26,7 +26,7 @@ start() {
     # Run whisper-stream in background, writing text to file
     LD_LIBRARY_PATH="$LIB_PATH" "$WHISPER_STREAM" \
         -m "$MODEL" \
-        -t 4 \
+        -t 8 \
         --step 500 \
         --length 5000 \
         -f "$OUTFILE" \
