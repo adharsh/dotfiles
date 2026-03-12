@@ -1,7 +1,8 @@
 #!/bin/bash
 # Push-to-talk whisper transcription with live floating terminal
-# Usage: whisper-stream-toggle.sh start|stop [--notify]
+# Usage: whisper-stream-toggle.sh start|stop|cancel [--notify]
 # Press $mod+t to start live transcription, release to stop and type result
+# Press space during transcription ($mod+t+space) to cancel without typing
 
 WHISPER_DIR="$HOME/whisper.cpp"
 WHISPER_STREAM="$WHISPER_DIR/build/bin/whisper-stream"
@@ -15,6 +16,7 @@ LIB_PATH="$WHISPER_DIR/build/src:$WHISPER_DIR/build/ggml/src:$WHISPER_DIR/build/
 
 PIDFILE="/tmp/whisper-stream.pid"
 OUTFILE="/tmp/whisper-stream.txt"
+CANCELFILE="/tmp/whisper-stream.cancel"
 TERM_TITLE="whisper-live"
 NOTIFY=false
 
@@ -24,7 +26,7 @@ start() {
         return
     fi
 
-    rm -f "$OUTFILE"
+    rm -f "$OUTFILE" "$CANCELFILE"
     : > "$OUTFILE"
 
     # Launch whisper-stream in a floating terminal
@@ -57,6 +59,12 @@ start() {
 }
 
 stop() {
+    # If cancelled, just clean up without typing
+    if [ -f "$CANCELFILE" ]; then
+        rm -f "$CANCELFILE" "$PIDFILE" "$OUTFILE"
+        return
+    fi
+
     if [ -f "$PIDFILE" ]; then
         kill "$(cat "$PIDFILE")" 2>/dev/null
         pkill -f "whisper-stream.*ggml-base" 2>/dev/null
@@ -88,16 +96,35 @@ stop() {
     fi
 }
 
+# Cancel: press $mod+q while still holding $mod+t to discard transcription.
+# 1. Sets a cancel flag file
+# 2. Kills whisper-stream and closes the floating terminal
+# 3. Deletes the output file (no text gets typed)
+# 4. On $mod+t release, stop() sees the flag and returns immediately
+cancel() {
+    # Set cancel flag so the subsequent stop (on key release) skips typing
+    touch "$CANCELFILE"
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null
+        pkill -f "whisper-stream.*ggml-base" 2>/dev/null
+        rm -f "$PIDFILE"
+    fi
+    wmctrl -c "$TERM_TITLE" 2>/dev/null
+    rm -f "$OUTFILE"
+    $NOTIFY && notify-send -t 1000 "Whisper" "Cancelled"
+}
+
 ACTION=""
 for arg in "$@"; do
     case "$arg" in
-        start|stop) ACTION="$arg" ;;
+        start|stop|cancel) ACTION="$arg" ;;
         --notify)   NOTIFY=true ;;
     esac
 done
 
 case "$ACTION" in
-    start) start ;;
-    stop)  stop  ;;
-    *)     echo "Usage: $0 start|stop [--notify]" ;;
+    start)  start  ;;
+    stop)   stop   ;;
+    cancel) cancel ;;
+    *)      echo "Usage: $0 start|stop|cancel [--notify]" ;;
 esac

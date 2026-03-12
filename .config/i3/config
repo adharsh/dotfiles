@@ -272,4 +272,5 @@ bindsym $mod+Shift+d exec /opt/google/chrome/chrome --force-device-scale-factor=
 for_window [title="whisper-live"] floating enable, border pixel 1, move position center
 bindsym $mod+t exec --no-startup-id $HOME/dotfiles/.scripts/whisper-stream-toggle.sh start
 bindsym --release $mod+t exec --no-startup-id $HOME/dotfiles/.scripts/whisper-stream-toggle.sh stop
+bindsym $mod+q exec --no-startup-id $HOME/dotfiles/.scripts/whisper-stream-toggle.sh cancel
 
