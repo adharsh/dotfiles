@@ -136,8 +136,14 @@ packages=(
     ca-certificates wget
     shellcheck
     tmux
+    gh
 )
 sudo apt install -y "${packages[@]}"
+
+# Authenticate GitHub CLI
+if ! gh auth status >/dev/null 2>&1; then
+    gh auth login --web
+fi
 
 # Install latest version of CMake for CUDA compatibility
 sudo apt remove -y --purge --auto-remove cmake
