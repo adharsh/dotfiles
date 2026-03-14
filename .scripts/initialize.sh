@@ -448,7 +448,7 @@ if ! command -v claude >/dev/null 2>&1; then
 
     # task master ai
     yes | pnpm add -g task-master-ai@latest
-    claude mcp add taskmaster-ai -- npx -y task-master-ai
+    claude mcp add task-master-ai --scope user --env TASK_MASTER_TOOLS="core" -- task-master-ai
 fi
 
 # Install whisper.cpp (speech-to-text)
