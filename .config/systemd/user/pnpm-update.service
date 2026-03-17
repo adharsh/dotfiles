@@ -1,0 +1,7 @@
+[Unit]
+Description=Update pnpm global packages
+
+[Service]
+Type=oneshot
+Environment=PATH=/home/adharsh/.local/share/fnm/aliases/default/bin:/usr/bin:/bin
+ExecStart=/bin/bash -c 'pnpm update -g --latest'
