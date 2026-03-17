@@ -1,5 +1,6 @@
 [Unit]
 Description=Update pnpm global packages
+OnFailure=notify-failure@%n.service
 
 [Service]
 Type=oneshot

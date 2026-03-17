@@ -1,0 +1,6 @@
+[Unit]
+Description=Send desktop notification on %i failure
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/notify-send --urgency=critical "Systemd: %i failed" "Run: journalctl --user -u %i"
