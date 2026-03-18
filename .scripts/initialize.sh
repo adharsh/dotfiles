@@ -471,21 +471,7 @@ if ! command -v claude >/dev/null 2>&1; then
         fi
     fi
     yes | pnpm add -g gitnexus@latest
-    ## Rebuild @ladybugdb/core from source if prebuilt binary doesn't load (GLIBC mismatch)
-    LBUG_DIR=$(find "$PNPM_GLOBAL_DIR/.pnpm" -path "*/@ladybugdb/core/package.json" -not -path "*/lbug-source/*" -printf '%h\n' 2>/dev/null | head -1)
-    if [ -n "$LBUG_DIR" ] && ! node -e "require('$LBUG_DIR/lbug_native.js')" 2>/dev/null; then
-        (cd "$LBUG_DIR/lbug-source" && \
-            CC=gcc-13 CXX=g++-13 cmake -B build/release \
-                -DCMAKE_BUILD_TYPE=Release -DBUILD_NODEJS=TRUE -DBUILD_EXTENSIONS="fts" \
-                -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 . && \
-            cmake --build build/release --config Release -j"$(nproc)")
-        cp "$LBUG_DIR/lbug-source/tools/nodejs_api/build/lbugjs.node" "$LBUG_DIR/"
-        ## Copy FTS extension to ladybugdb's extension dir
-        LBUG_EXT_VER=$(node -e "console.log(require('$LBUG_DIR/package.json').version.replace(/\.\d+$/,''))" 2>/dev/null || echo "0.15.0")
-        mkdir -p "$HOME/.lbdb/extension/$LBUG_EXT_VER/linux_amd64/fts"
-        cp "$LBUG_DIR/lbug-source/extension/fts/build/libfts.lbug_extension" \
-            "$HOME/.lbdb/extension/$LBUG_EXT_VER/linux_amd64/fts/"
-    fi
+    "$DOTFILES_DIR/.scripts/fix-gitnexus.sh"
     ## Register MCP using pnpm global binary (not npx, which has its own broken copy)
     claude mcp add gitnexus --scope user -- gitnexus mcp
 fi

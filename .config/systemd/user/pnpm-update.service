@@ -4,21 +4,6 @@ OnFailure=notify-failure@%n.service
 
 [Service]
 Type=oneshot
-Environment=PATH=/home/adharsh/.local/share/fnm/aliases/default/bin:/usr/bin:/bin
+Environment=PATH=/home/adharsh/.local/share/pnpm/global/5/node_modules/.bin:/home/adharsh/.local/share/fnm/aliases/default/bin:/usr/bin:/bin
 ExecStart=/bin/bash -c 'pnpm update -g --latest'
-# Rebuild @ladybugdb/core from source if prebuilt binary doesn't load (GLIBC mismatch)
-ExecStartPost=/bin/bash -c '\
-  PNPM_GLOBAL_DIR="$(dirname "$(pnpm root -g)")"; \
-  LBUG_DIR=$(find "$PNPM_GLOBAL_DIR/.pnpm" -path "*/@ladybugdb/core/package.json" -not -path "*/lbug-source/*" -printf "%%h\n" 2>/dev/null | head -1); \
-  if [ -n "$LBUG_DIR" ] && ! node -e "require(\"$LBUG_DIR/lbug_native.js\")" 2>/dev/null; then \
-    (cd "$LBUG_DIR/lbug-source" && \
-      CC=gcc-13 CXX=g++-13 cmake -B build/release \
-        -DCMAKE_BUILD_TYPE=Release -DBUILD_NODEJS=TRUE -DBUILD_EXTENSIONS="fts" \
-        -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 . && \
-      cmake --build build/release --config Release -j"$(nproc)") && \
-    cp "$LBUG_DIR/lbug-source/tools/nodejs_api/build/lbugjs.node" "$LBUG_DIR/" && \
-    LBUG_EXT_VER=$(node -e "console.log(require(\"$LBUG_DIR/package.json\").version.replace(/\.\d+$/,\"\"))" 2>/dev/null || echo "0.15.0") && \
-    mkdir -p "$HOME/.lbdb/extension/$LBUG_EXT_VER/linux_amd64/fts" && \
-    cp "$LBUG_DIR/lbug-source/extension/fts/build/libfts.lbug_extension" \
-      "$HOME/.lbdb/extension/$LBUG_EXT_VER/linux_amd64/fts/"; \
-  fi'
+ExecStartPost=/home/adharsh/dotfiles/.scripts/fix-gitnexus.sh
