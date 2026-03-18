@@ -453,6 +453,36 @@ if ! command -v claude >/dev/null 2>&1; then
     # task master ai
     yes | pnpm add -g task-master-ai@latest
     claude mcp add task-master-ai --scope user --env TASK_MASTER_TOOLS="core" -- task-master-ai
+
+    # gitnexus (better than deepwiki)
+    ## gcc-13 needed to build @ladybugdb/core from source (prebuilt requires GLIBC 2.38, Ubuntu 22.04 has 2.35)
+    if ! command -v g++-13 >/dev/null 2>&1; then
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt install -y gcc-13 g++-13
+    fi
+    ## Allow @ladybugdb/core install script (pnpm v10 blocks lifecycle scripts by default)
+    PNPM_GLOBAL_DIR="$(dirname "$(pnpm root -g)")"
+    if ! grep -q '@ladybugdb/core' "$PNPM_GLOBAL_DIR/pnpm-workspace.yaml" 2>/dev/null; then
+        if [ -f "$PNPM_GLOBAL_DIR/pnpm-workspace.yaml" ]; then
+            sed -i "/^onlyBuiltDependencies:/a\\  - '@ladybugdb/core'" "$PNPM_GLOBAL_DIR/pnpm-workspace.yaml"
+        else
+            printf "onlyBuiltDependencies:\n  - '@ladybugdb/core'\n" > "$PNPM_GLOBAL_DIR/pnpm-workspace.yaml"
+        fi
+    fi
+    yes | pnpm add -g gitnexus@latest
+    ## Rebuild @ladybugdb/core from source if prebuilt binary doesn't load (GLIBC mismatch)
+    LBUG_DIR=$(find "$PNPM_GLOBAL_DIR/.pnpm" -path "*/@ladybugdb/core/package.json" -not -path "*/lbug-source/*" -printf '%h\n' 2>/dev/null | head -1)
+    if [ -n "$LBUG_DIR" ] && ! node -e "require('$LBUG_DIR/lbug_native.js')" 2>/dev/null; then
+        (cd "$LBUG_DIR/lbug-source" && \
+            CC=gcc-13 CXX=g++-13 cmake -B build/release \
+                -DCMAKE_BUILD_TYPE=Release -DBUILD_NODEJS=TRUE \
+                -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 . && \
+            cmake --build build/release --config Release -j"$(nproc)")
+        cp "$LBUG_DIR/lbug-source/tools/nodejs_api/build/lbugjs.node" "$LBUG_DIR/"
+    fi
+    ## Register MCP using pnpm global binary (not npx, which has its own broken copy)
+    claude mcp add gitnexus --scope user -- gitnexus mcp
 fi
 
 # Install whisper.cpp (speech-to-text)
