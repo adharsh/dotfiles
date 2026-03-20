@@ -43,6 +43,7 @@ if ! command -v google-chrome >/dev/null 2>&1; then
     rm google-chrome.deb
     # Dark Mode for default profile
     read -rp $'1. Sign in and sync. \n2. Set chrome://flags Auto Dark Mode for Web Contents to Enabled.'
+    read -rp "Go to chrome://settings/performance, set memory saver on, to maximum."
     # Light Mode profile / dev-profile, only after signing in to default profile since that will be copied over
     cp -r "$HOME/.config/google-chrome/Default" "$HOME/.config/google-chrome/dev-profile"
 fi
@@ -298,7 +299,7 @@ if [ ! -d "$("$CONDA_BIN" info --base)/envs/ml" ]; then
     pip_packages=(
         torchmetrics torchtext torchvision torchaudio tensorboard torch-tb-profiler
         triton "kernel_tuner[cuda]"
-        jupyterlab pandas tokenizers datasets altair
+        jupyterlab pandas tokenizers datasets altair matplotlib
         jaxtyping pycairo
     )
     uv pip install "${pip_packages[@]}"
