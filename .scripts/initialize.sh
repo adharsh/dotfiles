@@ -118,8 +118,22 @@ if ! command -v ncu-ui >/dev/null 2>&1; then
 fi
 if ! command -v nsys-ui >/dev/null 2>&1; then
     read -rp $'Error: Nsight Systems not found.
-    1. Install CUDA: https://developer.nvidia.com/cuda-downloads 
+    1. Install CUDA: https://developer.nvidia.com/cuda-downloads
     2. Reboot or Ctrl+c and source ~/.bashrc or open new shell session.'
+    exit 1
+fi
+
+# Allow non-root users to use ncu (Nsight Compute) without sudo
+if [ ! -f /etc/modprobe.d/nvidia-profiling.conf ]; then
+    sudo tee /etc/modprobe.d/nvidia-profiling.conf <<'EOF'
+options nvidia NVreg_RestrictProfilingToAdminUsers=0
+EOF
+    sudo update-initramfs -u -k all
+    read -rp "Reboot for nvidia-profiling.conf to take effect, then rerun initialize.sh."
+    exit 0
+fi
+if ! grep -q 'RmProfilingAdminOnly: 0' /proc/driver/nvidia/params 2>/dev/null; then
+    read -rp "Error: ncu still requires sudo. Verify /etc/modprobe.d/nvidia-profiling.conf exists and reboot."
     exit 1
 fi
 
