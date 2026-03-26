@@ -453,6 +453,18 @@ if ! command -v brave-browser-stable >/dev/null 2>&1; then
     curl -fsS https://dl.brave.com/install.sh | sh
 fi
 
+# Install vercel
+if ! command -v vercel >/dev/null 2>&1; then
+    yes | pnpm add -g vercel
+fi
+if ! vercel whoami >/dev/null 2>&1; then
+    vercel login
+    if ! vercel whoami >/dev/null 2>&1; then
+        read -rp "Error: Vercel login failed."
+        exit 1
+    fi
+fi
+
 # Install codex
 if ! command -v codex >/dev/null 2>&1; then
     yes | pnpm i -g @openai/codex
