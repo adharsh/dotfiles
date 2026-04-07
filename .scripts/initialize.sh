@@ -181,7 +181,7 @@ sudo usermod -aG video "$USER"
 # Windows: https://gist.github.com/tanyuan/55bca522bf50363ae4573d4bdcf06e2e
 if ! command -v xcape >/dev/null 2>&1; then
     sudo apt install -y gcc make pkg-config libx11-dev libxtst-dev libxi-dev
-    git clone git@github.com:alols/xcape.git "$HOME/.xcape"
+    git clone git@github.com:adharsh/xcape.git "$HOME/.xcape"
     (cd "$HOME/.xcape" && make && sudo make install)
 fi
 
