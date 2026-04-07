@@ -265,9 +265,9 @@ bind -x '"\C-s": _sgpt_bash'
 # Shell-GPT integration BASH v0.2
 
 # Clipboard
-## Usage: cl                 - Copies the last run command to clipboard
-## Usage: echo "text" | cl   - Copies piped input to clipboard
-cl() {
+## Usage: c                 - Copies the last run command to clipboard
+## Usage: echo "text" | c   - Copies piped input to clipboard
+c() {
     if [ -t 0 ] && [ $# -eq 0 ]; then
         # If nothing is piped in and no arguments are provided
         fc -ln -1 | sed 's/^\s*//' | tee >(xclip -selection clipboard)
