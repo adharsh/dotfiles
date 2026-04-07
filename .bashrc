@@ -171,7 +171,7 @@ esac
 eval "$(~/.rbenv/bin/rbenv init - --no-rehash bash)"
 
 # NODE_PATH (glob is ~2ms vs 205ms for `pnpm root -g`, and future-proof unlike hardcoding)
-export NODE_PATH="$(echo $HOME/.local/share/pnpm/global/*/node_modules)"
+export NODE_PATH="$(echo "$HOME"/.local/share/pnpm/global/*/node_modules)"
 
 # uv
 export PATH="$HOME/.local/bin:$PATH"
@@ -206,7 +206,7 @@ export PATH="$HOME/bin:$PATH" # Check local binaries first
 
 # Check if cuda is available
 p(){
-    $HOME/miniforge3/envs/ml/bin/python -c "import torch; print('CUDA Available:', torch.cuda.is_available())"
+    "$HOME/miniforge3/envs/ml/bin/python" -c "import torch; print('CUDA Available:', torch.cuda.is_available())"
 }
 
 # Restart copyq
