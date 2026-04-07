@@ -319,7 +319,7 @@ if [ ! -d "$("$CONDA_BIN" info --base)/envs/ml" ]; then
     uv pip install "${pip_packages[@]}"
 
     [ -d "$HOME/.triton-viz" ] && rm -rf "$HOME/.triton-viz"
-    git clone https://github.com/Deep-Learning-Profiling-Tools/triton-viz.git "$HOME/.triton-viz"
+    git clone git@github.com:Deep-Learning-Profiling-Tools/triton-viz.git "$HOME/.triton-viz"
     (cd .triton-viz && uv pip install -e .)
     conda deactivate
 fi
@@ -419,9 +419,9 @@ fi
 
 # Install rbenv
 if ! command -v rbenv >/dev/null 2>&1; then
-    git clone https://github.com/rbenv/rbenv.git "$HOME/.rbenv"
+    git clone git@github.com:rbenv/rbenv.git "$HOME/.rbenv"
     "$HOME/.rbenv/bin/rbenv" init
-    git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
+    git clone git@github.com:rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
     latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
     rbenv install "$latest_version"
     rbenv global "$latest_version"
