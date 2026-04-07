@@ -124,20 +124,20 @@ fi
 # Deferred to first use to save ~200ms on shell startup
 _conda_lazy_init() {
     unset -f conda mamba _conda_lazy_init
-    __conda_setup="$('/home/adharsh/miniforge3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    __conda_setup="$("$HOME/miniforge3/bin/conda" 'shell.bash' 'hook' 2> /dev/null)"
     if [ $? -eq 0 ]; then
         eval "$__conda_setup"
     else
-        if [ -f "/home/adharsh/miniforge3/etc/profile.d/conda.sh" ]; then
-            . "/home/adharsh/miniforge3/etc/profile.d/conda.sh"
+        if [ -f "$HOME/miniforge3/etc/profile.d/conda.sh" ]; then
+            . "$HOME/miniforge3/etc/profile.d/conda.sh"
         else
-            export PATH="/home/adharsh/miniforge3/bin:$PATH"
+            export PATH="$HOME/miniforge3/bin:$PATH"
         fi
     fi
     unset __conda_setup
 
-    export MAMBA_EXE='/home/adharsh/miniforge3/bin/mamba'
-    export MAMBA_ROOT_PREFIX='/home/adharsh/miniforge3'
+    export MAMBA_EXE="$HOME/miniforge3/bin/mamba"
+    export MAMBA_ROOT_PREFIX="$HOME/miniforge3"
     __mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
     if [ $? -eq 0 ]; then
         eval "$__mamba_setup"
@@ -152,14 +152,14 @@ mamba() { _conda_lazy_init; mamba "$@"; }
 # <<< conda/mamba lazy initialize <<<
 
 # fnm
-FNM_PATH="/home/adharsh/.local/share/fnm"
+FNM_PATH="$HOME/.local/share/fnm"
 if [ -d "$FNM_PATH" ]; then
   export PATH="$FNM_PATH:$PATH"
   eval "`fnm env`"
 fi
 
 # pnpm
-export PNPM_HOME="/home/adharsh/.local/share/pnpm"
+export PNPM_HOME="$HOME/.local/share/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
@@ -171,13 +171,13 @@ esac
 eval "$(~/.rbenv/bin/rbenv init - --no-rehash bash)"
 
 # NODE_PATH (glob is ~2ms vs 205ms for `pnpm root -g`, and future-proof unlike hardcoding)
-export NODE_PATH="$(echo /home/adharsh/.local/share/pnpm/global/*/node_modules)"
+export NODE_PATH="$(echo $HOME/.local/share/pnpm/global/*/node_modules)"
 
 # uv
-export PATH="/home/adharsh/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # flyctl
-export FLYCTL_INSTALL="/home/adharsh/.fly"
+export FLYCTL_INSTALL="$HOME/.fly"
 export PATH="$FLYCTL_INSTALL/bin:$PATH"
 
 # CUDA
@@ -206,7 +206,7 @@ export PATH="$HOME/bin:$PATH" # Check local binaries first
 
 # Check if cuda is available
 p(){
-    /home/adharsh/miniforge3/envs/ml/bin/python -c "import torch; print('CUDA Available:', torch.cuda.is_available())"
+    $HOME/miniforge3/envs/ml/bin/python -c "import torch; print('CUDA Available:', torch.cuda.is_available())"
 }
 
 # Restart copyq
