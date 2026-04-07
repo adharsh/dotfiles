@@ -421,12 +421,14 @@ fi
 if ! command -v rbenv >/dev/null 2>&1; then
     git clone git@github.com:rbenv/rbenv.git "$HOME/.rbenv"
     "$HOME/.rbenv/bin/rbenv" init
-    git clone git@github.com:rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
-    latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
-    rbenv install "$latest_version"
-    rbenv global "$latest_version"
-    gem install bundler
+    git clone git@github.com:rbenv/ruby-build.git "$("$HOME/.rbenv/bin/rbenv" root)"/plugins/ruby-build
+    read -rp "source ~/.bashrc then rerun initialize.sh to proceed with installation."
+    exit 0
 fi
+latest_version=$(rbenv install -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
+rbenv install "$latest_version"
+rbenv global "$latest_version"
+gem install bundler
 
 # Install latest LLVM
 read -rp "Read https://apt.llvm.org/ to check latest LLVM version specifically for Ubuntu 22.04 Jammy and update LLVM_VERSION below."
