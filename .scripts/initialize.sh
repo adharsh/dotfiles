@@ -181,13 +181,13 @@ sudo usermod -aG video "$USER"
 # Windows: https://gist.github.com/tanyuan/55bca522bf50363ae4573d4bdcf06e2e
 if ! command -v xcape >/dev/null 2>&1; then
     sudo apt install -y gcc make pkg-config libx11-dev libxtst-dev libxi-dev
-    git clone https://github.com/alols/xcape.git "$HOME/.xcape"
+    git clone git@github.com:alols/xcape.git "$HOME/.xcape"
     (cd "$HOME/.xcape" && make && sudo make install)
 fi
 
 # fzf: https://github.com/junegunn/fzf#using-git
 if ! command -v fzf >/dev/null 2>&1; then
-    git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+    git clone --depth 1 git@github.com:junegunn/fzf.git "$HOME/.fzf"
     yes | "$HOME/.fzf/install"
 fi
 
@@ -342,7 +342,7 @@ if ! command -v scrcpy >/dev/null 2>&1; then
                     gcc git pkg-config meson ninja-build libsdl2-dev \
                     libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
                     libswresample-dev libusb-1.0-0 libusb-1.0-0-dev
-    git clone https://github.com/Genymobile/scrcpy "$HOME/.scrcpy"
+    git clone git@github.com:Genymobile/scrcpy.git "$HOME/.scrcpy"
     (cd "$HOME/.scrcpy" && ./install_release.sh)
 fi
 
@@ -485,7 +485,7 @@ fi
 # Install whisper.cpp (speech-to-text)
 if [ ! -x "$HOME/whisper.cpp/build/bin/whisper-cli" ]; then
     sudo apt install -y libsdl2-dev xdotool xterm wmctrl cmake build-essential
-    git clone https://github.com/ggml-org/whisper.cpp.git "$HOME/whisper.cpp"
+    git clone git@github.com:ggml-org/whisper.cpp.git "$HOME/whisper.cpp"
     (cd "$HOME/whisper.cpp" && sh ./models/download-ggml-model.sh base.en)
     (cd "$HOME/whisper.cpp" && cmake -B build -DGGML_CUDA=1 -DWHISPER_SDL2=ON)
     (cd "$HOME/whisper.cpp" && cmake --build build -j"$(nproc)" --config Release)
