@@ -241,6 +241,20 @@ if ! command -v uv >/dev/null 2>&1; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
+# Install nvitop
+if ! command -v nvitop >/dev/null 2>&1; then
+    uv tool install nvitop
+fi
+
+# Install sgpt
+if ! command -v sgpt >/dev/null 2>&1; then
+    uv tool install shell-gpt --with litellm
+    sgpt --install-integration
+    sgpt --install-functions
+    read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history lines) before continuing."
+    exit 0
+fi
+
 
 # Installing conda via Miniforge
 CONDA_BIN="$HOME/miniforge3/bin/conda"
@@ -264,7 +278,6 @@ if [ ! -d "$("$CONDA_BIN" info --base)/envs/basic" ]; then
     pip_packages=(
         jupyterlab matplotlib pandas mypy shortuuid genanki loguru nbdime black isort ipywidgets gdown
         google-auth-oauthlib google-auth-httplib2 google-api-python-client tenacity
-        nvitop
     )
     uv pip install "${pip_packages[@]}"
     nbdime config-git --enable --global
@@ -280,17 +293,6 @@ if [ ! -d "$("$CONDA_BIN" info --base)/envs/cling" ]; then
     conda deactivate
 fi
 
-## Installing sgpt
-if [ ! -d "$("$CONDA_BIN" info --base)/envs/sgpt" ]; then
-    conda create -n sgpt python -y
-    conda activate sgpt
-    uv pip install shell-gpt litellm
-    sgpt --install-integration
-    sgpt --install-functions
-    read -rp "sgpt shell integration command run. Merge additions in .bashrc (with custom history lines) before continuing."
-    conda deactivate
-    exit 0
-fi
 
 ## For VSCode Extension: Latex Sympy Calculator
 if [ ! -d "$("$CONDA_BIN" info --base)/envs/latex_sympy_calculator" ]; then
