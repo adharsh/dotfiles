@@ -469,7 +469,7 @@ fi
 
 # Install codex
 if ! command -v codex >/dev/null 2>&1; then
-    yes | pnpm i -g @openai/codex
+    yes | pnpm add -g @openai/codex
 fi
 
 # Install claude-code
