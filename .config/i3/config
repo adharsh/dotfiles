@@ -234,8 +234,9 @@ bindsym $mod+m exec --no-startup-id $HOME/dotfiles/.scripts/dynamic_monitors.sh
 bindsym $mod+g exec google-chrome-stable --force-device-scale-factor=2 --profile-directory=Default --password-store=gnome
 bindsym $mod+Shift+g exec google-chrome-stable --force-device-scale-factor=2 --profile-directory=Default --incognito
 
-# Chrome for development (with sign-in)
-bindsym $mod+Shift+n exec /opt/google/chrome/chrome --force-device-scale-factor=2 \
+# Chrome for development (with sign-in, 1GB memory limit)
+bindsym $mod+Shift+n exec systemd-run --user --scope -p MemoryMax=1G \
+  /opt/google/chrome/chrome --force-device-scale-factor=2 \
   --user-data-dir=$HOME/.config/google-chrome/dev-profile \
   --disable-background-networking \
   --disable-background-timer-throttling \
@@ -249,7 +250,8 @@ bindsym $mod+Shift+n exec /opt/google/chrome/chrome --force-device-scale-factor=
   --metrics-recording-only \
   --no-first-run \
   --no-default-browser-check \
-  --remote-debugging-port=9222
+  --remote-debugging-port=9222 \
+  --js-flags="--max-old-space-size=512"
 
 # Chrome for development (without sign-in)
 bindsym $mod+Shift+d exec /opt/google/chrome/chrome --force-device-scale-factor=2 \
