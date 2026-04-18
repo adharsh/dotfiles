@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Configuration (override via environment or systemd Environment=)
+THRESHOLD_MB="${WATCHDOG_THRESHOLD_MB:-1024}"
+THRESHOLD_KB=$((THRESHOLD_MB * 1024))
+DRY_RUN="${WATCHDOG_DRY_RUN:-false}"
+COOLDOWN_FILE="${XDG_RUNTIME_DIR:-/tmp}/chrome-watchdog-cooldown"
+COOLDOWN_SEC=60
+CHROME_ICON=/opt/google/chrome/product_logo_64.png
+KILL_LOG="${WATCHDOG_KILL_LOG:-${HOME}/.local/share/chrome-tab-watchdog/kills.jsonl}"
+CDP_PORT="${WATCHDOG_CDP_PORT:-9222}"
+
+now=$(date +%s)
+mkdir -p "$(dirname "$KILL_LOG")"
+
+# Prune stale cooldown entries
+if [[ -f "$COOLDOWN_FILE" ]]; then
+    tmp=$(mktemp)
+    while IFS=: read -r pid ts; do
+        if (( now - ts < 120 )); then
+            printf '%s:%s\n' "$pid" "$ts" >> "$tmp"
+        fi
+    done < "$COOLDOWN_FILE"
+    mv "$tmp" "$COOLDOWN_FILE"
+fi
+
+# Check if PID is in cooldown
+in_cooldown() {
+    [[ -f "$COOLDOWN_FILE" ]] || return 1
+    while IFS=: read -r cpid ts; do
+        if [[ "$cpid" == "$1" ]] && (( now - ts < COOLDOWN_SEC )); then
+            return 0
+        fi
+    done < "$COOLDOWN_FILE"
+    return 1
+}
+
+# Read memory in KB for a given PID (PSS preferred, RSS fallback)
+read_memory_kb() {
+    local pid=$1
+    # Try PSS from smaps_rollup (more accurate for shared-memory processes)
+    local pss
+    pss=$(awk '/^Pss:/{s+=$2} END{print s+0}' "/proc/$pid/smaps_rollup" 2>/dev/null) || true
+    if [[ -n "$pss" && "$pss" -gt 0 ]]; then
+        echo "$pss"
+        return
+    fi
+    # Fallback to RSS
+    awk '/^VmRSS:/{print $2}' "/proc/$pid/status" 2>/dev/null || echo 0
+}
+
+# Identify Chrome instance from cmdline
+chrome_instance() {
+    local cmdline
+    cmdline=$(tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null) || true
+    if [[ "$cmdline" == *dev-profile* ]]; then
+        echo "Dev Chrome"
+    else
+        echo "Chrome"
+    fi
+}
+
+# Process age in seconds (from /proc/pid/stat starttime vs system uptime)
+process_age() {
+    local pid=$1
+    local clk_tck
+    clk_tck=$(getconf CLK_TCK)
+    local start_ticks
+    start_ticks=$(awk '{print $22}' "/proc/$pid/stat" 2>/dev/null) || { echo 0; return; }
+    local uptime_sec
+    uptime_sec=$(awk '{printf "%d", $1}' /proc/uptime)
+    echo $(( uptime_sec - start_ticks / clk_tck ))
+}
+
+# Snapshot dev chrome tabs via CDP (returns JSON array or empty string)
+snapshot_tabs() {
+    command -v jq >/dev/null 2>&1 || { echo ""; return; }
+    curl -sf -m 1 "http://localhost:${CDP_PORT}/json/list" 2>/dev/null || echo ""
+}
+
+# Identify the title of a tab that was just crashed by diffing before/after snapshots.
+# A killed renderer leaves its tab on a sad-tab page: the id either disappears or the
+# url flips to chrome-error://. If no signal is found, fall back to empty.
+find_crashed_tab_title() {
+    local before=$1 after=$2
+    [[ -z "$before" ]] && return
+    jq -r --argjson after "${after:-[]}" '
+        [.[] | select(.type=="page")] as $bp |
+        $bp[] as $b |
+        ($after | map(select(.type=="page" and .id==$b.id)) | first) as $a |
+        select($a == null or ($a.url | startswith("chrome-error://")))
+        | $b.title
+    ' <<< "$before" 2>/dev/null | head -1
+}
+
+# Total Chrome memory (all processes, not just renderers) in MB
+total_chrome_mb() {
+    local total=0
+    local p
+    for p in $(pgrep -f chrome 2>/dev/null || true); do
+        local kb
+        kb=$(awk '/^VmRSS:/{print $2}' "/proc/$p/status" 2>/dev/null) || continue
+        (( total += kb )) || true
+    done
+    echo $(( total / 1024 ))
+}
+
+# Find all Chrome renderer PIDs (exclude extension processes)
+mapfile -t pids < <(pgrep -f 'chrome.*--type=renderer' 2>/dev/null || true)
+
+if [[ ${#pids[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+renderer_count=${#pids[@]}
+killed=0
+tabs_before=$(snapshot_tabs)
+for pid in "${pids[@]}"; do
+    [[ -d "/proc/$pid" ]] || continue
+
+    # Skip extension renderer processes
+    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    [[ "$cmdline" == *--extension-process* ]] && continue
+
+    mem_kb=$(read_memory_kb "$pid")
+    mem_mb=$((mem_kb / 1024))
+
+    if (( mem_kb > THRESHOLD_KB )); then
+        if in_cooldown "$pid"; then
+            continue
+        fi
+
+        instance=$(chrome_instance "$pid")
+        age=$(process_age "$pid")
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "[chrome-tab-watchdog] DRY RUN: would kill PID $pid (${mem_mb}MB) [$instance]"
+            continue
+        fi
+
+        # Snapshot total chrome memory before kill
+        chrome_total=$(total_chrome_mb)
+
+        echo "[chrome-tab-watchdog] Killing PID $pid (${mem_mb}MB PSS) [$instance]"
+        kill -TERM "$pid" 2>/dev/null || true
+
+        tab_title=""
+        if [[ -n "$tabs_before" && "$instance" == "Dev Chrome" ]]; then
+            sleep 0.3
+            tabs_after=$(snapshot_tabs)
+            tab_title=$(find_crashed_tab_title "$tabs_before" "$tabs_after")
+            tabs_before="$tabs_after"
+        fi
+
+        body="PID $pid exceeded ${THRESHOLD_MB}MB limit.\nInstance: $instance"
+        [[ -n "$tab_title" ]] && body="${body}\nTab: $tab_title"
+
+        icon_flag=()
+        [[ -f "$CHROME_ICON" ]] && icon_flag=(--icon "$CHROME_ICON")
+        notify-send --urgency=critical --app-name=chrome-tab-watchdog \
+            "${icon_flag[@]}" \
+            "Chrome Tab Killed (${mem_mb}MB)" \
+            "$body"
+
+        tab_title_json=$(jq -Rn --arg t "$tab_title" '$t')
+        # Log kill to JSONL for analytics
+        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"instance":"%s","age_seconds":%d,"renderer_count":%d,"total_chrome_mb":%d,"tab_title":%s}\n' \
+            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$instance" "$age" "$renderer_count" "$chrome_total" "$tab_title_json" \
+            >> "$KILL_LOG"
+
+        printf '%s:%s\n' "$pid" "$now" >> "$COOLDOWN_FILE"
+        (( killed++ )) || true
+    fi
+done
+
+if (( killed > 0 )); then
+    echo "[chrome-tab-watchdog] Killed $killed tab(s) exceeding ${THRESHOLD_MB}MB"
+fi

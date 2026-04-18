@@ -1,0 +1,8 @@
+[Unit]
+Description=Kill Chrome tabs exceeding memory limit
+OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+Environment=WATCHDOG_THRESHOLD_MB=1024
+ExecStart=%h/bin/chrome-tab-watchdog
