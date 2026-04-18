@@ -220,7 +220,7 @@ yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
 
 # Enable pnpm maintenance timers (daily global update, weekly store prune)
 systemctl --user daemon-reload
-systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer
+systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer chrome-tab-watchdog.timer
 
 # Install timer
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
