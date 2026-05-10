@@ -18,6 +18,18 @@ fi
 sudo apt update -y
 sudo apt upgrade -y
 
+# Check firmware updates
+sudo apt install -y fwupd
+fwupdmgr refresh --force || true
+if fwupdmgr get-updates; then
+    read -rp "Apply firmware updates now? Only do this while plugged into power. [y/N] " update_firmware
+    if [[ "$update_firmware" =~ ^[Yy]$ ]]; then
+        sudo fwupdmgr update
+        read -rp "Firmware update finished or was staged. Reboot if prompted, then rerun initialize.sh."
+        exit 0
+    fi
+fi
+
 # Install Nvidia Driver
 if ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi >/dev/null 2>&1; then
     sudo apt install -y ubuntu-drivers-common
