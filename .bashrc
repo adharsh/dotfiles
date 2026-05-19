@@ -119,6 +119,11 @@ fi
 
 # fzf
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+## alt+o to open directories
+if [[ "${FZF_ALT_C_COMMAND-x}" != "" ]] && declare -F __fzf_cd__ >/dev/null; then
+    bind -m emacs-standard -r '\ec'
+    bind -m emacs-standard '"\eo": " \C-b\C-k \C-u`__fzf_cd__`\e\C-e\er\C-m\C-y\C-h\e \C-y\ey\C-x\C-x\C-d"'
+fi
 
 # >>> conda/mamba lazy initialize >>>
 # Deferred to first use to save ~200ms on shell startup
