@@ -162,6 +162,15 @@ packages=(
 )
 sudo apt install -y "${packages[@]}"
 
+# Install Ookla Speedtest CLI
+if ! dpkg-query -W -f='${Status}' speedtest 2>/dev/null | grep -q '^install ok installed$'; then
+    if dpkg-query -W -f='${Status}' speedtest-cli 2>/dev/null | grep -q '^install ok installed$'; then
+        sudo apt remove -y speedtest-cli
+    fi
+    curl -fsSL https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | sudo bash
+    sudo apt install -y speedtest
+fi
+
 # Authenticate GitHub CLI
 if ! gh auth status >/dev/null 2>&1; then
     gh auth login --web
