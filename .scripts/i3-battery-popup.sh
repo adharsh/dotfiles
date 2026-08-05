@@ -209,7 +209,7 @@ main (){
         if is_battery_discharging; then
             debug "Battery is discharging"
 
-            if [[ $PERC -lt $LIMIT ]]; then
+            if [[ $PERC -le $LIMIT ]]; then
                 debug "showing warning"
                 show_message "${MESSAGE}"
 
