@@ -159,6 +159,7 @@ packages=(
     shellcheck
     tmux
     gh
+    feh
 )
 sudo apt install -y "${packages[@]}"
 
