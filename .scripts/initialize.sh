@@ -148,7 +148,7 @@ fi
 packages=(
     gnome-themes-extra gnome-icon-theme
     i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
-    xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect
+    xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xterm ffmpeg
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
     xournalpp libreoffice
@@ -501,19 +501,6 @@ if ! command -v claude >/dev/null 2>&1; then
     # task master ai
     yes | pnpm add -g task-master-ai@latest
     claude mcp add task-master-ai --scope user --env TASK_MASTER_TOOLS="core" -- task-master-ai
-fi
-
-# Install whisper.cpp (speech-to-text)
-if [ ! -x "$HOME/whisper.cpp/build/bin/whisper-cli" ]; then
-    sudo apt install -y libsdl2-dev xdotool xterm wmctrl cmake build-essential
-    git clone git@github.com:ggml-org/whisper.cpp.git "$HOME/whisper.cpp"
-    (cd "$HOME/whisper.cpp" && sh ./models/download-ggml-model.sh base.en)
-    (cd "$HOME/whisper.cpp" && cmake -B build -DGGML_CUDA=1 -DWHISPER_SDL2=ON)
-    (cd "$HOME/whisper.cpp" && cmake --build build -j"$(nproc)" --config Release)
-    LD_LIBRARY_PATH="$HOME/whisper.cpp/build/src:$HOME/whisper.cpp/build/ggml/src:$HOME/whisper.cpp/build/ggml/src/ggml-cuda" \
-        "$HOME/whisper.cpp/build/bin/whisper-quantize" \
-        "$HOME/whisper.cpp/models/ggml-base.en.bin" \
-        "$HOME/whisper.cpp/models/ggml-base.en-q5_0.bin" q5_0
 fi
 
 # Check if passwords are being synced in chrome
