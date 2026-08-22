@@ -160,6 +160,7 @@ packages=(
     tmux
     gh
     feh
+    pdfarranger
 )
 sudo apt install -y "${packages[@]}"
 
