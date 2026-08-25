@@ -5,10 +5,18 @@
 set -f
 
 # Source the API key file explicitly
+# shellcheck source=/dev/null
 [ -f "$HOME/.api_keys" ] && source "$HOME/.api_keys"
 
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+    message="OPENAI_API_KEY is not set in $HOME/.api_keys"
+    echo "$message" >&2
+    notify-send "Screenshot transcription failed" "$message" -t 5000
+    exit 1
+fi
+
 # Define the detailed prompt
-read -r -d '' PROMPT << EOM
+read -r -d '' PROMPT << 'EOM'
 Transcribe the text in the provided image as is. If and only if there's math, use katex with the following specifications:
 - For inline (non-centered) mathematical expressions, use single dollar signs: $...$
 - For block (centered) mathematical expressions, use double dollar signs: $$...$$
@@ -41,6 +49,11 @@ TEMP_IMAGE=$(mktemp)
 TEMP_BASE64=$(mktemp)
 TEMP_JSON=$(mktemp)
 
+cleanup() {
+    rm -f -- "$TEMP_IMAGE" "$TEMP_BASE64" "$TEMP_JSON"
+}
+trap cleanup EXIT
+
 echo "Temporary files:"
 echo "Image: $TEMP_IMAGE"
 echo "Base64: $TEMP_BASE64"
@@ -50,7 +63,6 @@ echo "JSON: $TEMP_JSON"
 echo "Select the area you want to capture..."
 if ! maim -s --hidecursor -f png "$TEMP_IMAGE" || [ ! -s "$TEMP_IMAGE" ]; then
     echo "Failed to capture screenshot or screenshot was cancelled. Aborting."
-    rm -f "$TEMP_IMAGE"
     exit 1
 fi
 
@@ -61,7 +73,7 @@ start_time=$(date +%s.%N)
 # xclip -selection clipboard -t image/png < "$TEMP_IMAGE"
 
 # Encode the image to base64 and save to a file
-base64 "$TEMP_IMAGE" > "$TEMP_BASE64"
+base64 --wrap=0 "$TEMP_IMAGE" > "$TEMP_BASE64"
 
 # Create the JSON payload using jq, reading the base64 image from the file
 jq -n \
@@ -86,24 +98,55 @@ jq -n \
   }' > "$TEMP_JSON"
 
 # Send the image to OpenAI API for analysis
-RESPONSE=$(curl -s https://api.openai.com/v1/responses \
+if ! RESPONSE=$(curl --silent --show-error --fail-with-body \
+  https://api.openai.com/v1/responses \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -d @"$TEMP_JSON")
+  -d @"$TEMP_JSON"); then
+    error_message=$(printf '%s' "$RESPONSE" | jq -r '.error.message // empty' 2>/dev/null)
+    if [ -z "$error_message" ]; then
+        error_message="The OpenAI API request failed; run snap2md.sh in a terminal for details."
+    fi
+    echo "$error_message" >&2
+    notify-send "Screenshot transcription failed" "$error_message" -t 7000
+    exit 1
+fi
 
-# Clean up temporary files
-rm "$TEMP_IMAGE" "$TEMP_BASE64" "$TEMP_JSON"
-
-# Extract the markdown text from API response (glob pattern matching disabled)
-MARKDOWN=$(echo "$RESPONSE" | jq -r '.output[0].content[0].text')
+# Responses may contain reasoning or tool items before the assistant message, so
+# locate output text by type instead of assuming it is the first output item.
+if ! MARKDOWN=$(printf '%s' "$RESPONSE" | jq -er '
+  [
+    .output[]?
+    | select(.type == "message")
+    | .content[]?
+    | select(.type == "output_text")
+    | .text
+  ]
+  | join("")
+  | select(length > 0)
+'); then
+    error_message=$(printf '%s' "$RESPONSE" | jq -r '
+      .error.message
+      // ([.output[]?.content[]? | select(.type == "refusal") | .refusal] | join(" ") | select(length > 0))
+      // ("The response did not contain transcription text (status: " + (.status // "unknown") + ").")
+    ' 2>/dev/null)
+    if [ -z "$error_message" ]; then
+        error_message="The OpenAI response was not valid JSON."
+    fi
+    echo "$error_message" >&2
+    echo "Full API response:" >&2
+    printf '%s\n' "$RESPONSE" >&2
+    notify-send "Screenshot transcription failed" "$error_message" -t 7000
+    exit 1
+fi
 
 # Echo the full response for debugging
 echo "Full API Response:"
-echo "$RESPONSE"
+printf '%s\n' "$RESPONSE"
 
 # Copy the markdown to clipboard and print to screen
 echo -e "\nExtracted Markdown:"
-echo "$MARKDOWN" | tee >(xclip -selection clipboard)
+printf '%s\n' "$MARKDOWN" | tee >(xclip -selection clipboard)
 
 # Calculate elapsed time
 end_time=$(date +%s.%N)
