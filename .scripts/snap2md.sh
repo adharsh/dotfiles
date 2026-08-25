@@ -77,11 +77,13 @@ base64 --wrap=0 "$TEMP_IMAGE" > "$TEMP_BASE64"
 
 # Create the JSON payload using jq, reading the base64 image from the file
 jq -n \
-  --arg model "gpt-5.1" \
+  --arg model "gpt-5.6-luna" \
   --arg prompt "$PROMPT" \
   --rawfile image "$TEMP_BASE64" \
   '{
     model: $model,
+    reasoning: {effort: "none"},
+    service_tier: "fast",
     input: [
       {
         role: "user",
@@ -89,7 +91,8 @@ jq -n \
           {type: "input_text", text: $prompt},
           {
             type: "input_image",
-            image_url: "data:image/png;base64,\($image)"
+            image_url: "data:image/png;base64,\($image)",
+            detail: "high"
           }
         ]
       }
