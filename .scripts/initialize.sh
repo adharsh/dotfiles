@@ -450,9 +450,8 @@ rbenv install "$latest_version"
 rbenv global "$latest_version"
 gem install bundler
 
-# Install latest LLVM
-read -rp "Read https://apt.llvm.org/ to check latest LLVM version specifically for Ubuntu 22.04 Jammy and update LLVM_VERSION below."
-LLVM_VERSION=21
+# Install the current stable LLVM release from apt.llvm.org
+LLVM_VERSION=22
 echo "LLVM version: $LLVM_VERSION"
 if ! command -v "clang-tidy-$LLVM_VERSION" >/dev/null 2>&1; then
     curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
@@ -462,13 +461,14 @@ if ! command -v "clang-tidy-$LLVM_VERSION" >/dev/null 2>&1; then
     ## Fix known LLVM packaging issue where files move between sub-packages across versions
     sudo dpkg --configure -a
     sudo apt install -y --fix-broken -o Dpkg::Options::="--force-overwrite"
-    ## Register as defaults
-    sudo update-alternatives --install /usr/bin/clangd       clangd       "/usr/bin/clangd-$LLVM_VERSION"       100
-    sudo update-alternatives --install /usr/bin/clang-tidy   clang-tidy   "/usr/bin/clang-tidy-$LLVM_VERSION"   100
-    sudo update-alternatives --install /usr/bin/clang-format clang-format "/usr/bin/clang-format-$LLVM_VERSION" 100
-    sudo update-alternatives --install /usr/bin/clang   clang   "/usr/bin/clang-$LLVM_VERSION"   100
-    sudo update-alternatives --install /usr/bin/clang++ clang++ "/usr/bin/clang++-$LLVM_VERSION" 100
 fi
+
+# apt.llvm.org installs versioned commands, so register unversioned command names.
+# The priority is only a required update-alternatives argument; this setup keeps
+# a single LLVM toolchain registered as the default.
+for llvm_tool in clang clang++ clangd clang-tidy clang-format; do
+    sudo update-alternatives --install "/usr/bin/$llvm_tool" "$llvm_tool" "/usr/bin/${llvm_tool}-${LLVM_VERSION}" 100
+done
 
 # Install brave browser (to block youtube ads)
 if ! command -v brave-browser-stable >/dev/null 2>&1; then
