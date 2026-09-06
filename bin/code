@@ -1,2 +1,3 @@
 #!/bin/bash
-/usr/bin/code --force-device-scale-factor=2 "$@"
+export XCURSOR_SIZE=48
+exec /usr/bin/code --force-device-scale-factor=2 "$@"
