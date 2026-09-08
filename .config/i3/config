@@ -268,8 +268,6 @@ bindsym $mod+Shift+d exec /opt/google/chrome/chrome --force-device-scale-factor=
   --no-default-browser-check \
   --remote-debugging-port=9222
 
-# GPT Transcribe push-to-talk: hold $mod+t to record, release to transcribe and type.
-# Recording starts before the floating window; $mod+Shift+q closes it and cancels.
-for_window [title="gpt-transcribe"] floating enable, border pixel 1, move position center
-bindsym $mod+t exec --no-startup-id $HOME/dotfiles/.scripts/gpt-transcribe-toggle.sh start
-bindsym --release $mod+t exec --no-startup-id $HOME/dotfiles/.scripts/gpt-transcribe-toggle.sh stop
+# Wispr Flow: hold Alt+T ($mod+t) to record; release either key to finish.
+# One hold watcher handles early release and suppresses key autorepeat.
+bindsym $mod+t exec --no-startup-id /home/adharsh/workspace/wispr-bridge/wispr-ptt --key t --modifier $mod
