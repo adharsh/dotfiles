@@ -204,8 +204,6 @@ sa() {
 }
 alias d="deactivate" # for uv's virtualenvs
 alias npx="pnpm dlx"
-alias tm="task-master"
-alias taskmaster="task-master"
 alias t=tree
 export PATH="$HOME/bin:$PATH" # Check local binaries first
 

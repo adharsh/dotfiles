@@ -26,6 +26,3 @@
 
 # Ignore pycache
 __pycache__/
-
-# Ignore ruflo
-.claude-flow

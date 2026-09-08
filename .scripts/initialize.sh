@@ -96,11 +96,13 @@ if [ ! -f "$HOME/dotfiles/.api_keys" ]; then
 export OPENAI_API_KEY=
 export CLOCKIFY_API_KEY=
 EOM
-)
+    )
     echo "$PROMPT" > "$HOME/dotfiles/.api_keys"
+    chmod 600 "$HOME/dotfiles/.api_keys"
     read -rp "Populate .api_keys file: https://platform.openai.com/api-keys https://console.anthropic.com/settings/keys https://app.clockify.me/user/preferences#advanced"
     source "$HOME/dotfiles/.api_keys"
 fi
+chmod 600 "$HOME/dotfiles/.api_keys"
 
 # Create .screenshot_save_config
 touch "$HOME/dotfiles/.screenshot_save_config"
@@ -147,7 +149,7 @@ fi
 # Install general packages
 packages=(
     gnome-themes-extra gnome-icon-theme
-    i3 xdotool xautomation silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
+    i3 xdotool xautomation x11-utils silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
     xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xterm ffmpeg
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
@@ -490,18 +492,6 @@ fi
 # Install codex
 if ! command -v codex >/dev/null 2>&1; then
     yes | pnpm add -g @openai/codex
-fi
-
-# Install claude-code
-if ! command -v claude >/dev/null 2>&1; then
-    curl -fsSL https://claude.ai/install.sh | bash
-
-    # ruflo
-    yes | pnpm add -g ruflo@latest
-
-    # task master ai
-    yes | pnpm add -g task-master-ai@latest
-    claude mcp add task-master-ai --scope user --env TASK_MASTER_TOOLS="core" -- task-master-ai
 fi
 
 # Check if passwords are being synced in chrome
