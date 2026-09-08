@@ -90,6 +90,12 @@ if [ ! -d "$HOME/dotfiles" ]; then
     git clone git@github.com:adharsh/dotfiles.git "$HOME/dotfiles"
 fi
 
+# Install Wispr bridge
+if [ ! -d "$HOME/workspace/wispr-bridge" ]; then
+    mkdir -p "$HOME/workspace"
+    git clone git@github.com:adharsh/wispr-bridge.git "$HOME/workspace/wispr-bridge"
+fi
+
 # Create .api_keys file
 if [ ! -f "$HOME/dotfiles/.api_keys" ]; then
     PROMPT=$(cat <<EOM
