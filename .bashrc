@@ -166,8 +166,8 @@ fi
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
 case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 # pnpm end
 
@@ -175,8 +175,15 @@ esac
 # Added by `rbenv init` on Fri Aug  1 08:02:32 PM PDT 2025
 eval "$(~/.rbenv/bin/rbenv init - --no-rehash bash)"
 
-# NODE_PATH (glob is ~2ms vs 205ms for `pnpm root -g`, and future-proof unlike hardcoding)
-export NODE_PATH="$(echo "$HOME"/.local/share/pnpm/global/*/node_modules)"
+# NODE_PATH for libraries in pnpm's active global install groups.
+NODE_PATH=
+for pnpm_global_dir in "$PNPM_HOME"/global/v11/*; do
+  if [ -L "$pnpm_global_dir" ] && [ -d "$pnpm_global_dir/node_modules" ]; then
+    NODE_PATH="${NODE_PATH:+$NODE_PATH:}$pnpm_global_dir/node_modules"
+  fi
+done
+export NODE_PATH
+unset pnpm_global_dir
 
 # uv
 export PATH="$HOME/.local/bin:$PATH"

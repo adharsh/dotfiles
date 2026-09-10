@@ -241,8 +241,8 @@ if ! command -v pnpm >/dev/null 2>&1; then
     exit 0
 fi
 # pnpm global packages 
-## Markdown to Anki custom plugin
-yes | pnpm add -g markdown-it @iktakahiro/markdown-it-katex highlight.js
+## Markdown to Anki custom plugin (keep its libraries in one pnpm 12 install group)
+pnpm add -g markdown-it,@iktakahiro/markdown-it-katex,highlight.js
 
 # Enable pnpm maintenance timers (daily global update, weekly store prune)
 systemctl --user daemon-reload
