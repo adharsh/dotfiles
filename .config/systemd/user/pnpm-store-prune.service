@@ -4,5 +4,7 @@ OnFailure=notify-failure@%n.service
 
 [Service]
 Type=oneshot
-Environment=PATH=/home/adharsh/.local/share/fnm/aliases/default/bin:/usr/bin:/bin
+WorkingDirectory=%h
+Environment=PNPM_HOME=/home/adharsh/.local/share/pnpm
+Environment=PATH=/home/adharsh/.local/share/pnpm/bin:/home/adharsh/.local/share/fnm/aliases/default/bin:/usr/bin:/bin
 ExecStart=/bin/bash -c 'pnpm store prune'
