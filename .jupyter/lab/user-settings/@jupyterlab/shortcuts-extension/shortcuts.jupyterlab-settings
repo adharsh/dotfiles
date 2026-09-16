@@ -1,0 +1,14 @@
+{
+  "shortcuts": [
+    {
+      "command": "notebook:restart-and-run-to-selected",
+      "keys": ["1", "1"],
+      "selector": ".jp-Notebook.jp-mod-commandMode:not(.jp-mod-readWrite) :focus"
+    },
+    {
+      "command": "notebook:restart-run-all",
+      "keys": ["=", "="],
+      "selector": ".jp-Notebook.jp-mod-commandMode:not(.jp-mod-readWrite) :focus"
+    }
+  ]
+}
