@@ -55,6 +55,12 @@ if ! command -v google-chrome >/dev/null 2>&1; then
     cp -r "$HOME/.config/google-chrome/Default" "$HOME/.config/google-chrome/dev-profile"
 fi
 
+# Install Brave browser
+if ! command -v brave-browser-stable >/dev/null 2>&1; then
+    curl -fsS https://dl.brave.com/install.sh | sh
+fi
+
+
 # Install VSCode
 if ! command -v /usr/bin/code >/dev/null 2>&1; then
     wget -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
@@ -477,11 +483,6 @@ fi
 for llvm_tool in clang clang++ clangd clang-tidy clang-format; do
     sudo update-alternatives --install "/usr/bin/$llvm_tool" "$llvm_tool" "/usr/bin/${llvm_tool}-${LLVM_VERSION}" 100
 done
-
-# Install brave browser (to block youtube ads)
-if ! command -v brave-browser-stable >/dev/null 2>&1; then
-    curl -fsS https://dl.brave.com/install.sh | sh
-fi
 
 # Install vercel
 if ! command -v vercel >/dev/null 2>&1; then

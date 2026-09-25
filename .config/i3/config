@@ -231,8 +231,8 @@ bindsym $mod+c exec copyq show
 bindsym $mod+m exec --no-startup-id $HOME/dotfiles/.scripts/dynamic_monitors.sh
 
 # Chrome: https://superuser.com/a/377195
-bindsym $mod+g exec $HOME/bin/google-chrome-stable --profile-directory=Default --password-store=gnome
-bindsym $mod+Shift+g exec $HOME/bin/google-chrome-stable --profile-directory=Default --incognito
+bindsym $mod+g exec $HOME/bin/brave --profile-directory=Default
+bindsym $mod+Shift+g exec $HOME/bin/brave --profile-directory=Default --incognito
 
 # Chrome for development (with sign-in)
 bindsym $mod+Shift+n exec $HOME/bin/google-chrome-stable \
