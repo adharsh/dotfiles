@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
+export XCURSOR_SIZE=48
 exec /usr/bin/brave-browser-stable --force-device-scale-factor=2 "$@"

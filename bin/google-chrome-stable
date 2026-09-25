@@ -1,0 +1,8 @@
+#!/bin/bash
+# Match the cursor override in bin/code while keeping the HiDPI UI scale.
+export XCURSOR_SIZE=48
+# Work around missing toolbars in second windows on the external X11 monitor.
+exec /usr/bin/google-chrome-stable \
+  --force-device-scale-factor=2 \
+  --disable-gpu-compositing \
+  "$@"
