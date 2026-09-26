@@ -1,5 +1,5 @@
 [Unit]
-Description=Check Chrome tab memory every 30s
+Description=Check Chrome and Brave tab memory every 30s
 
 [Timer]
 OnBootSec=60

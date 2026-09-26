@@ -5,10 +5,10 @@ set -euo pipefail
 THRESHOLD_MB="${WATCHDOG_THRESHOLD_MB:-1024}"
 THRESHOLD_KB=$((THRESHOLD_MB * 1024))
 DRY_RUN="${WATCHDOG_DRY_RUN:-false}"
-COOLDOWN_FILE="${XDG_RUNTIME_DIR:-/tmp}/chrome-watchdog-cooldown"
+COOLDOWN_FILE="${XDG_RUNTIME_DIR:-/tmp}/browser-watchdog-cooldown"
 COOLDOWN_SEC=60
-CHROME_ICON=/opt/google/chrome/product_logo_64.png
-KILL_LOG="${WATCHDOG_KILL_LOG:-${HOME}/.local/share/chrome-tab-watchdog/kills.jsonl}"
+KILL_LOG="${WATCHDOG_KILL_LOG:-${HOME}/.local/share/browser-tab-watchdog/kills.jsonl}"
+# Optional tab-title lookup for Dev Chrome only.
 CDP_PORT="${WATCHDOG_CDP_PORT:-9222}"
 
 now=$(date +%s)
@@ -50,15 +50,16 @@ read_memory_kb() {
     awk '/^VmRSS:/{print $2}' "/proc/$pid/status" 2>/dev/null || echo 0
 }
 
-# Identify Chrome instance from cmdline
-chrome_instance() {
-    local cmdline
-    cmdline=$(tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null) || true
-    if [[ "$cmdline" == *dev-profile* ]]; then
-        echo "Dev Chrome"
-    else
-        echo "Chrome"
-    fi
+# Match the browser executable, rather than browser names elsewhere in the arguments.
+browser_name() {
+    local executable
+    IFS= read -r -d '' executable < "/proc/$1/cmdline" 2>/dev/null || return 1
+    case "$executable" in
+        # Chrome's main process keeps its launcher path in argv[0].
+        /opt/google/chrome/chrome|/opt/google/chrome/google-chrome|/usr/bin/google-chrome|/usr/bin/google-chrome-stable) echo "Chrome" ;;
+        /opt/brave.com/brave/brave) echo "Brave" ;;
+        *) return 1 ;;
+    esac
 }
 
 # Process age in seconds (from /proc/pid/stat starttime vs system uptime)
@@ -94,11 +95,13 @@ find_crashed_tab_title() {
     ' <<< "$before" 2>/dev/null | head -1
 }
 
-# Total Chrome memory (all processes, not just renderers) in MB
-total_chrome_mb() {
+# Total memory for this browser (all of this user's processes) in MB.
+total_browser_mb() {
+    local browser=$1
     local total=0
     local p
-    for p in $(pgrep -f chrome 2>/dev/null || true); do
+    for p in $(pgrep -u "$UID" -f 'chrome|brave' 2>/dev/null || true); do
+        [[ "$(browser_name "$p")" == "$browser" ]] || continue
         local kb
         kb=$(awk '/^VmRSS:/{print $2}' "/proc/$p/status" 2>/dev/null) || continue
         (( total += kb )) || true
@@ -106,21 +109,30 @@ total_chrome_mb() {
     echo $(( total / 1024 ))
 }
 
-# Find all Chrome renderer PIDs (exclude extension processes)
-mapfile -t pids < <(pgrep -f 'chrome.*--type=renderer' 2>/dev/null || true)
+# Find this user's Chrome and Brave page renderers, excluding extensions.
+pids=()
+declare -A renderer_counts=([Chrome]=0 [Brave]=0)
+while read -r pid; do
+    browser=$(browser_name "$pid") || continue
+    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    [[ "$cmdline" == *--extension-process* ]] && continue
+    pids+=("$pid")
+    renderer_counts[$browser]=$((renderer_counts[$browser] + 1))
+done < <(pgrep -u "$UID" -f -- '(^| )--type=renderer( |$)' 2>/dev/null || true)
 
 if [[ ${#pids[@]} -eq 0 ]]; then
     exit 0
 fi
 
-renderer_count=${#pids[@]}
 killed=0
 tabs_before=$(snapshot_tabs)
 for pid in "${pids[@]}"; do
     [[ -d "/proc/$pid" ]] || continue
+    browser=$(browser_name "$pid") || continue
 
     # Skip extension renderer processes
     cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    [[ " $cmdline " == *" --type=renderer "* ]] || continue
     [[ "$cmdline" == *--extension-process* ]] && continue
 
     mem_kb=$(read_memory_kb "$pid")
@@ -131,18 +143,21 @@ for pid in "${pids[@]}"; do
             continue
         fi
 
-        instance=$(chrome_instance "$pid")
+        instance="$browser"
+        if [[ "$browser" == "Chrome" && "$cmdline" == *dev-profile* ]]; then
+            instance="Dev Chrome"
+        fi
         age=$(process_age "$pid")
 
         if [[ "$DRY_RUN" == "true" ]]; then
-            echo "[chrome-tab-watchdog] DRY RUN: would kill PID $pid (${mem_mb}MB) [$instance]"
+            echo "[browser-tab-watchdog] DRY RUN: would kill PID $pid (${mem_mb}MB) [$instance]"
             continue
         fi
 
-        # Snapshot total chrome memory before kill
-        chrome_total=$(total_chrome_mb)
+        # Snapshot this browser's total memory before kill.
+        browser_total=$(total_browser_mb "$browser")
 
-        echo "[chrome-tab-watchdog] Killing PID $pid (${mem_mb}MB PSS) [$instance]"
+        echo "[browser-tab-watchdog] Killing PID $pid (${mem_mb}MB PSS) [$instance]"
         kill -TERM "$pid" 2>/dev/null || true
 
         tab_title=""
@@ -156,17 +171,21 @@ for pid in "${pids[@]}"; do
         body="PID $pid exceeded ${THRESHOLD_MB}MB limit.\nInstance: $instance"
         [[ -n "$tab_title" ]] && body="${body}\nTab: $tab_title"
 
+        case "$browser" in
+            Chrome) browser_icon=/opt/google/chrome/product_logo_64.png ;;
+            Brave) browser_icon=/opt/brave.com/brave/product_logo_64.png ;;
+        esac
         icon_flag=()
-        [[ -f "$CHROME_ICON" ]] && icon_flag=(--icon "$CHROME_ICON")
-        notify-send --urgency=critical --app-name=chrome-tab-watchdog \
+        [[ -f "$browser_icon" ]] && icon_flag=(--icon "$browser_icon")
+        notify-send --urgency=critical --app-name=browser-tab-watchdog \
             "${icon_flag[@]}" \
-            "Chrome Tab Killed (${mem_mb}MB)" \
+            "$browser Tab Killed (${mem_mb}MB)" \
             "$body"
 
         tab_title_json=$(jq -Rn --arg t "$tab_title" '$t')
         # Log kill to JSONL for analytics
-        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"instance":"%s","age_seconds":%d,"renderer_count":%d,"total_chrome_mb":%d,"tab_title":%s}\n' \
-            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$instance" "$age" "$renderer_count" "$chrome_total" "$tab_title_json" \
+        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"browser":"%s","instance":"%s","age_seconds":%d,"renderer_count":%d,"total_browser_mb":%d,"tab_title":%s}\n' \
+            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$browser" "$instance" "$age" "${renderer_counts[$browser]}" "$browser_total" "$tab_title_json" \
             >> "$KILL_LOG"
 
         printf '%s:%s\n' "$pid" "$now" >> "$COOLDOWN_FILE"
@@ -175,5 +194,5 @@ for pid in "${pids[@]}"; do
 done
 
 if (( killed > 0 )); then
-    echo "[chrome-tab-watchdog] Killed $killed tab(s) exceeding ${THRESHOLD_MB}MB"
+    echo "[browser-tab-watchdog] Killed $killed tab(s) exceeding ${THRESHOLD_MB}MB"
 fi
