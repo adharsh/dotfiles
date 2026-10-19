@@ -175,6 +175,7 @@ packages=(
     gh
     feh
     pdfarranger
+    kdeconnect
 )
 sudo apt install -y "${packages[@]}"
 
