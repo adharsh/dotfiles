@@ -4,18 +4,111 @@
 #   swap            -> defaults to: swap 23 45  => (2↔4), (3↔5)
 #   swap 23 45      -> (2↔4), (3↔5)
 #   swap 23 89      -> (2↔8), (3↔9)
+#   swap 2345       -> same as: swap 23 45
+#   swap --prompt   -> popup asks for the 4 digits (bound to $mod+x in i3)
 
 set -euo pipefail
+
+# Print error; also show a notification when not run from a terminal (e.g. the i3 popup)
+die() {
+  echo "$1"
+  [[ -t 1 ]] || notify-send "swap" "$1"
+  exit 1
+}
+
+# Popup that runs as soon as 4 digits are typed; Enter on empty input = default; Escape or focusing away cancels.
+# Floated and centered on the focused monitor by the i3 for_window rule on instance "swap-prompt".
+# Prints the digits ("" for default); exits non-zero if cancelled.
+prompt() {
+  python3 - <<'EOF'
+import sys
+import tkinter as tk
+
+BG, FG, DIM = "#222222", "#ffffff", "#888888"
+FONT = ("monospace", 16)
+
+result = None  # stays None on cancel
+
+
+def finish(value):
+    global result
+    result = value
+    root.quit()
+
+
+def on_change(*_):
+    if len(digits.get()) == 4:
+        finish(digits.get())
+
+
+def on_return(_):
+    if digits.get():
+        root.bell()  # partial input: wait for all 4 digits
+    else:
+        finish("")
+
+
+def on_focus_out(_):
+    # Focus moved to another window (not just between our own widgets)
+    root.after(50, lambda: root.focus_get() is None and root.quit())
+
+
+root = tk.Tk(className="swap-prompt")
+root.title("swap")
+root.configure(bg=BG, padx=20, pady=14)
+
+tk.Label(root, text="swap (e.g. 2345):", font=FONT, bg=BG, fg=DIM).pack(side="left")
+
+digits = tk.StringVar()
+entry = tk.Entry(
+    root,
+    textvariable=digits,
+    width=4,
+    font=FONT,
+    bg=BG,
+    fg=FG,
+    insertbackground=FG,
+    relief="flat",
+    highlightthickness=0,
+    validate="key",
+    validatecommand=(root.register(lambda s: s == "" or (s.isdigit() and len(s) <= 4)), "%P"),
+)
+entry.pack(side="left", padx=(8, 0))
+entry.focus_set()
+
+digits.trace_add("write", on_change)
+root.bind("<Return>", on_return)
+root.bind("<KP_Enter>", on_return)
+root.bind("<Escape>", lambda _: root.quit())
+root.bind("<FocusOut>", on_focus_out)
+
+root.mainloop()
+
+if result is None:
+    sys.exit(1)
+print(result)
+EOF
+}
+
+# Popup mode: read the digits from the popup instead of args
+if [[ "${1:-}" == "--prompt" ]]; then
+  INPUT="$(prompt)" || exit 0  # cancelled
+  set -- ${INPUT:+"$INPUT"}
+fi
 
 # Default args
 if (( $# == 0 )); then
   set -- 23 45
 fi
 
+# Single 4-digit arg: 2345 -> 23 45
+if (( $# == 1 )) && [[ "$1" =~ ^[0-9]{4}$ ]]; then
+  set -- "${1:0:2}" "${1:2:2}"
+fi
+
 # Must be exactly two args
 if (( $# != 2 )); then
-  echo "Usage: swap AB CD   (exactly two args, each 2 digits; e.g. swap 23 45)"
-  exit 1
+  die "Usage: swap AB CD   (exactly two args, each 2 digits; e.g. swap 23 45 or swap 2345)"
 fi
 
 LEFT="$1"
@@ -23,12 +116,10 @@ RIGHT="$2"
 
 # Validate: exactly two digits each
 if [[ ! "$LEFT" =~ ^[0-9]{2}$ ]]; then
-  echo "Invalid LEFT '$LEFT' (must be exactly two digits, e.g. 23)"
-  exit 1
+  die "Invalid LEFT '$LEFT' (must be exactly two digits, e.g. 23)"
 fi
 if [[ ! "$RIGHT" =~ ^[0-9]{2}$ ]]; then
-  echo "Invalid RIGHT '$RIGHT' (must be exactly two digits, e.g. 45)"
-  exit 1
+  die "Invalid RIGHT '$RIGHT' (must be exactly two digits, e.g. 45)"
 fi
 
 swap_pair() {
