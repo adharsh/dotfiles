@@ -372,13 +372,14 @@ if ! command -v buildifier >/dev/null 2>&1; then
 fi
 
 # Scrcpy, screen capture for Android
-if ! command -v scrcpy >/dev/null 2>&1; then
-    sudo apt install -y ffmpeg libsdl2-2.0-0 adb wget \
-                    gcc git pkg-config meson ninja-build libsdl2-dev \
-                    libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
-                    libswresample-dev libusb-1.0-0 libusb-1.0-0-dev
-    git clone git@github.com:Genymobile/scrcpy.git "$HOME/.scrcpy"
-    (cd "$HOME/.scrcpy" && ./install_release.sh)
+# Static build bundles FFmpeg, SDL3 and adb (building from source needs FFmpeg 6+ and SDL3, not in 22.04 apt)
+# bin/scrcpy wraps it with default flags, so check for the real binary instead of using command -v
+if [ ! -x "$HOME/.scrcpy/scrcpy" ]; then
+    scrcpy_version=v5.0.1
+    mkdir -p "$HOME/.scrcpy"
+    curl -fL "https://github.com/Genymobile/scrcpy/releases/download/$scrcpy_version/scrcpy-linux-x86_64-$scrcpy_version.tar.gz" \
+        | tar -xz --strip-components=1 -C "$HOME/.scrcpy"
+    ln -sf "$HOME/.scrcpy/adb" "$HOME/bin/adb" # scrcpy always uses its bundled adb, so use it everywhere to avoid adb server version clashes
 fi
 
 # Install anki

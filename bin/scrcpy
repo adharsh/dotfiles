@@ -1,0 +1,2 @@
+#!/bin/bash
+exec "$HOME/.scrcpy/scrcpy" --keep-active -S "$@"

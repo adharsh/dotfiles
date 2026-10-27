@@ -16,6 +16,7 @@
 !/bin/swap
 !/bin/browser-tab-watchdog
 !/bin/wispr
+!/bin/scrcpy
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config
