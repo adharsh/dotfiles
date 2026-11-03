@@ -273,6 +273,7 @@ bindsym $mod+Shift+d exec $HOME/bin/google-chrome-stable \
   --no-default-browser-check \
   --remote-debugging-port=9222
 
-# Wispr Flow: hold Alt+T ($mod+t) to record; release either key to finish.
-# One hold watcher handles early release and suppresses key autorepeat.
-bindsym $mod+t exec --no-startup-id /home/adharsh/workspace/wispr-bridge/wispr-ptt --key t --modifier $mod
+# stt dictation: tap $mod+t, talk, tap it again. Or hold it while you talk, then let go.
+bindsym $mod+t exec --no-startup-id /home/adharsh/workspace/stt/stt dictate --key t --mod $mod
+# stt meeting notes: tap $mod+Shift+t to start and again to stop (holding works like a tap).
+bindsym $mod+Shift+t exec --no-startup-id /home/adharsh/workspace/stt/stt meeting --key t --mod $mod

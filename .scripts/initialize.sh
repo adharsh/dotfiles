@@ -96,12 +96,6 @@ if [ ! -d "$HOME/dotfiles" ]; then
     git clone git@github.com:adharsh/dotfiles.git "$HOME/dotfiles"
 fi
 
-# Install Wispr bridge
-if [ ! -d "$HOME/workspace/wispr-bridge" ]; then
-    mkdir -p "$HOME/workspace"
-    git clone git@github.com:adharsh/wispr-bridge.git "$HOME/workspace/wispr-bridge"
-fi
-
 # Create .api_keys file
 if [ ! -f "$HOME/dotfiles/.api_keys" ]; then
     PROMPT=$(cat <<EOM
@@ -162,7 +156,7 @@ fi
 packages=(
     gnome-themes-extra gnome-icon-theme
     i3 xdotool xautomation x11-utils silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
-    xpad dunst p7zip-full gnome-sound-recorder pulseaudio pavucontrol zstd xdot yad audacity expect xterm ffmpeg
+    xpad dunst p7zip-full gnome-sound-recorder pulseaudio pulseaudio-utils pavucontrol zstd xdot yad audacity expect xterm ffmpeg
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
     xournalpp libreoffice
@@ -267,6 +261,16 @@ if ! command -v copyq >/dev/null 2>&1; then
     sudo add-apt-repository -y ppa:hluk/copyq
     sudo apt update
     sudo apt install -y copyq
+fi
+
+# Install stt: dictation and meeting notes on the GPU (hotkeys are in the i3 config).
+# Its setup.sh needs CUDA, cmake, copyq and the packages above; the first run builds for 15-30 min.
+if [ ! -d "$HOME/workspace/stt" ]; then
+    mkdir -p "$HOME/workspace"
+    git clone git@github.com:adharsh/stt.git "$HOME/workspace/stt"
+fi
+if ! "$HOME/workspace/stt/stt" check >/dev/null 2>&1; then
+    "$HOME/workspace/stt/setup.sh"
 fi
 
 # Install uv

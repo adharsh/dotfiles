@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-exec "$HOME/workspace/wispr-bridge/wispr" "$@"
