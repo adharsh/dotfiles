@@ -1,0 +1,13 @@
+// Workspace 8: gnome-system-monitor on the left, nvtop on the right.
+// Loaded at login with append_layout (see the i3 config); each app fills its slot when its window opens.
+{
+    "layout": "splith",
+    "nodes": [
+        {
+            "swallows": [{"class": "^Gnome-system-monitor$"}]
+        },
+        {
+            "swallows": [{"class": "^Gnome-terminal$", "window_role": "^nvtop$"}]
+        }
+    ]
+}
