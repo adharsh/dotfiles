@@ -263,8 +263,9 @@ if ! command -v copyq >/dev/null 2>&1; then
     sudo apt install -y copyq
 fi
 
-# Install stt: dictation and meeting notes on the GPU (hotkeys are in the i3 config).
-# Its setup.sh needs CUDA, cmake, copyq and the packages above; the first run builds for 15-30 min.
+# Install stt: dictation and meeting notes on the GPU. Its hotkeys are in the i3 config, and its
+# settings and analysis prompt in .config/stt, linked by dfm above, so setup.sh keeps them.
+# setup.sh needs CUDA, cmake, copyq and the packages above; the first run builds for 15-30 min.
 if [ ! -d "$HOME/workspace/stt" ]; then
     mkdir -p "$HOME/workspace"
     git clone git@github.com:adharsh/stt.git "$HOME/workspace/stt"

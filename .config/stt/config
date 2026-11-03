@@ -1,0 +1,11 @@
+# stt settings. "stt config" asks for each one, with what each choice is for.
+# "stt models" lists the models.
+speech_model = parakeet-unified-en-0.6b
+analysis_model = qwen3.5-9b
+# Each meeting gets a folder in here.
+meetings_folder = ~/Documents/Meetings
+# A meeting's audio, once its notes are written: flac (kept, lossless),
+# opus (kept, small) or no (deleted).
+keep_audio = flac
+# auto, or a language code (en, de, fr, ...) for models that need one.
+language = auto
