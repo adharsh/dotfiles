@@ -17,6 +17,7 @@
 !/bin/browser-tab-watchdog
 !/bin/stt
 !/bin/scrcpy
+!/bin/adb-wifi
 
 # Ignore .screenshot_save_config
 /.screenshot_save_config

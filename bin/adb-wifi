@@ -1,0 +1,350 @@
+#!/usr/bin/env python3
+"""adb-wifi: one-tap wireless ADB from the phone, via KDE Connect.
+
+USAGE
+  adb-wifi [--device ID]                    connect to the phone over wireless ADB
+  adb-wifi pair CODE [PORT] [--device ID]   pair this laptop with the phone (first time only)
+
+  ID is the phone's KDE Connect device ID (kdeconnect-cli -a). It can be left out when exactly
+  one paired device is reachable. The result goes to stdout, a desktop notification, a KDE
+  Connect ping on the phone, and ~/.cache/adb-wifi/log.
+
+SETUP
+  Laptop: KDE Connect settings > the phone > Run command > add
+            Name "Connect ADB", command: $HOME/bin/adb-wifi --device ID
+  Phone:  long-press the home screen > Widgets > KDE Connect > Run command, pick this laptop.
+          (Also in the KDE Connect app under Run command. No Quick Settings tile exists.)
+
+USE
+  Turn on Wireless debugging and tap "Connect ADB". The phone gets a ping with the result.
+
+PAIRING (first time, or when told the phone refused this laptop)
+  Phone:  Wireless debugging > Pair device with pairing code. It shows a code and IP:PORT.
+  Laptop: adb-wifi pair CODE PORT    (on a shared subnet, PORT is optional: found over mDNS)
+  The phone stores the pairing against ~/.android/adbkey, so it works on any network. Android
+  drops it after 7 days without a connection; pair again then. adb-wifi never pairs by itself.
+
+HOW IT FINDS THE PHONE
+  IP:   the address of KDE Connect's link to the paired phone. KDE Connect checks the phone's
+        pinned certificate. adb doesn't check the phone at all: it will treat any host that
+        speaks its protocol as a device. So this IP is what the connection's trust rests on.
+        The link is found by having kdeconnectd send the phone an invisible packet (its command
+        list) and seeing which connection carried it. Other KDE Connect devices on the network,
+        paired or not, are never used.
+  Port: changes every time Wireless debugging is turned on. Found from:
+        1. mDNS, only for services at the phone's IP (works when both share a subnet);
+        2. the last port that worked;
+        3. a scan of the phone's ephemeral ports (32768-60999) for the one that answers adb's
+           handshake (CNXN -> STLS). Takes 5-20 s. Needed when mDNS can't cross subnets.
+  Then adb connect IP:PORT. Success means the device reached the 'device' state; adb connect's
+  exit code isn't trusted. Stale or duplicate connections to the phone are disconnected.
+
+SECURITY
+  - Wireless ADB only stops unpaired laptops reaching the phone. It never verifies the phone,
+    so an impostor is only kept out by connecting to the KDE Connect-verified IP.
+  - adb's own mDNS auto-connect would connect to any host advertising the phone's (public)
+    service name. adb servers started here have it off (ADB_MDNS_AUTO_CONNECT=0). For servers
+    started by anything else, add `export ADB_MDNS_AUTO_CONNECT=0` to your shell profile.
+  - ~/.android/adbkey gives a shell on the phone whenever Wireless debugging is on and the
+    phone is reachable. Keep it mode 600 and out of dotfiles.
+  - Turn Wireless debugging off when done. Android also turns it off when Wi-Fi changes.
+  - Not covered: an attacker on the same network who takes over the phone's IP (ARP spoofing).
+  - The scan sends one short adb hello to each open port on the phone, and only the phone.
+    Network monitoring may see it as a port scan.
+
+TROUBLESHOOTING
+  "isn't reachable over KDE Connect"  open KDE Connect on the phone; check kdeconnect-cli -a
+  "No ADB port open"                  Wireless debugging is off
+  "refused this laptop"               not paired, or the pairing expired: pair (above)
+  "Already running"                   a previous tap is still scanning; wait for its ping
+"""
+import asyncio
+import fcntl
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+HOME = Path.home()
+# Prefer ~/bin/adb (scrcpy's): a different adb version would kill the running server.
+ADB = os.environ.get("ADB") or shutil.which("adb", path=f"{HOME}/bin:{os.environ.get('PATH', '')}") or "adb"
+CACHE = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "adb-wifi"
+PORTS = range(32768, 61000)  # Android's ip_local_port_range; adbd's TLS port is ephemeral
+CNXN, STLS = 0x4E584E43, 0x534C5453
+HELLO = struct.pack("<6I", CNXN, 0x01000001, 1 << 20, 7, sum(b"host::\0"), CNXN ^ 0xFFFFFFFF) + b"host::\0"
+os.environ["ADB_MDNS_AUTO_CONNECT"] = "0"  # an adb server we start never trusts mDNS names
+device = None  # the phone's KDE Connect ID; results are pinged to it
+
+
+class Failure(Exception):
+    pass
+
+
+def adb(*args, timeout=20):
+    try:
+        r = subprocess.run([ADB, *args], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return f"timed out after {timeout}s"
+    return (r.stdout + r.stderr).strip()
+
+
+def run(*cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def cache_dir():
+    CACHE.mkdir(parents=True, exist_ok=True)
+    CACHE.chmod(0o700)
+    return CACHE
+
+
+def endpoint(ip, port=""):
+    return f"[{ip}]:{port}" if ":" in ip else f"{ip}:{port}"
+
+
+def host_of(address):
+    return address.rsplit(":", 1)[0].strip("[]").removeprefix("::ffff:")
+
+
+def report(msg, ok=True):
+    print(msg, file=sys.stdout if ok else sys.stderr)
+    with open(cache_dir() / "log", "a") as f:
+        f.write(f"{datetime.now():%F %T} {msg}\n")
+    run("notify-send", "-a", "adb-wifi", "-u", "normal" if ok else "critical", "Wireless ADB", msg)
+    if device:
+        run("kdeconnect-cli", "-d", device, "--ping-msg", f"ADB: {msg}")
+
+
+def pick_device(requested):
+    reachable = run("kdeconnect-cli", "-a", "--id-only").split()
+    if requested in reachable or (not requested and len(reachable) == 1):
+        return requested or reachable[0]
+    if requested or not reachable:
+        raise Failure("The phone isn't reachable over KDE Connect. Open KDE Connect on it.")
+    raise Failure("Several KDE Connect devices are reachable; pass --device ID.")
+
+
+def kdeconnect_sockets():
+    """{(local, peer): bytes sent} for kdeconnectd's established TCP connections."""
+    sockets, key = {}, None
+    for line in run("ss", "-Htinp", "state", "established").splitlines():
+        if not line[:1].isspace():  # a socket line; its counters follow on an indented line
+            fields = line.split()
+            key = (fields[2], fields[3]) if '"kdeconnectd"' in line else None
+        elif key:
+            m = re.search(r"\bbytes_sent:(\d+)", line)
+            sockets[key] = int(m[1]) if m else 0
+    return sockets
+
+
+def phone_ip(dev):
+    """IP of KDE Connect's link to `dev`: send it a packet and see which connection carried it."""
+    for _ in range(3):
+        before = kdeconnect_sockets()
+        # Makes kdeconnectd re-send its run-command list to that device only (invisible on the phone).
+        run("dbus-send", "--session", "--type=signal", f"/kdeconnect/{dev}/kdeconnect_runcommand",
+            "org.kde.kdeconnect.config.configChanged")
+        time.sleep(0.5)
+        after = kdeconnect_sockets()
+        ips = {host_of(peer) for (local, peer), sent in after.items() if sent > before.get((local, peer), sent)}
+        if len(ips) == 1:
+            return ips.pop()
+    raise Failure("Couldn't identify the phone's KDE Connect connection. Try again, and check that the "
+                  "Run command plugin is enabled for the phone.")
+
+
+def mdns(kind, ip, wait=0):
+    """[(name, port)] of _adb-tls-<kind>._tcp services adb sees over mDNS at the phone's IP."""
+    deadline = time.time() + wait
+    while True:
+        found = []
+        for line in adb("mdns", "services").splitlines():
+            m = re.fullmatch(rf"(adb-[\w-]+)\s+_adb-tls-{kind}\._tcp\.?\s+(\S+):(\d+)", line.strip())
+            if m and host_of(m[2]) == ip:
+                found.append((m[1], int(m[3])))
+        if found or time.time() >= deadline:
+            return found
+        time.sleep(0.5)
+
+
+def transports():
+    lines = adb("devices").splitlines()[1:]
+    return dict(line.split("\t")[:2] for line in lines if "\t" in line)
+
+
+def phone_transports(ip, services):
+    """{serial: state} for adb transports to the phone: IP:PORT ones and adb's mDNS-named ones."""
+    names = {f"{name}._adb-tls-connect._tcp" for name, _ in services}
+    return {s: state for s, state in transports().items() if s.startswith(endpoint(ip)) or s in names}
+
+
+def live_transport(ip, services):
+    """The phone's connected IP:PORT transport. mDNS-named ones don't count: their address is unverified."""
+    return next((s for s, state in phone_transports(ip, services).items()
+                 if state == "device" and s.startswith(endpoint(ip))), None)
+
+
+def tidy(ip, services, keep):
+    """Disconnect every other transport to the phone (stale ports, mDNS-named duplicates)."""
+    for serial in phone_transports(ip, services):
+        if serial != keep:
+            adb("disconnect", serial)
+
+
+async def is_adb(ip, port, timeout=1.5):
+    """True if ip:port is adbd's TLS port, False if not, None if the TCP connect timed out."""
+    try:
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(ip, port), timeout)
+    except asyncio.TimeoutError:
+        return None
+    except OSError:
+        return False
+    try:
+        writer.write(HELLO)
+        header = await asyncio.wait_for(reader.readexactly(24), timeout)
+        return struct.unpack_from("<I", header)[0] == STLS
+    except (OSError, asyncio.TimeoutError, asyncio.IncompleteReadError):
+        return False
+    finally:
+        writer.close()
+
+
+async def scan(ip):
+    """adbd's TLS port on ip, or None. Connects that timed out (lost SYNs) get a slower second pass."""
+    ports = PORTS
+    for concurrency in (256, 32):
+        sem = asyncio.Semaphore(concurrency)
+
+        async def check(port):
+            async with sem:
+                return port, await is_adb(ip, port)
+
+        tasks = [asyncio.create_task(check(p)) for p in ports]
+        timed_out = []
+        try:
+            for next_done in asyncio.as_completed(tasks):
+                port, result = await next_done
+                if result:
+                    return port
+                if result is None:
+                    timed_out.append(port)
+        finally:
+            for t in tasks:
+                t.cancel()
+        ports = timed_out
+    return None
+
+
+def last_port(ip):
+    try:
+        last_ip, port = (CACHE / "endpoint").read_text().split()
+        return [(int(port), "last used port")] if last_ip == ip else []
+    except (OSError, ValueError):
+        return []
+
+
+def find_port(ip, hints):
+    for port, how in hints:
+        if asyncio.run(is_adb(ip, port)):
+            return port, how
+    port = asyncio.run(scan(ip))
+    return (port, "port scan") if port else (None, None)
+
+
+def try_connect(target, attempts=3):
+    """adb connect, confirmed by the transport reaching 'device' (adb connect exits 0 even on failure).
+    Retried because the TLS handshake occasionally fails transiently; an unpaired key fails every time."""
+    for attempt in range(attempts):
+        time.sleep(attempt)
+        adb("connect", target)
+        for _ in range(10):
+            state = transports().get(target)
+            if state == "device":
+                return True
+            if state is None:
+                break
+            time.sleep(0.5)
+        adb("disconnect", target)
+    return False
+
+
+def connect(dev):
+    ip = phone_ip(dev)
+    fresh = "daemon started" in adb("start-server")
+    services = mdns("connect", ip, wait=3 if fresh else 0)  # a new server needs a moment to hear mDNS
+    live = live_transport(ip, services)
+    if live:
+        tidy(ip, services, keep=live)
+        return report(f"Already connected ({live}).")
+
+    port, how = find_port(ip, [(port, "mDNS") for _, port in services] + last_port(ip))
+    if not port:
+        raise Failure(f"No ADB port open on the phone ({ip}). Is Wireless debugging on?")
+    target = endpoint(ip, port)
+    if not try_connect(target):
+        raise Failure(f"The phone's ADB ({target}) refused this laptop: not paired, or the pairing expired. "
+                      "Pair: Wireless debugging > Pair device with pairing code, then adb-wifi pair CODE PORT")
+    (cache_dir() / "endpoint").write_text(f"{ip} {port}\n")
+    tidy(ip, services, keep=target)
+    report(f"Connected to {target} (found via {how}).")
+
+
+def pair(dev, code, port=None):
+    ip = phone_ip(dev)
+    adb("start-server")
+    live = live_transport(ip, mdns("connect", ip))
+    if live:
+        return report(f"Already connected ({live}), so this laptop is already paired. Nothing to do.")
+    if not port:
+        found = mdns("pairing", ip, wait=3)
+        if not found:
+            raise Failure("Pairing port not visible over mDNS (different subnet?). Pass the port from the "
+                          "phone's pairing dialog: adb-wifi pair CODE PORT")
+        port = found[0][1]
+    out = adb("pair", endpoint(ip, port), code, timeout=30)
+    if not out.startswith("Successfully paired"):
+        raise Failure(f"Pairing with {endpoint(ip, port)} failed: {out}")
+    report(out)
+    connect(dev)
+
+
+def main():
+    global device
+    args = sys.argv[1:]
+    if "--device" in args:
+        i = args.index("--device")
+        device = args[i + 1] if i + 1 < len(args) else None
+        del args[i:i + 2]
+    if args in ([], ["connect"]):
+        action = connect
+    elif args[0] == "pair" and len(args) in (2, 3) and all(a.isdigit() for a in args[1:]):
+        action = lambda dev: pair(dev, *args[1:])  # noqa: E731
+    else:
+        print(__doc__.strip())
+        return 0 if args[:1] in (["-h"], ["--help"]) else 2
+
+    lock = open(cache_dir() / "lock", "a")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        report("Already running; wait for the previous attempt's result.", ok=False)
+        return 1
+    try:
+        device = pick_device(device)
+        action(device)
+    except Failure as e:
+        report(str(e), ok=False)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
