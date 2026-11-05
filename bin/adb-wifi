@@ -4,16 +4,24 @@
 USAGE
   adb-wifi [--device ID]                    connect to the phone over wireless ADB
   adb-wifi pair CODE [PORT] [--device ID]   pair this laptop with the phone (first time only)
+  adb-wifi setup [--device ID]              add the "Connect ADB" button for the phone
 
   ID is the phone's KDE Connect device ID (kdeconnect-cli -a). It can be left out when exactly
   one paired device is reachable. The result goes to stdout, a desktop notification, a KDE
   Connect ping on the phone, and ~/.cache/adb-wifi/log.
 
-SETUP
-  Laptop: KDE Connect settings > the phone > Run command > add
-            Name "Connect ADB", command: $HOME/bin/adb-wifi --device ID
-  Phone:  long-press the home screen > Widgets > KDE Connect > Run command, pick this laptop.
-          (Also in the KDE Connect app under Run command. No Quick Settings tile exists.)
+SETUP (once per laptop install)
+  1. Pair the phone and this laptop in KDE Connect.
+  2. Laptop: adb-wifi setup
+     Adds a KDE Connect run command, "Connect ADB", that runs this script for the phone, and
+     sends it to the phone. It's stored outside dotfiles, since it holds the phone's ID:
+       ~/.config/kdeconnect/ID/kdeconnect_runcommand/config
+     so run setup again after a reinstall. Re-running is safe: other run commands are kept, and
+     an entry that's already right isn't rewritten.
+     By hand instead: KDE Connect settings > the phone > Run command > add
+       Name "Connect ADB", command: $HOME/bin/adb-wifi --device ID
+  3. Phone: long-press the home screen > Widgets > KDE Connect > Run command, pick this laptop.
+     (Also in the KDE Connect app under Run command. No Quick Settings tile exists.)
 
 USE
   Turn on Wireless debugging and tap "Connect ADB". The phone gets a ping with the result.
@@ -47,6 +55,8 @@ SECURITY
     started by anything else, add `export ADB_MDNS_AUTO_CONNECT=0` to your shell profile.
   - ~/.android/adbkey gives a shell on the phone whenever Wireless debugging is on and the
     phone is reachable. Keep it mode 600 and out of dotfiles.
+  - The button runs only what this laptop's KDE Connect config says. The phone gets a copy of
+    the command to list, but a tap sends back only its key.
   - Turn Wireless debugging off when done. Android also turns it off when Wi-Fi changes.
   - Not covered: an attacker on the same network who takes over the phone's IP (ARP spoofing).
   - The scan sends one short adb hello to each open port on the phone, and only the phone.
@@ -57,11 +67,15 @@ TROUBLESHOOTING
   "No ADB port open"                  Wireless debugging is off
   "refused this laptop"               not paired, or the pairing expired: pair (above)
   "Already running"                   a previous tap is still scanning; wait for its ping
+  "couldn't confirm"                  enable KDE Connect's Run command plugin on both devices
+  "left untouched"                    the run-command config has unexpected content; add by hand
 """
 import asyncio
 import fcntl
+import json
 import os
 import re
+import shlex
 import shutil
 import struct
 import subprocess
@@ -74,6 +88,7 @@ HOME = Path.home()
 # Prefer ~/bin/adb (scrcpy's): a different adb version would kill the running server.
 ADB = os.environ.get("ADB") or shutil.which("adb", path=f"{HOME}/bin:{os.environ.get('PATH', '')}") or "adb"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "adb-wifi"
+KDECONNECT = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config") / "kdeconnect"
 PORTS = range(32768, 61000)  # Android's ip_local_port_range; adbd's TLS port is ephemeral
 CNXN, STLS = 0x4E584E43, 0x534C5453
 HELLO = struct.pack("<6I", CNXN, 0x01000001, 1 << 20, 7, sum(b"host::\0"), CNXN ^ 0xFFFFFFFF) + b"host::\0"
@@ -316,6 +331,64 @@ def pair(dev, code, port=None):
     connect(dev)
 
 
+def read_run_commands(path):
+    """{key: {"name", "command"}} from KDE Connect's run-command config, a QSettings INI file:
+    [General] then commands="@ByteArray(<JSON>)", in C-style escapes (\\" \\\\ \\xNN)."""
+    text = path.read_text("latin-1") if path.exists() else ""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if lines in ([], ["[General]"]):
+        return {}
+    try:
+        if len(lines) == 2 and lines[0] == "[General]" and lines[1].startswith("commands="):
+            value = lines[1].removeprefix("commands=")
+            if len(value) >= 2 and value[0] == value[-1] == '"':
+                value = value[1:-1]
+            value = value.encode("latin-1").decode("unicode_escape")  # the same escapes Qt writes
+            if value.startswith("@ByteArray(") and value.endswith(")"):
+                commands = json.loads(value[len("@ByteArray("):-1].encode("latin-1").decode())
+                if isinstance(commands, dict) and all(isinstance(c, dict) for c in commands.values()):
+                    return commands
+    except ValueError:
+        pass
+    raise Failure(f"Couldn't read the run commands in {path}, so it was left untouched. Add "
+                  '"Connect ADB" by hand (see adb-wifi --help, SETUP).')
+
+
+def write_run_commands(path, commands):
+    """Write `commands` the way QSettings does. The JSON is ASCII, so only \\ and " need escaping."""
+    data = json.dumps(commands, separators=(",", ":"), sort_keys=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text('[General]\ncommands="@ByteArray(%s)"\n' % data.replace("\\", "\\\\").replace('"', '\\"'))
+    os.replace(tmp, path)
+
+
+def setup(dev):
+    """Add the "Connect ADB" run command for `dev` to KDE Connect, and send it to the phone."""
+    if not re.fullmatch(r"\w+", dev):  # it goes into a path and a shell command
+        raise Failure(f"Unexpected KDE Connect device ID: {dev!r}")
+    path = KDECONNECT / dev / "kdeconnect_runcommand" / "config"
+    commands = read_run_commands(path)
+    script = shlex.quote(str(Path(__file__).absolute()))
+    entry = {"name": "Connect ADB", "command": f"{script} --device {dev}"}
+    if commands.get("adb-wifi") == entry:
+        status = '"Connect ADB" is already set up'
+    else:
+        status = ("Updated" if "adb-wifi" in commands else "Added") + ' "Connect ADB"'
+        write_run_commands(path, {**commands, "adb-wifi": entry})
+    try:
+        phone_ip(dev)  # has kdeconnectd reload the config and send the list to the phone
+    except Failure:
+        raise Failure(f"{status}, but couldn't confirm the phone got it. Check that KDE Connect's "
+                      "Run command plugin is enabled on both devices.")
+    note = ""
+    if any(key != "adb-wifi" and c.get("name") == "Connect ADB" for key, c in commands.items()):
+        note = (' Another run command is also called "Connect ADB"; delete it in KDE Connect settings'
+                " if unused.")
+    report(f"{status}. On the phone it's under KDE Connect > Run command; for one tap, add the Run command "
+           f"widget.{note}")
+
+
 def main():
     global device
     args = sys.argv[1:]
@@ -325,6 +398,8 @@ def main():
         del args[i:i + 2]
     if args in ([], ["connect"]):
         action = connect
+    elif args == ["setup"]:
+        action = setup
     elif args[0] == "pair" and len(args) in (2, 3) and all(a.isdigit() for a in args[1:]):
         action = lambda dev: pair(dev, *args[1:])  # noqa: E731
     else:
