@@ -3,7 +3,7 @@
 
 USAGE
   adb-wifi [--device ID]                    connect to the phone over wireless ADB
-  adb-wifi pair CODE [PORT] [--device ID]   pair this laptop with the phone (first time only)
+  adb-wifi pair [PORT] [--device ID]        pair this laptop with the phone (asks for the code)
   adb-wifi setup [--device ID]              add the "Connect ADB" button for the phone
 
   ID is the phone's KDE Connect device ID (kdeconnect-cli -a). It can be left out when exactly
@@ -26,30 +26,37 @@ SETUP (once per laptop install)
 USE
   Turn on Wireless debugging and tap "Connect ADB". The phone gets a ping with the result.
 
-PAIRING (first time, or when told the phone refused this laptop)
+PAIRING (first time, or when told the phone refused this laptop or couldn't prove it's the phone)
   Phone:  Wireless debugging > Pair device with pairing code. It shows a code and IP:PORT.
-  Laptop: adb-wifi pair CODE PORT    (on a shared subnet, PORT is optional: found over mDNS)
+  Laptop: adb-wifi pair PORT, then type the code. (On a shared subnet PORT is optional: it's
+          found over mDNS.) The code is read from the terminal, never put on a command line,
+          which other users of the laptop can see.
   The phone stores the pairing against ~/.android/adbkey, so it works on any network. Android
   drops it after 7 days without a connection; pair again then. adb-wifi never pairs by itself.
 
 HOW IT FINDS THE PHONE
-  IP:   the address of KDE Connect's link to the paired phone. KDE Connect checks the phone's
-        pinned certificate. adb doesn't check the phone at all: it will treat any host that
-        speaks its protocol as a device. So this IP is what the connection's trust rests on.
-        The link is found by having kdeconnectd send the phone an invisible packet (its command
-        list) and seeing which connection carried it. Other KDE Connect devices on the network,
-        paired or not, are never used.
+  IP:   the address of KDE Connect's link to the paired phone, found by having kdeconnectd send
+        the phone an invisible packet (its command list) and seeing which connection carried it.
+        That's a best guess, not proof: any KDE Connect client on the network, paired or not,
+        can make kdeconnectd send it data at will, so a stranger can make this fail or pick the
+        wrong IP. The phone check (SECURITY) catches a wrong IP.
   Port: changes every time Wireless debugging is turned on. Found from:
         1. mDNS, only for services at the phone's IP (works when both share a subnet);
         2. the last port that worked;
         3. a scan of the phone's ephemeral ports (32768-60999) for the one that answers adb's
            handshake (CNXN -> STLS). Takes 5-20 s. Needed when mDNS can't cross subnets.
   Then adb connect IP:PORT. Success means the device reached the 'device' state; adb connect's
-  exit code isn't trusted. Stale or duplicate connections to the phone are disconnected.
+  exit code isn't trusted. Then the phone check. Stale or duplicate connections to the phone are
+  disconnected.
 
 SECURITY
-  - Wireless ADB only stops unpaired laptops reaching the phone. It never verifies the phone,
-    so an impostor is only kept out by connecting to the KDE Connect-verified IP.
+  - Wireless ADB only stops unpaired laptops reaching the phone. adb never checks that the
+    device is the phone: it accepts anything that speaks its protocol. So adb-wifi checks. The
+    first connection stores a random token on the phone (/data/local/tmp/adb-wifi-*, mode 600,
+    readable only by adb shell) and in ~/.local/state/adb-wifi/ID.token. Every later connection
+    must read it back, or the device is disconnected. This catches a wrong IP and an attacker
+    taking over the phone's IP. Pairing stores a fresh token. Not covered: an impostor present
+    at the first connection or at pairing; the real phone then fails the check, loudly.
   - adb's own mDNS auto-connect would connect to any host advertising the phone's (public)
     service name. adb servers started here have it off (ADB_MDNS_AUTO_CONNECT=0). For servers
     started by anything else, add `export ADB_MDNS_AUTO_CONNECT=0` to your shell profile.
@@ -58,7 +65,6 @@ SECURITY
   - The button runs only what this laptop's KDE Connect config says. The phone gets a copy of
     the command to list, but a tap sends back only its key.
   - Turn Wireless debugging off when done. Android also turns it off when Wi-Fi changes.
-  - Not covered: an attacker on the same network who takes over the phone's IP (ARP spoofing).
   - The scan sends one short adb hello to each open port on the phone, and only the phone.
     Network monitoring may see it as a port scan.
 
@@ -66,15 +72,19 @@ TROUBLESHOOTING
   "isn't reachable over KDE Connect"  open KDE Connect on the phone; check kdeconnect-cli -a
   "No ADB port open"                  Wireless debugging is off
   "refused this laptop"               not paired, or the pairing expired: pair (above)
+  "couldn't prove it's your phone"    the phone was reset (pair again), or something else
+                                      answered at the phone's address
   "Already running"                   a previous tap is still scanning; wait for its ping
   "couldn't confirm"                  enable KDE Connect's Run command plugin on both devices
   "left untouched"                    the run-command config has unexpected content; add by hand
 """
 import asyncio
 import fcntl
+import hashlib
 import json
 import os
 import re
+import secrets
 import shlex
 import shutil
 import struct
@@ -88,6 +98,7 @@ HOME = Path.home()
 # Prefer ~/bin/adb (scrcpy's): a different adb version would kill the running server.
 ADB = os.environ.get("ADB") or shutil.which("adb", path=f"{HOME}/bin:{os.environ.get('PATH', '')}") or "adb"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "adb-wifi"
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local" / "state") / "adb-wifi"  # tokens: not a cache
 KDECONNECT = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config") / "kdeconnect"
 PORTS = range(32768, 61000)  # Android's ip_local_port_range; adbd's TLS port is ephemeral
 CNXN, STLS = 0x4E584E43, 0x534C5453
@@ -100,9 +111,9 @@ class Failure(Exception):
     pass
 
 
-def adb(*args, timeout=20):
+def adb(*args, timeout=20, stdin=None):
     try:
-        r = subprocess.run([ADB, *args], capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run([ADB, *args], input=stdin, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return f"timed out after {timeout}s"
     return (r.stdout + r.stderr).strip()
@@ -141,7 +152,10 @@ def report(msg, ok=True):
 def pick_device(requested):
     reachable = run("kdeconnect-cli", "-a", "--id-only").split()
     if requested in reachable or (not requested and len(reachable) == 1):
-        return requested or reachable[0]
+        dev = requested or reachable[0]
+        if not re.fullmatch(r"\w+", dev):  # it goes into file paths, a DBus path and a shell command
+            raise Failure(f"Unexpected KDE Connect device ID: {dev!r}")
+        return dev
     if requested or not reachable:
         raise Failure("The phone isn't reachable over KDE Connect. Open KDE Connect on it.")
     raise Failure("Several KDE Connect devices are reachable; pass --device ID.")
@@ -291,14 +305,41 @@ def try_connect(target, attempts=3):
     return False
 
 
-def connect(dev):
+def check_phone(target, dev, new_token=False):
+    """adb never checks that the device is the phone, so this does: the phone must give back a random
+    token this laptop stored on it. A token is stored on the first connection and when pairing (trust on
+    first use); otherwise a device without it is disconnected. Returns a note for the result message."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    STATE.chmod(0o700)
+    mine = STATE / f"{dev}.token"
+    token = mine.read_text().strip() if mine.exists() else ""
+    laptop = Path("/etc/machine-id").read_text() if Path("/etc/machine-id").exists() else os.uname().nodename
+    remote = f"/data/local/tmp/adb-wifi-{hashlib.sha256(f'adb-wifi {laptop}'.encode()).hexdigest()[:16]}"
+    new_token = new_token or not token
+    if new_token:
+        token = secrets.token_hex(16)
+        # Through stdin: other users of the laptop can read command lines.
+        adb("-s", target, "shell", f"umask 077; cat > {remote}", stdin=token, timeout=10)
+    if adb("-s", target, "shell", "cat", remote, timeout=10) != token:
+        adb("disconnect", target)
+        raise Failure(f"The device at {target} couldn't prove it's your phone (it doesn't have this laptop's "
+                      "token), so it was disconnected. If the phone was reset, pair again: adb-wifi pair PORT")
+    if not new_token:
+        return ""
+    mine.write_text(token + "\n")  # only once the phone has given it back
+    mine.chmod(0o600)
+    return " Stored a new token on the phone; every later connection checks it."
+
+
+def connect(dev, new_token=False):
     ip = phone_ip(dev)
     fresh = "daemon started" in adb("start-server")
     services = mdns("connect", ip, wait=3 if fresh else 0)  # a new server needs a moment to hear mDNS
     live = live_transport(ip, services)
     if live:
+        note = check_phone(live, dev, new_token)
         tidy(ip, services, keep=live)
-        return report(f"Already connected ({live}).")
+        return report(f"Already connected ({live}).{note}")
 
     port, how = find_port(ip, [(port, "mDNS") for _, port in services] + last_port(ip))
     if not port:
@@ -306,29 +347,38 @@ def connect(dev):
     target = endpoint(ip, port)
     if not try_connect(target):
         raise Failure(f"The phone's ADB ({target}) refused this laptop: not paired, or the pairing expired. "
-                      "Pair: Wireless debugging > Pair device with pairing code, then adb-wifi pair CODE PORT")
+                      "Pair: Wireless debugging > Pair device with pairing code, then adb-wifi pair PORT")
+    note = check_phone(target, dev, new_token)
     (cache_dir() / "endpoint").write_text(f"{ip} {port}\n")
     tidy(ip, services, keep=target)
-    report(f"Connected to {target} (found via {how}).")
+    report(f"Connected to {target} (found via {how}).{note}")
 
 
-def pair(dev, code, port=None):
+def pair(dev, port=None):
     ip = phone_ip(dev)
     adb("start-server")
     live = live_transport(ip, mdns("connect", ip))
     if live:
-        return report(f"Already connected ({live}), so this laptop is already paired. Nothing to do.")
+        note = check_phone(live, dev)
+        return report(f"Already connected ({live}), so this laptop is already paired. Nothing to do.{note}")
     if not port:
         found = mdns("pairing", ip, wait=3)
         if not found:
             raise Failure("Pairing port not visible over mDNS (different subnet?). Pass the port from the "
-                          "phone's pairing dialog: adb-wifi pair CODE PORT")
+                          "phone's pairing dialog: adb-wifi pair PORT")
         port = found[0][1]
-    out = adb("pair", endpoint(ip, port), code, timeout=30)
-    if not out.startswith("Successfully paired"):
-        raise Failure(f"Pairing with {endpoint(ip, port)} failed: {out}")
-    report(out)
-    connect(dev)
+    try:
+        code = input("Pairing code shown on the phone: ").strip()
+    except EOFError:
+        code = ""
+    if not code.isdigit():
+        raise Failure("Pairing needs the code shown on the phone's pairing dialog.")
+    out = adb("pair", endpoint(ip, port), stdin=code + "\n", timeout=30)  # adb reads the code from stdin
+    paired = re.search(r"Successfully paired.*", out)
+    if not paired:
+        raise Failure(f"Pairing with {endpoint(ip, port)} failed: {out.removeprefix('Enter pairing code: ')}")
+    report(paired[0])
+    connect(dev, new_token=True)
 
 
 def read_run_commands(path):
@@ -365,8 +415,6 @@ def write_run_commands(path, commands):
 
 def setup(dev):
     """Add the "Connect ADB" run command for `dev` to KDE Connect, and send it to the phone."""
-    if not re.fullmatch(r"\w+", dev):  # it goes into a path and a shell command
-        raise Failure(f"Unexpected KDE Connect device ID: {dev!r}")
     path = KDECONNECT / dev / "kdeconnect_runcommand" / "config"
     commands = read_run_commands(path)
     script = shlex.quote(str(Path(__file__).absolute()))
@@ -400,7 +448,7 @@ def main():
         action = connect
     elif args == ["setup"]:
         action = setup
-    elif args[0] == "pair" and len(args) in (2, 3) and all(a.isdigit() for a in args[1:]):
+    elif args[0] == "pair" and len(args) <= 2 and all(a.isdigit() and int(a) < 65536 for a in args[1:]):
         action = lambda dev: pair(dev, *args[1:])  # noqa: E731
     else:
         print(__doc__.strip())
