@@ -37,7 +37,7 @@ exec --no-startup-id nm-applet
 
 # Workspace 8: gnome-system-monitor and nvtop side by side, started at login.
 # The layout's empty slots go in first, so each app lands in its own slot whichever opens first.
-exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvtop -- nvtop -i
+exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvtop -- nvtop
 
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
