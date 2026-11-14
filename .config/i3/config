@@ -39,6 +39,10 @@ exec --no-startup-id nm-applet
 # The layout's empty slots go in first, so each app lands in its own slot whichever opens first.
 exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvtop -- nvtop
 
+# At login, open a terminal on each empty workspace like Alt+m does, except 8, which gets the layout above.
+# Then go to workspace 1 rather than staying on the last one filled.
+exec --no-startup-id $HOME/dotfiles/.scripts/open_workspace_terminals.sh 1 2 3 4 5 6 7 9 10 && i3-msg workspace 1
+
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status

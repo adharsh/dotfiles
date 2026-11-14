@@ -2,20 +2,8 @@
 
 set -e
 
-# Function to check if a workspace is empty and create a terminal if it is
-create_terminal_if_empty() {
-    workspace=$1
-    # Check if the workspace is empty
-    if [ -z "$(i3-msg -t get_tree | jq ".nodes[].nodes[].nodes[] | select(.name == \"$workspace\") | .nodes[]")" ]; then
-        # If empty, create a new terminal
-        i3-msg "workspace $workspace; exec i3-sensible-terminal"
-    fi
-}
-
 # Create terminals in empty workspaces
-for workspace in 1 2 3 4 5 6 7 8 9 10; do
-    create_terminal_if_empty $workspace
-done
+"$HOME/dotfiles/.scripts/open_workspace_terminals.sh"
 
 # Find the name of the second monitor
 first_monitor=$(xrandr | rg primary | cut -d' ' -f1)
