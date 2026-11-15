@@ -287,8 +287,9 @@ if ! command -v uv >/dev/null 2>&1; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-# Install nvitop
-if ! command -v nvitop >/dev/null 2>&1; then
+# Install nvitop. Checks for uv's install, not for an nvitop command: ~/bin/nvitop is the dotfiles
+# wrapper that runs it, so that command exists before nvitop does.
+if [ ! -x "$HOME/.local/share/uv/tools/nvitop/bin/python" ]; then
     uv tool install nvitop
 fi
 

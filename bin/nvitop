@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""nvitop with GPU charts in place of CPU ones.
+
+Under the GPU table, four full-width charts, one above the other, share a time axis at the bottom.
+Each chart's top is its limit. Its label gives the value, the limit when it isn't 100%, and the
+highest point in view, like  TEMP: 64°C / 96°C · peak 72°C
+  GPU MEM   magenta   % of GPU memory in use
+  GPU UTL   cyan      GPU utilization
+  POWER     yellow    out of the power limit (80 W here), which the GPU slows down to stay under;
+                      without one, no limit shown and scaled to what's been seen
+  TEMP      red       out of where the GPU starts slowing itself down to cool (96°C here, else
+                      100°C), from 20°C at the bottom
+Memory and utilization first, in the GPU table's order. Then what follows from utilization: load
+draws power, and power makes heat (temperature lags behind it). With several GPUs: memory and
+utilization averaged, total power, the hottest temperature. The process list stays below them.
+
+Charts glow when they near their limit. Below a chart's top 30% it's a muted shade of its color.
+In that 30%, a column turns more vivid the higher it is, up to the most vivid shade of its color
+at the top, never white, so maxed-out charts keep their colors apart. The label follows the
+latest value, and at the limit becomes a badge: dark text on the chart's color. The glow takes
+nvitop's --colorful, on by default here, and a terminal that lets programs set colors, like GNOME
+Terminal. Otherwise the charts use the terminal palette's bright colors, and only the badge
+shows the limit.
+
+This replaces nvitop's CPU, RAM and swap charts, and its GPU charts, which go only on the right
+and not at all below 100 columns. When the terminal is too short for the charts, nvitop's short
+form of that panel, CPU and RAM bars, is dropped instead, as are those bars in nvitop --once.
+
+--colorful also turns the GPU table's MEM and UTL bars into gradients, in place of green/yellow/red
+by load (yellow is brown-orange in GNOME Terminal's palette), as on the per-process screen.
+NVITOP_MONITOR_MODE=plain nvitop runs without it. Everything else, arguments included, is plain
+nvitop.
+
+Runs uv's install of nvitop (uv tool install nvitop) with its host panel patched. The patch uses
+nvitop internals, written against nvitop 1.6.2: if an upgrade breaks it, ~/.local/bin/nvitop is
+the unpatched one.
+"""
+
+import curses
+import dataclasses
+import itertools
+import os
+import sys
+from typing import Callable, Optional
+
+# --colorful by default, through nvitop's own setting, read when nvitop is imported. Kept as it is
+# if it already says plain or colorful (it does after the re-exec below).
+modes = os.environ.get('NVITOP_MONITOR_MODE', '')
+if 'plain' not in modes and 'colorful' not in modes:
+    os.environ['NVITOP_MONITOR_MODE'] = f'{modes},colorful' if modes else 'colorful'
+
+VENV_PYTHON = os.path.join(
+    os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'),
+    'uv/tools/nvitop/bin/python',
+)
+
+try:
+    from nvitop import cli
+    from nvitop.api import libnvml
+    from nvitop.tui.library import NA, BufferedHistoryGraph
+    from nvitop.tui.screens.main.panels.host import HostPanel
+except ImportError:
+    # Started by the system python3 (the shebang). Re-run under the python of uv's nvitop install.
+    if sys.executable == VENV_PYTHON:
+        raise
+    try:
+        os.execv(VENV_PYTHON, [VENV_PYTHON, os.path.abspath(__file__), *sys.argv[1:]])
+    except FileNotFoundError:
+        sys.exit(f'nvitop is not installed (no {VENV_PYTHON}). Run: uv tool install nvitop')
+
+CHART_HEIGHT = 4  # rows per chart
+# The charts are braille: 2 samples per column, and a sample is the average over 1 second.
+SECONDS_PER_COLUMN = 2
+
+# Palette indices of the bright colors. Each is its normal color + 8, used with only 8 colors.
+# --colorful defines its own colors from index 64 up, so it leaves these alone.
+RED, YELLOW, MAGENTA, CYAN = 9, 11, 13, 14
+# Each chart's glow levels, from calm to at its limit: its hue, from muted to as vivid as the
+# screen shows it. Designed in OKLCH, so the steps look even. Hues from GNOME Terminal's palette.
+GLOW = {
+    MAGENTA: ['#996f9e', '#ae6db6', '#c368ce', '#d862e6', '#ed58ff'],
+    CYAN: ['#4a93a0', '#4ea7b7', '#52bcce', '#55d1e7', '#57e7ff'],
+    YELLOW: ['#a3915c', '#b9a158', '#d0b251', '#e7c246', '#ffd335'],
+    RED: ['#aa6960', '#c0665b', '#d56355', '#ea5d4e', '#ff5545'],
+}
+GLOWS_FROM = 0.7  # how far up a chart its glow starts
+GLOW_STEPS = 4  # glow levels above calm
+READABLE = 2  # labels use at least this level, as the calm color is dim for text
+
+
+@dataclasses.dataclass
+class Chart:
+    """One chart: what it shows, its scale and label, its color, and its glow."""
+
+    name: str
+    value_of: Callable  # the devices' snapshots -> the value, or NA
+    show: Callable  # a value -> its text, like 64 -> '64°C'
+    color: int  # palette index of its bright color
+    limit: Optional[float]  # the chart's top; None: scaled to what's been seen, no glow
+    limit_text: str = ''  # after the value in the label, like ' / 96°C'
+    baseline: float = 0.0  # the chart's bottom
+
+    def __post_init__(self):
+        if self.limit is None:
+            scale = {'upperbound': 1000.0, 'dynamic_bound': True, 'min_bound': 10.0}
+        else:
+            scale = {'upperbound': self.limit}
+        # Width 77 for now: the panel sets the real one.
+        self.history = BufferedHistoryGraph(
+            width=77, height=CHART_HEIGHT, baseline=self.baseline, interval=1.0, **scale
+        )
+
+    def text(self, value):
+        # The history holds values below the baseline where it has none.
+        return 'N/A' if value is NA or value < self.baseline else self.show(value)
+
+    def label(self):
+        now, peak = self.history.last_value, self.history.max_value
+        return f' {self.name}: {self.text(now)}{self.limit_text} · peak {self.text(peak)} '
+
+    def glow(self, value):
+        """0 below where the glow starts, up to GLOW_STEPS at the limit."""
+        if self.limit is None or value is NA:
+            return 0
+        start = self.baseline + GLOWS_FROM * (self.limit - self.baseline)
+        fraction = (value - start) / (self.limit - start)
+        return round(GLOW_STEPS * min(max(fraction, 0.0), 1.0))
+
+
+def nvml_ints(devices, query, *args):
+    """The NVML query's value for each device, or None if any device doesn't report one."""
+    values = [libnvml.nvmlQuery(query, device.handle, *args) for device in devices]
+    return values if values and all(isinstance(value, int) for value in values) else None
+
+
+def make_charts(devices):
+    def known(snapshots, field):
+        return [getattr(s, field) for s in snapshots if getattr(s, field) is not NA]
+
+    def memory(snapshots):
+        used, total = known(snapshots, 'memory_used'), known(snapshots, 'memory_total')
+        return 100.0 * sum(used) / sum(total) if used and total and sum(total) > 0 else NA
+
+    def utilization(snapshots):
+        values = known(snapshots, 'gpu_utilization')
+        return sum(values) / len(values) if values else NA
+
+    def power(snapshots):
+        values = known(snapshots, 'power_usage')  # milliwatts
+        return sum(values) / 1000.0 if values else NA
+
+    def temperature(snapshots):
+        values = known(snapshots, 'temperature')
+        return max(values) if values else NA
+
+    # nvitop's own power limit query comes back N/A on this laptop GPU; the enforced limit doesn't.
+    limits = nvml_ints(devices, 'nvmlDeviceGetEnforcedPowerLimit')
+    power_limit = sum(limits) / 1000.0 if limits else None
+    slowdowns = nvml_ints(
+        devices,
+        'nvmlDeviceGetTemperatureThreshold',
+        libnvml.NVML_TEMPERATURE_THRESHOLD_SLOWDOWN,
+    )
+    slowdown = float(min(slowdowns)) if slowdowns else 100.0
+
+    percent = '{:.1f}%'.format
+    watts = '{:.1f} W'.format
+    return [
+        Chart('GPU MEM', memory, percent, MAGENTA, limit=100.0),
+        Chart('GPU UTL', utilization, percent, CYAN, limit=100.0),
+        Chart('POWER', power, watts, YELLOW, limit=power_limit, limit_text=(
+            '' if power_limit is None else f' / {power_limit:.0f} W'
+        )),
+        Chart('TEMP', temperature, '{:.0f}°C'.format, RED, limit=slowdown, baseline=20.0,
+              limit_text=f' / {slowdown:.0f}°C'),
+    ]
+
+
+def glow_rgb(color, level):
+    """A chart's color at a glow level, in curses' 0-1000 RGB."""
+    hex_color = GLOW[color][level]
+    return tuple(round(int(hex_color[i : i + 2], 16) * 1000 / 255) for i in (1, 3, 5))
+
+
+def frame_width(panel):
+    """nvitop draws everything 79 columns wide below 100 columns, and full width from 100 up."""
+    return panel.width if panel.width >= 100 else 79
+
+
+def set_width(self, value):
+    width = max(79, value)
+    if self._width != width:
+        if self.visible:
+            self.need_redraw = True
+        # The original __init__ sets the width before init() below has made the charts.
+        for chart in getattr(self, 'charts', ()):
+            chart.history.width = (width if width >= 100 else 79) - 2
+    self._width = width
+
+
+def take_snapshots(self):
+    snapshots = [device.snapshot for device in self.devices]
+    for chart in self.charts:
+        chart.history.add(chart.value_of(snapshots))
+
+
+def frame_lines(self, compact=None):
+    if compact is None:
+        compact = self.compact
+    if compact or self.no_unicode:
+        return []
+
+    width = frame_width(self)
+    # Top: the GPU table's bottom border with side joints, keeping the joints of its columns.
+    top = '╞═══════════════════════════════╧══════════════════════╧══════════════════════'
+    if width >= 100:
+        top += '╧' + '═' * (width - 80)
+    top += '╡'
+    data_line = '│' + ' ' * (width - 2) + '│'
+    separator_line = '├' + '─' * (width - 2) + '┤'
+    lines = [top]
+    for _ in self.charts:
+        lines += [data_line] * CHART_HEIGHT + [separator_line]
+    lines[-1] = '╘' + '═' * (width - 2) + '╛'
+    return lines
+
+
+def draw(self):
+    self.color_reset()
+    if self.compact:
+        return
+
+    bottom = self.y + self.height - 1
+    if self.need_redraw:
+        for y, line in enumerate(self.frame_lines(), start=self.y - 1):
+            self.addstr(y, self.x, line)
+
+        # Time marks along the bottom border: 30s, 60s, then every minute, newest on the right.
+        newest_column = self.x + frame_width(self) - 2
+        for seconds in itertools.chain((30, 60), itertools.count(120, 60)):
+            mark = f' {seconds}s╧'
+            start = newest_column - seconds // SECONDS_PER_COLUMN - len(mark) + 1
+            if start <= self.x:
+                break
+            self.addstr(bottom, start, mark)
+            self.color_at(bottom, start + 1, width=len(mark) - 2, attr='dim')
+
+    # Glowing takes colors of our own: --colorful, and a terminal that lets curses set colors.
+    rgb = self.TERM_256COLOR and curses.can_change_color()
+    bright = getattr(curses, 'COLORS', 0) >= 16
+
+    for i, chart in enumerate(self.charts):
+        attrs = {}
+
+        def attr(level, label=False):
+            """Bars glow by level. A label is bold, and at the limit, a badge: dark on its color."""
+            if (level, label) not in attrs:
+                if rgb:
+                    fg = glow_rgb(chart.color, max(level, READABLE) if label else level)
+                else:  # flat colors; at the limit only the badge shows it
+                    fg = chart.color if bright else chart.color - 8
+                style = ('bold | reverse' if level == GLOW_STEPS else 'bold') if label else 0
+                attrs[level, label] = self.get_fg_bg_attr(fg=fg, attr=style)
+            return attrs[level, label]
+
+        with chart.history.write_lock:  # taken while the snapshot thread adds a sample
+            lines = list(chart.history.graph)
+            history = list(chart.history.reversed_history)
+        width = min(len(lines[0]), (len(history) - 1) // 2) if lines else 0
+        # Column j from the left holds 2 samples, newest on the right: it glows by the higher.
+        levels = [
+            chart.glow(max(history[2 * k], history[2 * k + 1]))
+            for k in reversed(range(width))
+        ]
+        runs = [(level, len(list(run))) for level, run in itertools.groupby(levels)]
+
+        top = self.y + i * (CHART_HEIGHT + 1)
+        for row, line in enumerate(lines):
+            line = line[-width:] if width else ''
+            column = 0
+            for level, length in runs:
+                text = line[column : column + length]
+                self.addstr(top + row, self.x + 1 + column, text, attr(level))
+                column += length
+        latest = chart.glow(chart.history.last_value)
+        self.addstr(top, self.x + 1, chart.label(), attr(latest, label=True))
+    self.color_reset()
+
+
+original_init = HostPanel.__init__
+
+
+def init(self, *args, **kwargs):
+    original_init(self, *args, **kwargs)
+    self.charts = make_charts(self.devices)
+    for chart in self.charts:
+        chart.history.width = frame_width(self) - 2
+    self.full_height = len(self.charts) * (CHART_HEIGHT + 1)
+    # The short version of the panel is CPU and RAM bars only: take no lines instead.
+    self.compact_height = 0
+    self.height = self.compact_height if self.compact else self.full_height
+
+
+HostPanel.__init__ = init
+HostPanel.width = property(HostPanel.width.fget, set_width)
+HostPanel.take_snapshots = take_snapshots
+HostPanel.frame_lines = frame_lines
+HostPanel.draw = draw
+HostPanel.print = lambda self: None  # nvitop --once: no CPU and RAM bars
+
+if __name__ == '__main__':
+    sys.exit(cli.main())
