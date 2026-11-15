@@ -9,6 +9,13 @@ echo "Log stored at: ~/log_xsessionrc.txt"
 first_monitor=$(xrandr | rg primary | cut -d' ' -f1)
 xrandr --output "$first_monitor" --scale '1.0x1.0'
 
+# Put an external monitor, if one is connected, above the laptop screen like Alt+m does. At boot the
+# NVIDIA driver mirrors it onto the laptop screen, so this has to happen before i3 starts.
+"$HOME/dotfiles/.scripts/dynamic_monitors.sh"
+# And again whenever a monitor is plugged in or pulled out. -n keeps srandrd in the foreground, so
+# the script's output lands in this log (forked, srandrd closes stdout and the script's echo fails).
+srandrd -n "$HOME/dotfiles/.scripts/dynamic_monitors.sh" --if-changed &
+
 # Enable tap, drag by tap, and natural scrolling
 # https://github.com/maxwell-bland/i3-natural-scrolling-and-tap/blob/master/inverse-scroll.sh
 # Get id of touchpad and the id of the field corresponding to natural scrolling

@@ -1,53 +1,38 @@
 #!/bin/bash
+# Lay out the screens: an external monitor, if one is connected, goes above the laptop screen;
+# otherwise the laptop screen is used alone.
+# Run by .xsessionrc before i3 starts, so i3 never sees the mirrored screens the NVIDIA driver sets
+# up at boot, by Alt+m, and with --if-changed by srandrd when a monitor is plugged in or pulled out.
+# Which workspaces go on which screen is set by the "workspace N output" lines in the i3 config:
+# i3 moves them over itself when a screen turns on or off.
 
 set -e
 
-# Create terminals in empty workspaces
-"$HOME/dotfiles/.scripts/open_workspace_terminals.sh"
+# The outputs that were connected when the screens were last laid out
+state="${XDG_RUNTIME_DIR:-/tmp}/dynamic_monitors_connected"
 
-# Find the name of the second monitor
-first_monitor=$(xrandr | rg primary | cut -d' ' -f1)
-second_monitor=$(xrandr --query | rg ' connected ' | tail -1 | awk '{print $1}')
+query=$(xrandr --query)
+# " connected" with the space, so disconnected outputs don't match
+connected=$(awk '/ connected/ {print $1}' <<<"$query")
 
-if [ "$second_monitor" != "$first_monitor" ]; then
-    # Get the dimensions of the second monitor from the line below its name
-    second_monitor_res=$(xrandr --query | awk "/$second_monitor/{getline; print \$1}")
-    second_monitor_width=$(echo $second_monitor_res | cut -d'x' -f1)
-    second_monitor_height=$(echo $second_monitor_res | cut -d'x' -f2)
-
-    # Get the dimensions of the first monitor (eDP-1)
-    first_monitor_res=$(xrandr --query | grep "^$first_monitor" | grep -oP '\d+x\d+' | head -1)
- 
-    # Change monitor outputs with xrandr
-    xrandr --output $first_monitor --primary  --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
-    # Setting resolution of primary display is not necessary, but leaving below as a substitue in case above doesn't work
-    # xrandr --output $first_monitor --primary --mode $first_monitor_res --pos 0x$second_monitor_height --rotate normal --output $second_monitor --mode $second_monitor_res --pos 0x0 --rotate normal
-
-    # Move workspaces to the second monitor
-    # i3-msg "workspace 1, move workspace to output $first_monitor"
-
-    i3-msg "workspace 2, move workspace to output $second_monitor"
-    # i3-msg "workspace 3, move workspace to output $first_monitor"
-
-    i3-msg "workspace 4, move workspace to output $second_monitor"
-    # i3-msg "workspace 5, move workspace to output $first_monitor"
-
-    i3-msg "workspace 6, move workspace to output $second_monitor"
-    # i3-msg "workspace 7, move workspace to output $first_monitor"
-
-    i3-msg "workspace 8, move workspace to output $second_monitor"
-    # i3-msg "workspace 9, move workspace to output $first_monitor"
-
-    # i3-msg "workspace 10, move workspace to output $first_monitor"
-
-    # # Set focus back to workspace 2 and then 3
-    # i3-msg "workspace 2"
-    # i3-msg "workspace 3"
-
-else
-    # If single monitor, reset the monitor settings
-    xrandr --auto
-
-    # # Set focus back to workspace 3
-    # i3-msg "workspace 3"
+# srandrd runs this on every output change, including the ones made below, so only act on a plug or unplug
+if [ "$1" = --if-changed ] && [ "$connected" = "$(cat "$state" 2>/dev/null)" ]; then
+    exit 0
 fi
+
+laptop=$(awk '/ connected primary/ {print $1; exit}' <<<"$query")
+external=$(awk -v laptop="$laptop" '/ connected/ && $1 != laptop {print $1; exit}' <<<"$query")
+
+if [ -n "$external" ]; then
+    # The first mode listed under an output is its preferred one
+    mode=$(awk -v output="$external" '$1 == output {getline; print $1; exit}' <<<"$query")
+    echo "dynamic_monitors.sh: $external at $mode above $laptop"
+    xrandr --output "$laptop" --primary --pos "0x${mode#*x}" --rotate normal \
+        --output "$external" --mode "$mode" --pos 0x0 --rotate normal
+else
+    echo "dynamic_monitors.sh: $laptop only"
+    xrandr --auto
+fi
+
+# Saved only once xrandr worked, so a failed attempt is retried on srandrd's next event
+echo "$connected" >"$state"

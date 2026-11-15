@@ -40,8 +40,9 @@ exec --no-startup-id nm-applet
 exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvtop -- nvtop
 
 # At login, open a terminal on each empty workspace like Alt+m does, except 8, which gets the layout above.
-# Then go to workspace 1 rather than staying on the last one filled.
-exec --no-startup-id $HOME/dotfiles/.scripts/open_workspace_terminals.sh 1 2 3 4 5 6 7 9 10 && i3-msg workspace 1
+# Then show 2 on the external monitor, if .xsessionrc found one, and go to 1 on the laptop screen,
+# rather than staying on the last one filled.
+exec --no-startup-id $HOME/dotfiles/.scripts/open_workspace_terminals.sh 1 2 3 4 5 6 7 9 10 && i3-msg 'workspace 2; workspace 1'
 
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
@@ -130,6 +131,22 @@ set $ws7 "7"
 set $ws8 "8"
 set $ws9 "9"
 set $ws10 "10"
+
+# Even workspaces up to 8 go on an external monitor when one is on, the rest on the laptop screen
+# (the primary output). i3 moves them over itself whenever a monitor turns on or off, and puts a
+# workspace on its screen whenever it's created, so the Alt+m script only has to lay out the screens.
+# The list covers the HDMI and DisplayPort outputs of both GPUs.
+set $external HDMI-1-0 DP-1-0 DP-1-1 DP-1-2 DP-1-3 HDMI-1 DP-1 DP-2 DP-3 DP-4
+workspace $ws1 output primary
+workspace $ws2 output $external
+workspace $ws3 output primary
+workspace $ws4 output $external
+workspace $ws5 output primary
+workspace $ws6 output $external
+workspace $ws7 output primary
+workspace $ws8 output $external
+workspace $ws9 output primary
+workspace $ws10 output primary
 
 # switch to workspace
 bindsym $mod+1 workspace number $ws1
@@ -240,8 +257,9 @@ bindsym $mod+p exec --no-startup-id notify-send "Process ID: $(xprop -id $(xdoto
 # Clipboard
 bindsym $mod+c exec copyq show
 
-# Dynamic monitors binding
-bindsym $mod+m exec --no-startup-id $HOME/dotfiles/.scripts/dynamic_monitors.sh
+# Dynamic monitors binding: lay out the screens after plugging a monitor in or pulling it out
+# (the workspace output lines near the top move the workspaces), then fill any empty workspace.
+bindsym $mod+m exec --no-startup-id "$HOME/dotfiles/.scripts/dynamic_monitors.sh; $HOME/dotfiles/.scripts/open_workspace_terminals.sh"
 
 # Chrome: https://superuser.com/a/377195
 bindsym $mod+g exec $HOME/bin/brave --profile-directory=Default

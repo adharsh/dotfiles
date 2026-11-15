@@ -1,6 +1,6 @@
 #!/bin/bash
 # Open a terminal on each given i3 workspace that has no windows (default: 1-10).
-# Run at login from the i3 config, and by dynamic_monitors.sh (Alt+m).
+# Run at login and by Alt+m, both from the i3 config.
 
 set -e
 

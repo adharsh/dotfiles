@@ -212,6 +212,14 @@ if ! command -v xcape >/dev/null 2>&1; then
     (cd "$HOME/.xcape" && make && sudo make install)
 fi
 
+# srandrd: reruns .scripts/dynamic_monitors.sh when a monitor is plugged in or pulled out (started in .xsessionrc)
+# https://github.com/jceb/srandrd (not in apt). Its make install also rebuilds the man page, which needs asciidoc.
+if ! command -v srandrd >/dev/null 2>&1; then
+    sudo apt install -y gcc make libx11-dev libxrandr-dev libxinerama-dev
+    git clone git@github.com:jceb/srandrd.git "$HOME/.srandrd"
+    (cd "$HOME/.srandrd" && make && sudo install -m 755 srandrd /usr/local/bin/)
+fi
+
 # fzf: https://github.com/junegunn/fzf#using-git
 if ! command -v fzf >/dev/null 2>&1; then
     git clone --depth 1 git@github.com:junegunn/fzf.git "$HOME/.fzf"
