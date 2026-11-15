@@ -35,9 +35,10 @@ exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 # and nm-applet is a desktop environment-independent system tray GUI for it.
 exec --no-startup-id nm-applet
 
-# Workspace 8: gnome-system-monitor and nvtop side by side, started at login.
+# Workspace 8: gnome-system-monitor and nvitop side by side, started at login.
 # The layout's empty slots go in first, so each app lands in its own slot whichever opens first.
-exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvtop -- nvtop
+# nvitop by full path: in i3's PATH, uv's plain nvitop comes before the ~/bin/nvitop wrapper.
+exec --no-startup-id i3-msg "workspace 8; append_layout $HOME/dotfiles/.config/i3/workspace-8.json; workspace back_and_forth"; gnome-system-monitor -r & gnome-terminal --role=nvitop -- $HOME/bin/nvitop
 
 # At login, open a terminal on each empty workspace like Alt+m does, except 8, which gets the layout above.
 # Then show 2 on the external monitor, if .xsessionrc found one, and go to 1 on the laptop screen,
