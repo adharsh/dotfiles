@@ -22,12 +22,12 @@ hosts="$HOME/.config/claude-sessions/hosts"
 # it runs only when a session's file comes or goes, and once a minute for one that crashed.
 # A session in one of your Slurm jobs has its file in the shared home, but runs on the job's
 # node, which claude agents here can't see, so it's asked there, over ssh: the cluster lets you
-# in while your job runs there. Which nodes those are, squeue tells, only when a file comes
-# that no session here owns, so Slurm is barely asked. A node is dropped once it has no
-# sessions, or stops answering.
+# in while your job runs there. Which nodes those are, squeue tells, but only when a file comes
+# that no session owns and that hasn't been looked for, so Slurm is barely asked. A node with
+# no sessions is dropped; one that doesn't answer keeps its sessions for 3 more tries.
 read -r -d '' poll <<'EOF'
 PATH="$HOME/.local/bin:$PATH"
-# agents [NODE]: "pid id" for each session claude agents lists, here or on NODE
+# agents [NODE]: "pid id node" for each session claude agents lists, here or on NODE
 agents() {
     if [ -z "$1" ]; then
         out=$(claude agents --json)
@@ -35,32 +35,42 @@ agents() {
         out=$(timeout 20 ssh -n -o BatchMode=yes -o ConnectTimeout=5 "$1" \
             'PATH="$HOME/.local/bin:$PATH" claude agents --json') || return
     fi
-    printf '%s\n' "$out" | jq -r '.[] | "\(.pid) \(.sessionId)"'
+    printf '%s\n' "$out" | jq -r --arg node "$1" '.[] | "\(.pid) \(.sessionId) \($node)"'
 }
-seen= checked=0 nodes= live=
+# ask: puts in $live the sessions here and on $nodes, each "node:tries it hasn't answered"
+ask() {
+    prev=$live live=$(agents) kept=
+    for entry in $nodes; do
+        node=${entry%:*} misses=${entry##*:}
+        if out=$(agents "$node"); then
+            [ -z "$out" ] || kept="$kept $node:0" live="$live
+$out"
+        elif [ "$misses" -lt 3 ]; then
+            kept="$kept $node:$((misses + 1))" live="$live
+$(printf '%s\n' "$prev" | awk -v node="$node" '$3 == node')"
+        fi
+    done
+    nodes=$kept
+}
+# unowned: the session files that no session in $live owns
+unowned() {
+    for f in $files; do
+        case $f in *.json) printf '%s\n' "$live" | grep -q "^${f%.json} " || echo "$f" ;; esac
+    done
+}
+seen= checked=0 nodes= live= searched=
 while :; do
     files=$(ls ~/.claude/sessions 2>/dev/null)
     if [ "$files" != "$seen" ] || [ $(($(date +%s) - checked)) -ge 60 ]; then
-        live=$(agents)
-        if [ "$files" != "$seen" ] && command -v squeue >/dev/null; then
-            for f in $files; do  # a new session file that no session here owns
-                case $f in *.json) ;; *) continue ;; esac
-                printf '%s\n' "$seen" | grep -qxF "$f" && continue
-                printf '%s\n' "$live" | grep -q "^${f%.json} " && continue
-                nodes=$(timeout 20 squeue -h -u "$(id -un)" -t RUNNING -o %N | paste -sd, |
-                    xargs -r scontrol show hostnames | sort -u)
-                break
-            done
+        ask
+        if command -v squeue >/dev/null && unowned | grep -qvxF "$searched"; then
+            nodes=$(timeout 20 squeue -h -u "$(id -un)" -t RUNNING -o %N | paste -sd, |
+                xargs -r scontrol show hostnames | sort -u | sed 's/$/:0/')
+            ask
         fi
-        alive=
-        for node in $nodes; do
-            out=$(agents "$node") && [ -n "$out" ] || continue
-            alive="$alive $node" live="$live
-$out"
-        done
-        nodes=$alive seen=$files checked=$(date +%s)
+        searched=$(unowned) seen=$files checked=$(date +%s)
     fi
-    printf '%s\n' "$live" | while read -r pid id; do
+    printf '%s\n' "$live" | while read -r pid id _; do
         [ -n "$id" ] || continue
         cat ~/.claude/sessions/"$pid".json 2>/dev/null; echo
         tac ~/.claude/projects/*/"$id".jsonl 2>/dev/null | grep -m1 '"type":"ai-title"'
