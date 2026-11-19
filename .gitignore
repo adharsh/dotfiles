@@ -26,6 +26,9 @@
 # Ignore .api_keys file
 /.api_keys
 
+# Ignore the claude-sessions service's private config (which hosts, and login settings)
+/.config/claude-sessions/
+
 # Ignore credentials directory
 /credentials
 
