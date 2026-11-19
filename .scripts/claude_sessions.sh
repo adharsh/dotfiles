@@ -4,7 +4,7 @@
 # of this public repo, as do any settings in ~/.config/claude-sessions/env.
 # For each, $XDG_RUNTIME_DIR/claude-sessions/<host>.json (local.json for this laptop) holds
 # `claude agents --json` from there, a few seconds old at most; .scripts/i3status_stt.sh draws them.
-# Run by the claude-sessions user service.
+# Each host needs jq. Run by the claude-sessions user service.
 #
 # A host gets one ssh connection that runs the poll loop there. Nothing is left behind: once
 # the connection drops, the loop's next write fails and it ends. Then its sessions leave the
@@ -13,8 +13,16 @@
 
 run="${XDG_RUNTIME_DIR:-/run/user/$UID}/claude-sessions"
 hosts="$HOME/.config/claude-sessions/hosts"
-# Prints the sessions as a line of JSON every 3 seconds, here or on a host
-poll='PATH="$HOME/.local/bin:$PATH"; while :; do claude agents --json | tr -d "\n"; echo || exit; sleep 3; done'
+# Prints the sessions as a line of JSON every 3 seconds, here or on a host: Claude Code's own
+# file for each session claude agents lists, which also says when its status last changed.
+read -r -d '' poll <<'EOF'
+PATH="$HOME/.local/bin:$PATH"
+while :; do
+    claude agents --json | jq -r '.[].pid' | while read -r pid; do cat ~/.claude/sessions/"$pid".json; echo; done |
+        jq -ncR '[inputs | fromjson?]' || exit
+    sleep 3
+done
+EOF
 
 refresh_bar() { pkill -USR1 -x i3status; }
 
