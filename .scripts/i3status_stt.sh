@@ -3,7 +3,8 @@
 # meeting), blue while it transcribes or analyzes a meeting, and nothing otherwise.
 # Each is in full color for its first second, so you see it start, then dims, so it doesn't
 # catch the eye on a shared screen. Being at the left, it never moves the rest of the bar.
-# After the dot come the Claude Code sessions (see claude_marks).
+# After the dot come the Claude Code sessions (see claude_marks); click one to go to its window
+# (see read_clicks).
 # The i3 config's status_command runs this instead of i3status.
 #
 # stt writes $XDG_RUNTIME_DIR/stt/<kind>.pid while it records and <pid>.busy while it
@@ -87,14 +88,32 @@ claude_marks() {
 }
 
 # i3bar sends a line of JSON on stdin for each click, since the header asks for them. A click
-# on a Claude session stops its blinking, at once.
+# on a Claude session stops its blinking, at once, and a left click also takes you to its
+# window (see focus_session), so a right click is how to stop it without going there.
 read_clicks() {
-    local line
+    local line id
     while read -r line; do
         [[ $line == *'"name":"claude"'* && $line =~ \"instance\":\"([0-9a-f-]+)\" ]] || continue
-        touch "$clicked/${BASH_REMATCH[1]}"
+        id=${BASH_REMATCH[1]}
+        touch "$clicked/$id"
         pkill -USR1 -x i3status
+        [[ $line =~ \"button\":1[,}] ]] && focus_session "$id"
     done
+}
+
+# focus_session ID: focuses the window showing session ID, if there is one on this laptop: the
+# one titled with a mark and the session's title, the way Claude Code titles its terminal (its
+# name if you gave it one with /rename, or else the title Claude gave it). That's a terminal
+# here, or one ssh'd into the session's host. Nothing reads stdin here, which is i3bar's clicks.
+focus_session() {
+    local title con
+    title=$(jq -r --arg id "$1" '.[]? | select(.sessionId == $id)
+        | if .nameSource == "user" then .name else .aiTitle end // empty
+    ' "$claude_run"/*.json </dev/null 2>/dev/null | head -n1)
+    [ -n "$title" ] || return 0  # no title yet: its window can't be told apart
+    con=$(i3-msg -t get_tree </dev/null | jq --arg title "$title" '
+        first(.. | objects | select(.window and (.name // "" | sub("^[^ ]* "; "")) == $title) | .id) // empty')
+    [ -n "$con" ] && i3-msg -q "[con_id=$con] focus" </dev/null
 }
 mkdir -p "$clicked"
 read_clicks <&0 &
