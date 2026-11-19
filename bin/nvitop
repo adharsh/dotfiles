@@ -11,7 +11,8 @@ line sets the GPU's heading apart:
                               one if the firmware sets two (109 W here). It can pass it briefly.
        CPU TEMP       red     the CPU package's temperature, out of where it starts slowing itself
                               down to cool (100°C here), from 20°C at the bottom
-       CPU THROTTLED  blue    the share of the time it slowed itself down to cool
+       CPU THROTTLED  blue    the share of the time it slowed itself down: to cool, or because
+                              the laptop told it to (a weak charger does); the count doesn't say
        FANS           green   the fastest fan's speed, scaled to what's been seen; the label has
                               each fan's (unlabeled: which is which varies). They cool both chips.
   GPU  its name, its performance state (P0 is the fastest), and its fan if the GPU reports one
@@ -30,11 +31,16 @@ temperature. A chart whose reading the machine doesn't have is left out. The CPU
 sampled together, so their charts line up column for column.
 
 Throttling: while a chip slows down, a blue band runs down its box, across every chart, darker the
-more of the time it slowed; the throttling chart has the amount. Its label says what held it
-back (heat; for the GPU, its power limit or heat, each with its share), the clock it ran at
-against its fastest while it did (the CPU's fastest core), and the total since boot. The kernel
-counts a CPU slowdown when it ends: they last milliseconds here, but a long one shows when it's
-over. Bands take --colorful (below).
+more of the time it slowed; the throttling chart has the amount. Its label has the time
+throttled in all since boot, and for the GPU, what held it back: its power limit or heat, each
+with its share. (The CPU's counter doesn't say why; nor what the clock was: read after a slowdown,
+it's only the clock now.) The kernel counts a CPU slowdown when it ends: they last milliseconds
+here, but a long one shows when it's over. A band is on a column exactly where its throttling chart has a bar: any throttling at all,
+even a few milliseconds of a second. Bands take --colorful (below).
+
+A column is 2 seconds, on the same grid for every chart: the newest fills its left half, then its
+right half, then everything moves a column, bands and all. (nvitop's own charts move half a column
+every second; a band, a cell's background, can't.)
 
 The tables are gone: what they showed is in the charts and headings, or doesn't change
 (versions, bus, ECC: nvitop --once prints them), or is in gnome-system-monitor, beside nvitop on
@@ -92,6 +98,7 @@ try:
     from nvitop import cli
     from nvitop.api import libnvml
     from nvitop.tui.library import NA, BufferedHistoryGraph
+    from nvitop.tui.library.history import HistoryGraph
     from nvitop.tui.library.libcurses import CursesShortcuts
     from nvitop.tui.screens.main import MainScreen
     from nvitop.tui.screens.main.panels import DevicePanel, ProcessPanel
@@ -131,8 +138,14 @@ GLOWS_FROM = 0.7  # how far up a chart its glow starts
 GLOW_STEPS = 4  # glow levels above calm
 READABLE = 2  # labels use at least this level, as the calm color is dim for text
 # Throttling bands' backgrounds: GNOME Terminal's background (#171421) tinted with the
-# throttling charts' blue, by how much of the time the chip slowed: under 25%, under 75%, more.
+# throttling charts' blue, by how much of the time the chip slowed: from each of BAND_STEPS (%).
+# The first is any throttling at all. The throttling charts draw no bar below it, so their bars
+# and the bands agree.
 BANDS = ['#1c233b', '#203051', '#253f6a']
+BAND_STEPS = (1e-9, 25.0, 75.0)
+# Held while the snapshot thread adds a sample to every chart, and while a box copies its charts
+# to draw them, so each box draws all its charts, and its band, as of the same sample.
+SAMPLES = threading.Lock()
 # nvitop's double-line box characters, and the rounded single-line ones the boxes use instead, so
 # a box reads as one card: its border the only strong line, the lines between charts faint dots.
 ROUNDED = str.maketrans('═╒╕╘╛╞╡╤╧╪', '─╭╮╰╯├┤┬┴┼')
@@ -153,12 +166,52 @@ def share(percent):
     return '<1%' if 0 < percent < 0.5 else f'{percent:.0f}%'
 
 
+def band_level(value):
+    """0, or 1 to 3 by how much of the time (a %) the chip throttled."""
+    return sum(value >= step for step in BAND_STEPS)
+
+
+class ChartHistory(BufferedHistoryGraph):
+    """nvitop's history of a chart, told when its value was read. take_snapshots gives every chart
+    the same time, so they all start a new sample at once: by their own clocks, read a moment
+    apart, a second could start between two charts' adds, and put them a column apart."""
+
+    def add_at(self, value, now):
+        """nvitop's add, at time now. The buffer holds the readings of the second that started
+        at last_update_time. After a gap (a stall), they go in that second, and the seconds with
+        no reading are N/A, left blank, where nvitop draws a line from the last value to this
+        one. So every chart keeps a sample a second, on the same seconds, of what was read."""
+        if value is NA:
+            value = self.baseline - 0.1
+        elapsed = now - self.last_update_time
+        if self.buffer and elapsed >= self.interval:
+            HistoryGraph.add(self, sum(self.buffer) / len(self.buffer))
+            self.buffer.clear()
+            seconds = int(elapsed / self.interval)
+            for _ in range(1, seconds):
+                HistoryGraph.add(self, self.baseline - 0.1)
+            self.last_update_time += seconds * self.interval
+        self.buffer.append(value)
+
+
+class ThrottlingHistory(ChartHistory):
+    """A throttling chart's history. Its bars start where the bands do: none below BAND_STEPS[0],
+    a dot at least from it. (nvitop draws a dot at 0, and its smallest bars all look alike: on a
+    chart 2 rows tall, everything under 15% would look like 0 under a band.)"""
+
+    def make_bar_chart(self, value1, value2):
+        def shown(value):
+            return value if band_level(value) else self.baseline - 1.0  # below the baseline: blank
+
+        return super().make_bar_chart(shown(value1), shown(value2))
+
+
 @dataclasses.dataclass
 class Chart:
     """One chart: what it shows, its scale and label, its color, and its glow."""
 
     name: str
-    value_of: Callable  # a sample (the GPUs' snapshots, or the CPU's) -> the value, or NA
+    value_of: Callable  # a sample (the GPUs' readings, or the CPU's) -> the value, or NA
     show: Callable  # a value -> its text, like 64 -> '64°C'
     color: int  # palette index of its bright color
     limit: Optional[float]  # the chart's top; None: scaled to what's been seen, no glow
@@ -167,6 +220,7 @@ class Chart:
     small: bool = False  # half as tall as the others
     now_text: Optional[Callable] = None  # (its latest value) -> the label's value, for show's
     suffix: Optional[Callable] = None  # (its latest value) -> the label's end, after the peak
+    throttling: bool = False  # a share of the time throttled: its box's bands follow it
 
     def __post_init__(self):
         if self.limit is None:
@@ -174,7 +228,7 @@ class Chart:
         else:
             scale = {'upperbound': self.limit}
         # Width 77 for now: the panels set the real width and height.
-        self.history = BufferedHistoryGraph(
+        self.history = (ThrottlingHistory if self.throttling else ChartHistory)(
             width=77, height=self.rows(MIN_CHART_HEIGHT), baseline=self.baseline, interval=1.0,
             **scale,
         )
@@ -327,12 +381,6 @@ def power_limit():
     return min(limits) if limits else None
 
 
-def fastest_clock(kind):
-    """The fastest core's clock in kHz: kind scaling_cur_freq for now, cpuinfo_max_freq for most."""
-    clocks = [read_int(path) for path in glob.glob(f'/sys/devices/system/cpu/cpu*/cpufreq/{kind}')]
-    return max((clock for clock in clocks if clock), default=None)
-
-
 class Cpu:
     """Where the CPU's readings are, found once at start; sample() reads them."""
 
@@ -343,14 +391,10 @@ class Cpu:
         self.power_limit = power_limit()
         self.throttled = Rate(lambda: read_int(THROTTLED_FILE))
         self.has_throttled = read_int(THROTTLED_FILE) is not None
-        self.max_clock = fastest_clock('cpuinfo_max_freq')
         self.fans = []  # each fan's speed at the last sample
-        self.clock = None  # the fastest core's clock in kHz, at the last sample that throttled
 
     def sample(self):
         throttled = percent_of_time(self.throttled(), 1000)  # milliseconds a second
-        if throttled is not NA and throttled > 0:
-            self.clock = fastest_clock('scaling_cur_freq')
         milli_celsius = read_int(self.temperature_file) if self.temperature_file else None
         self.fans = [speed for speed in map(read_int, self.fan_files) if speed is not None]
         microwatts = self.energy() if self.energy else NA
@@ -367,11 +411,9 @@ class Cpu:
 CPU = Cpu()
 
 
-def cpu_throttled_suffix(value):
-    clock = ''
-    if value is not NA and value > 0 and CPU.clock and CPU.max_clock:
-        clock = f' · fastest core at {CPU.clock / 1e6:.1f} of {CPU.max_clock / 1e6:.1f} GHz'
-    return f'{clock} · {duration_text(CPU.throttled.total())} since boot'
+def throttled_since_boot(milliseconds):
+    """The label's end: the time throttled in all since boot, like  · 46m 03s throttled since boot"""
+    return f' · {duration_text(milliseconds)} throttled since boot'
 
 
 def make_cpu_charts():
@@ -388,8 +430,8 @@ def make_cpu_charts():
     if CPU.has_throttled:
         charts.append(Chart(
             'CPU THROTTLED', lambda sample: sample.throttled, share, BLUE, limit=100.0, small=True,
-            now_text=lambda value: f'{share(value)} of the time' + (' (heat)' if value > 0 else ''),
-            suffix=cpu_throttled_suffix,
+            now_text=lambda value: f'{share(value)} of the time',
+            suffix=lambda value: throttled_since_boot(CPU.throttled.total()), throttling=True,
         ))
     if CPU.fan_files:
         charts.append(Chart(
@@ -427,7 +469,6 @@ class GpuThrottling:
         self.power = Rate(lambda: held_back_ns(devices, libnvml.NVML_PERF_POLICY_POWER))
         self.heat = Rate(lambda: held_back_ns(devices, libnvml.NVML_PERF_POLICY_THERMAL))
         self.shares = (NA, NA)  # power's and heat's, at the last sample
-        self.clock = None  # (MHz, most MHz) of a single GPU, at the last sample that throttled
 
     def supported(self):
         return bool(self.devices) and None not in (
@@ -435,19 +476,13 @@ class GpuThrottling:
             held_back_ns(self.devices, libnvml.NVML_PERF_POLICY_THERMAL),
         )
 
-    def sample(self, snapshots):
+    def sample(self, readings):
         per_second = 1e9 * len(self.devices)  # nanoseconds a second, for each GPU
         self.shares = power, heat = (percent_of_time(self.power(), per_second),
                                      percent_of_time(self.heat(), per_second))
         if NA in self.shares:
             return NA
-        total = min(100.0, power + heat)
-        if total > 0 and len(self.devices) == 1:
-            handle = self.devices[0].handle
-            clocks = [libnvml.nvmlQuery(query, handle, libnvml.NVML_CLOCK_SM)
-                      for query in ('nvmlDeviceGetClockInfo', 'nvmlDeviceGetMaxClockInfo')]
-            self.clock = tuple(clocks) if all(isinstance(c, int) for c in clocks) else None
-        return total
+        return min(100.0, power + heat)
 
     def now_text(self, value):
         names = ('power limit', 'heat')
@@ -456,36 +491,32 @@ class GpuThrottling:
         return f'{share(value)} of the time' + (f' ({", ".join(reasons)})' if reasons else '')
 
     def suffix(self, value):
-        clock = ''
-        if value is not NA and value > 0 and self.clock:
-            clock = ' · at {} of {} MHz'.format(*self.clock)
         totals = [self.power.total(), self.heat.total()]
-        total = None if None in totals else sum(totals) / 1e6  # milliseconds
-        return f'{clock} · {duration_text(total)} since boot'
+        return throttled_since_boot(None if None in totals else sum(totals) / 1e6)  # milliseconds
 
 
 def make_gpu_charts(devices):
-    def known(snapshots, field):
-        return [getattr(s, field) for s in snapshots if getattr(s, field) is not NA]
+    def known(readings, field):
+        return [getattr(s, field) for s in readings if getattr(s, field) is not NA]
 
-    def memory_gib(snapshots):
-        used = known(snapshots, 'memory_used')
+    def memory_gib(readings):
+        used = known(readings, 'memory_used')
         return sum(used) / GIB if used else NA
 
-    def memory_percent(snapshots):
-        used, total = known(snapshots, 'memory_used'), known(snapshots, 'memory_total')
+    def memory_percent(readings):
+        used, total = known(readings, 'memory_used'), known(readings, 'memory_total')
         return 100.0 * sum(used) / sum(total) if used and total and sum(total) > 0 else NA
 
-    def utilization(snapshots):
-        values = known(snapshots, 'gpu_utilization')
+    def utilization(readings):
+        values = known(readings, 'gpu_utilization')
         return sum(values) / len(values) if values else NA
 
-    def power(snapshots):
-        values = known(snapshots, 'power_usage')  # milliwatts
+    def power(readings):
+        values = known(readings, 'power_usage')  # milliwatts
         return sum(values) / 1000.0 if values else NA
 
-    def temperature(snapshots):
-        values = known(snapshots, 'temperature')
+    def temperature(readings):
+        values = known(readings, 'temperature')
         return max(values) if values else NA
 
     totals = [device.memory_total() for device in devices]
@@ -518,12 +549,28 @@ def make_gpu_charts(devices):
     throttling = GpuThrottling(devices)
     if throttling.supported():
         charts.append(Chart('GPU THROTTLED', throttling.sample, share, BLUE, limit=100.0,
-                            small=True, now_text=throttling.now_text, suffix=throttling.suffix))
+                            small=True, now_text=throttling.now_text, suffix=throttling.suffix,
+                            throttling=True))
     return charts
 
 
+def gpu_readings(devices):
+    """What the GPU charts show, for each GPU, read now, at the same time as the CPU and the GPUs'
+    throttling. (The devices' snapshots, nvitop's GPU table's, come from a thread of its own, at
+    most once a second, up to 1.5 s old: bands ran ahead of the GPU charts.)"""
+    readings = []
+    for device in devices:
+        with device.oneshot():
+            readings.append(types.SimpleNamespace(
+                memory_used=device.memory_used(), memory_total=device.memory_total(),
+                gpu_utilization=device.gpu_utilization(), power_usage=device.power_usage(),
+                temperature=device.temperature(),
+            ))
+    return readings
+
+
 def throttling_chart(charts):
-    return next((chart for chart in charts if chart.name.endswith('THROTTLED')), None)
+    return next((chart for chart in charts if chart.throttling), None)
 
 
 # Drawing the boxes.
@@ -588,31 +635,86 @@ def draw_time_marks(panel, bottom):
         panel.color_at(bottom, start + 1, width=len(mark) - 2, attr='dim')
 
 
-def band_levels(chart, columns):
-    """For each column, left to right: 0, or 1 to 3 by how much of the time the chip throttled."""
-    with chart.history.write_lock:
-        history = list(chart.history.reversed_history)
-    levels = []
-    for k in reversed(range(columns)):  # column j from the left holds samples 2k and 2k + 1
-        value = max(history[2 * k : 2 * k + 2], default=0)
-        levels.append(0 if value <= 0 else 1 if value < 25 else 2 if value < 75 else 3)
-    return levels
+def column_samples(history, width):
+    """A chart's columns, left to right, each its (older, newer) sample, None for one not in yet.
+
+    A column holds 2 seconds on a fixed grid, the same for every chart, counted from their shared
+    start: the newest fills its older half, then its newer half, then a new column starts. So the
+    charts and their box's band move a whole column at once, every 2 seconds. (nvitop's own graph
+    moves half a column every second, and a band, a cell's background, can't: it lagged behind
+    every other second.)
+    """
+    samples = round((history.last_update_time - history.start_time) / history.interval)
+    values = list(history.reversed_history)  # newest first
+    if samples % 2 == 0:  # the newest column's newer half isn't in yet
+        values.insert(0, None)
+    width = min(width, (len(values) - 1) // 2)
+    return [(values[2 * k + 1], values[2 * k]) for k in reversed(range(width))]
+
+
+def known_max(pair):
+    return max((value for value in pair if value is not None), default=0)
+
+
+def bar_lines(history, columns):
+    """A chart's rows of braille, top to bottom, from its columns."""
+    blank = history.baseline - 1.0  # below the baseline: no dots
+    bars = [history.make_bar_chart(blank if older is None else older,
+                                   blank if newer is None else newer)
+            for older, newer in columns]
+    return [''.join(row) for row in zip(*bars)] if bars else []
+
+
+def copy_charts(charts):
+    """Each chart's columns, its rows of braille, its label and the label's glow, all as of the
+    same sample. The rows are made again only when a sample comes in or the chart's size or scale
+    changes."""
+    copies = []
+    with SAMPLES:
+        for chart in charts:
+            history = chart.history
+            with history.write_lock:
+                key = (history.last_update_time, history.width, history.height, history.bound)
+                if getattr(chart, 'drawn', (None,))[0] != key:
+                    columns = column_samples(history, history.width)
+                    chart.drawn = (key, columns, bar_lines(history, columns))
+                _, columns, lines = chart.drawn
+                copies.append(types.SimpleNamespace(
+                    columns=columns, lines=lines, height=history.height, label=chart.label(),
+                    glow=chart.glow(history.last_value),
+                ))
+    return copies
 
 
 def draw_charts(panel, charts, top):
     """Each chart's line and label, the first at row top, each under the one before it, and the
-    throttling bands down them and the separators between them."""
+    throttling bands down them, but for their labels, and across the separators between them."""
     # Glowing and bands take colors of our own: --colorful, and a terminal that lets curses set
     # colors.
     true_color = panel.TERM_256COLOR and curses.can_change_color()
     bright = getattr(curses, 'COLORS', 0) >= 16
+    copies = copy_charts(charts)
     band_chart = throttling_chart(charts) if true_color else None
+    # Each column's band: 0, or 1 to 3 by how much of the time the chip throttled.
+    bands = [0] * (frame_width(panel) - 2)
+    if band_chart:
+        bands = [band_level(known_max(pair)) for pair in copies[charts.index(band_chart)].columns]
 
     def background(band):
         return rgb(BANDS[band - 1]) if band else -1
 
+    def banded(row, column, text, attr_of, bands):
+        """text from column on, each run of columns on its band's background."""
+        def band_at(j):
+            return bands[j] if j < len(bands) else 0
+
+        for band, run in itertools.groupby(range(column, column + len(text)), key=band_at):
+            run = list(run)
+            panel.addstr(row, panel.x + 1 + run[0], text[run[0] - column : run[-1] - column + 1],
+                         attr_of(band))
+
     chart_top = top
-    for index, chart in enumerate(charts):
+    for index, (chart, copy) in enumerate(zip(charts, copies)):
         attrs = {}
 
         def attr(level, band=0, label=None):
@@ -631,41 +733,29 @@ def draw_charts(panel, charts, top):
                 )
             return attrs[level, band, label]
 
-        with chart.history.write_lock:  # taken while the snapshot thread adds a sample
-            lines = list(chart.history.graph)
-            history = list(chart.history.reversed_history)
-        width = min(len(lines[0]), (len(history) - 1) // 2) if lines else 0
-        # Column j from the left holds 2 samples, newest on the right: it glows by the higher.
-        levels = [
-            chart.glow(max(history[2 * k], history[2 * k + 1]))
-            for k in reversed(range(width))
-        ]
-        bands = band_levels(band_chart, width) if band_chart else [0] * width
-        runs = [(key, len(list(run))) for key, run in itertools.groupby(zip(levels, bands))]
+        lines, width = copy.lines, len(copy.columns)
+        levels = [chart.glow(known_max(pair)) for pair in copy.columns]  # glows by the higher
+        chart_bands = (bands + [0] * width)[:width]
+        runs = [(key, len(list(run))) for key, run in itertools.groupby(zip(levels, chart_bands))]
 
         for row, line in enumerate(lines):
-            line = line[-width:] if width else ''
             column = 0
             for (level, band), length in runs:
                 text = line[column : column + length]
                 panel.addstr(chart_top + row, panel.x + 1 + column, text, attr(level, band))
                 column += length
-        head, tail = chart.label()
+        head, tail = copy.label
         room = frame_width(panel) - 2
-        panel.addstr(chart_top, panel.x + 1, head[:room],
-                     attr(chart.glow(chart.history.last_value), label='head'))
+        # Labels stay on the plain background: on a band's, its edge ran through the text.
+        panel.addstr(chart_top, panel.x + 1, head[:room], attr(copy.glow, label='head'))
         if len(head) < room:
             panel.addstr(chart_top, panel.x + 1 + len(head), tail[: room - len(head)],
                          attr(0, label='tail'))
-        chart_top += len(lines)
+        chart_top += copy.height
 
         if index < len(charts) - 1:  # the faint line under it, banded too
-            column = 0
-            for band, run in itertools.groupby(bands):
-                length = len(list(run))
-                panel.addstr(chart_top, panel.x + 1 + column, '┈' * length,
-                             panel.get_fg_bg_attr(bg=background(band), attr='dim'))
-                column += length
+            banded(chart_top, 0, '┈' * width,
+                   lambda band: panel.get_fg_bg_attr(bg=background(band), attr='dim'), bands)
         chart_top += 1
 
 
@@ -698,12 +788,16 @@ def set_width(self, value):
 
 
 def take_snapshots(self):
-    snapshots = [device.snapshot for device in self.devices]
-    for chart in self.charts:
-        chart.history.add(chart.value_of(snapshots))
+    """Reads everything, then adds it to every chart at once, at one time. (Added as each was read,
+    between slow reads, NVML's and the fans' 20 ms, a second could start between two charts.)"""
+    readings = gpu_readings(self.devices)
+    values = [chart.value_of(readings) for chart in self.charts]
     self.cpu_sample = sample = CPU.sample()
-    for chart in self.cpu_charts:
-        chart.history.add(chart.value_of(sample))
+    values += [chart.value_of(sample) for chart in self.cpu_charts]
+    now = time.monotonic()
+    with SAMPLES:
+        for chart, value in zip(self.charts + self.cpu_charts, values):
+            chart.history.add_at(value, now)
 
 
 def frame_lines(self, compact=None):
@@ -743,7 +837,7 @@ def init(self, *args, **kwargs):
     # One clock for every chart's seconds, so a band's columns are every chart's.
     start = time.monotonic()
     for chart in self.charts + self.cpu_charts:
-        chart.history.last_update_time = start
+        chart.history.start_time = chart.history.last_update_time = start
     self.cpu_sample = CPU.sample()
     self.full_height = 2 + box_rows(self.charts, MIN_CHART_HEIGHT)  # and the heading and top
     self.compact_height = 2  # the heading, and the top of the process list's frame
