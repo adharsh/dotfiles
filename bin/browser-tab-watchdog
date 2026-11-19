@@ -8,6 +8,9 @@ DRY_RUN="${WATCHDOG_DRY_RUN:-false}"
 COOLDOWN_FILE="${XDG_RUNTIME_DIR:-/tmp}/browser-watchdog-cooldown"
 COOLDOWN_SEC=60
 KILL_LOG="${WATCHDOG_KILL_LOG:-${HOME}/.local/share/browser-tab-watchdog/kills.jsonl}"
+# Brave tabs whose page process died, with their address, as logged by the extension in .scripts/tab-death-log.
+DEATH_LOG="${WATCHDOG_DEATH_LOG:-${HOME}/.local/share/browser-tab-watchdog/tab-deaths.jsonl}"
+CLK_TCK=$(getconf CLK_TCK)
 
 now=$(date +%s)
 mkdir -p "$(dirname "$KILL_LOG")"
@@ -48,6 +51,23 @@ read_memory_kb() {
     awk '/^VmRSS:/{print $2}' "/proc/$pid/status" 2>/dev/null || echo 0
 }
 
+# A process's memory in MB, as "pss anon file shmem swap": its PSS split by kind, then what it has in swap.
+memory_breakdown() {
+    awk '/^Pss:/{p=$2} /^Pss_Anon:/{a=$2} /^Pss_File:/{f=$2} /^Pss_Shmem:/{s=$2} /^Swap:/{w=$2}
+         END{printf "%d %d %d %d %d\n", p/1024, a/1024, f/1024, s/1024, w/1024}' "/proc/$1/smaps_rollup" 2>/dev/null
+}
+
+# CPU seconds a process has used, in user and kernel mode together.
+cpu_seconds() {
+    awk -v hz="$CLK_TCK" '{printf "%.1f\n", ($14 + $15) / hz}' "/proc/$1/stat" 2>/dev/null
+}
+
+# The whole system's memory in MB, as "total available swap_used".
+system_memory() {
+    awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2} /^SwapFree:/{sf=$2}
+         END{printf "%d %d %d\n", t/1024, a/1024, (st-sf)/1024}' /proc/meminfo
+}
+
 # Match the browser executable, rather than browser names elsewhere in the arguments.
 browser_name() {
     local executable=""
@@ -67,13 +87,11 @@ browser_name() {
 # Process age in seconds (from /proc/pid/stat starttime vs system uptime)
 process_age() {
     local pid=$1
-    local clk_tck
-    clk_tck=$(getconf CLK_TCK)
     local start_ticks
     start_ticks=$(awk '{print $22}' "/proc/$pid/stat" 2>/dev/null) || { echo 0; return; }
     local uptime_sec
     uptime_sec=$(awk '{printf "%d", $1}' /proc/uptime)
-    echo $(( uptime_sec - start_ticks / clk_tck ))
+    echo $(( uptime_sec - start_ticks / CLK_TCK ))
 }
 
 # Total memory for this browser (all of this user's processes) in MB.
@@ -105,7 +123,8 @@ if [[ ${#pids[@]} -eq 0 ]]; then
     exit 0
 fi
 
-killed=0
+records=()
+brave_killed=false
 for pid in "${pids[@]}"; do
     [[ -d "/proc/$pid" ]] || continue
     browser=$(browser_name "$pid") || continue
@@ -127,42 +146,78 @@ for pid in "${pids[@]}"; do
         if [[ "$browser" == "Chrome" && "$cmdline" == *dev-profile* ]]; then
             instance="Dev Chrome"
         fi
+
+        # Measure the tab and the system before the kill, since the tab's /proc entry goes with it.
         age=$(process_age "$pid")
+        pss_mb=0 anon_mb=0 file_mb=0 shmem_mb=0 swap_mb=0 mem_total_mb=0 mem_available_mb=0 swap_used_mb=0
+        read -r pss_mb anon_mb file_mb shmem_mb swap_mb < <(memory_breakdown "$pid") || true
+        cpu_s=$(cpu_seconds "$pid") || true
+        cpu_s=${cpu_s:-0}
+        read -r mem_total_mb mem_available_mb swap_used_mb < <(system_memory) || true
+        record=$(jq -nc \
+            --arg timestamp "$(date -Iseconds)" \
+            --argjson pid "$pid" \
+            --arg browser "$browser" \
+            --arg instance "$instance" \
+            --argjson threshold_mb "$THRESHOLD_MB" \
+            --argjson memory_mb "${pss_mb:-0}" \
+            --argjson pss_anon_mb "${anon_mb:-0}" \
+            --argjson pss_file_mb "${file_mb:-0}" \
+            --argjson pss_shmem_mb "${shmem_mb:-0}" \
+            --argjson swap_mb "${swap_mb:-0}" \
+            --argjson age_seconds "$age" \
+            --argjson cpu_seconds "$cpu_s" \
+            --argjson cpu_avg_percent "$(awk -v c="$cpu_s" -v a="$age" 'BEGIN{printf "%.1f", (a > 0 ? 100 * c / a : 0)}')" \
+            --argjson renderer_count "${renderer_counts[$browser]}" \
+            --argjson total_browser_mb "$(total_browser_mb "$browser")" \
+            --argjson system_mem_total_mb "${mem_total_mb:-0}" \
+            --argjson system_mem_available_mb "${mem_available_mb:-0}" \
+            --argjson system_swap_used_mb "${swap_used_mb:-0}" \
+            '$ARGS.named')
 
         if [[ "$DRY_RUN" == "true" ]]; then
-            echo "[browser-tab-watchdog] DRY RUN: would kill PID $pid (${mem_mb}MB) [$instance]"
+            echo "[browser-tab-watchdog] DRY RUN: would kill PID $pid (${mem_mb}MB) [$instance] $record"
             continue
         fi
 
-        # Snapshot this browser's total memory before kill.
-        browser_total=$(total_browser_mb "$browser")
-
         echo "[browser-tab-watchdog] Killing PID $pid (${mem_mb}MB PSS) [$instance]"
+        killed_at_ms=$(date +%s%3N)
         kill -TERM "$pid" 2>/dev/null || true
-
-        body="PID $pid exceeded ${THRESHOLD_MB}MB limit.\nInstance: $instance"
-
-        case "$browser" in
-            Chrome) browser_icon=/opt/google/chrome/product_logo_64.png ;;
-            Brave) browser_icon=/opt/brave.com/brave/product_logo_64.png ;;
-        esac
-        icon_flag=()
-        [[ -f "$browser_icon" ]] && icon_flag=(--icon "$browser_icon")
-        notify-send --urgency=critical --app-name=browser-tab-watchdog \
-            "${icon_flag[@]}" \
-            "$browser Tab Killed (${mem_mb}MB)" \
-            "$body"
-
-        # Log kill to JSONL for analytics
-        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"browser":"%s","instance":"%s","age_seconds":%d,"renderer_count":%d,"total_browser_mb":%d}\n' \
-            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$browser" "$instance" "$age" "${renderer_counts[$browser]}" "$browser_total" \
-            >> "$KILL_LOG"
+        records+=("$(jq -c --argjson ms "$killed_at_ms" '. + {killed_at_ms: $ms}' <<< "$record")")
+        [[ "$browser" == "Brave" ]] && brave_killed=true
 
         printf '%s:%s\n' "$pid" "$now" >> "$COOLDOWN_FILE"
-        (( killed++ )) || true
     fi
 done
 
-if (( killed > 0 )); then
-    echo "[browser-tab-watchdog] Killed $killed tab(s) exceeding ${THRESHOLD_MB}MB"
-fi
+(( ${#records[@]} > 0 )) || exit 0
+
+# Give the Brave extension time to log which tabs died: it checks a tab 3 s after its page process goes.
+[[ "$brave_killed" == "true" ]] && sleep 6
+
+for record in "${records[@]}"; do
+    # Attach the tabs whose page process went just after this kill. Several tabs can share one process,
+    # and a Chrome tab, or a page the extension does not run in, gives none.
+    tabs='[]'
+    if [[ "$(jq -r .browser <<< "$record")" == "Brave" && -f "$DEATH_LOG" ]]; then
+        tabs=$(tail -n 200 "$DEATH_LOG" | jq -sc --argjson ms "$(jq .killed_at_ms <<< "$record")" \
+            '[.[] | select(.port_closed_ms >= $ms - 1000 and .port_closed_ms <= $ms + 5000)]' 2>/dev/null) || tabs='[]'
+    fi
+    record=$(jq -c --argjson tabs "$tabs" '. + {tabs: $tabs}' <<< "$record")
+    printf '%s\n' "$record" >> "$KILL_LOG"
+
+    browser=$(jq -r .browser <<< "$record")
+    case "$browser" in
+        Chrome) browser_icon=/opt/google/chrome/product_logo_64.png ;;
+        Brave) browser_icon=/opt/brave.com/brave/product_logo_64.png ;;
+    esac
+    icon_flag=()
+    [[ -f "$browser_icon" ]] && icon_flag=(--icon "$browser_icon")
+    notify-send --urgency=critical --app-name=browser-tab-watchdog "${icon_flag[@]}" \
+        "$(jq -r '"\(.browser) Tab Killed (\(.memory_mb)MB)"' <<< "$record")" \
+        "$(jq -r '(if .tabs == [] then "PID \(.pid), no tab address logged" else
+                    [.tabs[] | "\(.url | sub("^[a-z-]+://"; "") | sub("[/?#].*"; "")): \(.title)"] | join("\n") end)
+                  + "\nInstance: \(.instance), CPU \(.cpu_avg_percent)% over \(.age_seconds / 60 | floor) min"' <<< "$record")"
+done
+
+echo "[browser-tab-watchdog] Killed ${#records[@]} tab(s) exceeding ${THRESHOLD_MB}MB"

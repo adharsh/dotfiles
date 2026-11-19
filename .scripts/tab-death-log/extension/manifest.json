@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Tab death log",
+  "version": "1.0",
+  "description": "Logs the address of each tab whose page process dies, for browser-tab-watchdog.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuCppqn3GGEz0Xzdk9V2NvjLwuoUL/jFM3BL/b3p9oSlHM6pT5skKHzhkn1iGAdM27Z615hXSFtDrzApgQk/Tiw5A0DZiy5fF9yvVn1EZNVlORTaRVCozCEmIpDgu8/v/T78MGGFRVpR4jWHaUMwm5VRZBASv8nkE5bJDSUP5mBvQH0bwrJ0h1BvAI4FgOiM+hi0VUx4VjcfKSNhMIHelbjkOtBEEM4m1stoq3qQS4LJm4GWA10TWRncWDn92+om9IoGrnuKx91xLx9NNX940DkiC/EqustEW1X5n7JHzOCRwt0iyN+gxAW4VIo/gA5ti717J4smIjHhU4MfNDNImKwIDAQAB",
+  "permissions": ["nativeMessaging", "offscreen", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

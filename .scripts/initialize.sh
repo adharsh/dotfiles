@@ -260,6 +260,19 @@ pnpm add -g markdown-it,@iktakahiro/markdown-it-katex,highlight.js
 systemctl --user daemon-reload
 systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer lid-dot-morse.service claude-sessions.service
 
+# Log the address and title of each Brave tab whose page process dies (killed by the watchdog, or by the kernel when
+# memory runs out) to ~/.local/share/browser-tab-watchdog/tab-deaths.jsonl. The watchdog adds them to its kill log.
+tab_death_log_id=dcjfoojbngpfblbeimgekeclipamndbj # Fixed by the "key" in the extension's manifest.json
+brave_dir="$HOME/.config/BraveSoftware/Brave-Browser"
+mkdir -p "$brave_dir/NativeMessagingHosts"
+jq -n --arg path "$HOME/dotfiles/.scripts/tab-death-log/host.py" --arg id "$tab_death_log_id" \
+    '{name: "dotfiles.tab_death_log", description: "Appends Brave tabs whose page process died to ~/.local/share/browser-tab-watchdog/tab-deaths.jsonl",
+      path: $path, type: "stdio", allowed_origins: ["chrome-extension://\($id)/"]}' \
+    > "$brave_dir/NativeMessagingHosts/dotfiles.tab_death_log.json"
+if ! grep -qs "$tab_death_log_id" "$brave_dir/Default/Secure Preferences" "$brave_dir/Default/Preferences"; then
+    read -rp "In Brave, open brave://extensions, turn on Developer mode, click Load unpacked, and pick $HOME/dotfiles/.scripts/tab-death-log/extension"
+fi
+
 # Install timer
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
     sudo add-apt-repository -y ppa:tatokis/alarm-clock-applet
