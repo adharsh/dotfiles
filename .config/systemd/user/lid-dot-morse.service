@@ -1,0 +1,12 @@
+[Unit]
+Description=Spell adhar.sh in Morse on the lid's red dot
+OnFailure=notify-failure@%n.service
+# Only on a ThinkPad with the dot
+ConditionPathExists=/sys/class/leds/tpacpi::lid_logo_dot/brightness
+
+[Service]
+ExecStart=%h/dotfiles/.scripts/lid_dot_morse.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

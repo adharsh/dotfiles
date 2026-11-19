@@ -253,9 +253,9 @@ fi
 ## Markdown to Anki custom plugin (keep its libraries in one pnpm 12 install group)
 pnpm add -g markdown-it,@iktakahiro/markdown-it-katex,highlight.js
 
-# Enable pnpm maintenance timers (daily global update, weekly store prune)
+# Enable pnpm maintenance timers (daily global update, weekly store prune), and the lid dot spelling adhar.sh in Morse
 systemctl --user daemon-reload
-systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer browser-tab-watchdog.timer
+systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer browser-tab-watchdog.timer lid-dot-morse.service
 
 # Install timer
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
