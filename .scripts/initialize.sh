@@ -255,13 +255,16 @@ pnpm add -g markdown-it,@iktakahiro/markdown-it-katex,highlight.js
 
 # Enable pnpm maintenance timers (daily global update, weekly store prune), the lid dot spelling adhar.sh in Morse,
 # and the Claude Code sessions in the bar (list ssh hosts to include in ~/.config/claude-sessions/hosts).
-# browser-tab-watchdog.timer (kill tabs over 1 GB) is left off, since Brave manages its memory well enough;
-# turn it back on with: systemctl --user enable --now browser-tab-watchdog.timer
+# browser-tab-watchdog.timer (kill tabs over 1 GB) is left off, since Brave manages its memory well enough.
+# To turn it back on, with the address and title of each killed tab in its log and notifications:
+#   1. systemctl --user enable --now browser-tab-watchdog.timer
+#   2. In brave://extensions, turn on "Tab death log". If it isn't listed, turn on Developer mode, click Load unpacked,
+#      and pick ~/dotfiles/.scripts/tab-death-log/extension. Its native-messaging host is registered below.
+#      It also logs tabs the kernel kills when memory runs out, to ~/.local/share/browser-tab-watchdog/tab-deaths.jsonl.
 systemctl --user daemon-reload
 systemctl --user enable --now pnpm-update.timer pnpm-store-prune.timer lid-dot-morse.service claude-sessions.service
 
-# Log the address and title of each Brave tab whose page process dies (killed by the watchdog, or by the kernel when
-# memory runs out) to ~/.local/share/browser-tab-watchdog/tab-deaths.jsonl. The watchdog adds them to its kill log.
+# Register the native-messaging host the "Tab death log" extension writes its log through (see the watchdog note above).
 tab_death_log_id=dcjfoojbngpfblbeimgekeclipamndbj # Fixed by the "key" in the extension's manifest.json
 brave_dir="$HOME/.config/BraveSoftware/Brave-Browser"
 mkdir -p "$brave_dir/NativeMessagingHosts"
@@ -269,9 +272,6 @@ jq -n --arg path "$HOME/dotfiles/.scripts/tab-death-log/host.py" --arg id "$tab_
     '{name: "dotfiles.tab_death_log", description: "Appends Brave tabs whose page process died to ~/.local/share/browser-tab-watchdog/tab-deaths.jsonl",
       path: $path, type: "stdio", allowed_origins: ["chrome-extension://\($id)/"]}' \
     > "$brave_dir/NativeMessagingHosts/dotfiles.tab_death_log.json"
-if ! grep -qs "$tab_death_log_id" "$brave_dir/Default/Secure Preferences" "$brave_dir/Default/Preferences"; then
-    read -rp "In Brave, open brave://extensions, turn on Developer mode, click Load unpacked, and pick $HOME/dotfiles/.scripts/tab-death-log/extension"
-fi
 
 # Install timer
 if ! command -v alarm-clock-applet >/dev/null 2>&1; then
