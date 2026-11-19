@@ -31,21 +31,39 @@ mark() {
     printf '{"name":"stt","full_text":"●","color":"%s"},' "$color"
 }
 
-# The Claude Code sessions that .scripts/claude_sessions.sh collects: a ✻ and the folder for
-# each, after its host if it's not this laptop. Dim green while Claude works, bright green
-# when it's your turn, and red while claude agents calls it "waiting", which looks like a
-# question or permission for you.
+flash_s=6
+declare -A turn_since  # Claude session id -> when it became your turn, in ms
+
+# claude_marks: puts in $claude the Claude Code sessions that .scripts/claude_sessions.sh
+# collects: a ✻ and the folder for each, after its host if it's not this laptop. Dim green
+# while Claude works, coral when it's your turn, flashing for the first flash_s seconds.
 claude_marks() {
-    local files=("$claude_run"/*.json)
-    [ -f "${files[0]}" ] || return 0
-    # Each file is a line of JSON; one that isn't (claude printed something else) is skipped.
-    jq -nRj '
-        [inputs | (fromjson? // [])[] + {host: input_filename | split("/") | last | rtrimstr(".json")}]
-        | sort_by(.host != "local")[]
-        | {name: "claude",
-           full_text: "✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)",
-           color: ({busy: "#4f7a5f", waiting: "#ff6b6b"}[.status] // "#42c77a")}
-        | tojson + ","' "${files[@]}" 2>/dev/null
+    local files=("$claude_run"/*.json) now=$((${EPOCHREALTIME/[.,]/} / 1000)) id status text color s
+    local -A live
+    claude=
+    if [ -f "${files[0]}" ]; then
+        # A line per session: its id, status, and text as a JSON string. Each file is a line of
+        # JSON; one that isn't (claude printed something else) is skipped.
+        while read -r id status text; do
+            live[$id]=1
+            if [ "$status" = busy ]; then
+                unset "turn_since[$id]"
+                color='#4f7a5f'
+            else
+                # Whole seconds since its turn began, rounded: i3status's lines come about a
+                # second apart, but not on the clock's second
+                s=$(((now - ${turn_since[$id]:=$now} + 500) / 1000))
+                color='#ff7a59'
+                ((s < flash_s && s % 2)) && color='#80412f'
+            fi
+            claude+="{\"name\":\"claude\",\"full_text\":$text,\"color\":\"$color\"},"
+        done < <(jq -nrR '
+            [inputs | (fromjson? // [])[] + {host: input_filename | split("/") | last | rtrimstr(".json")}]
+            | sort_by(.host != "local")[]
+            | "\(.sessionId) \(.status) \("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)" | tojson)"
+        ' "${files[@]}" 2>/dev/null)
+    fi
+    for id in "${!turn_since[@]}"; do [ -n "${live[$id]}" ] || unset "turn_since[$id]"; done
 }
 
 i3status "$@" | {
@@ -54,7 +72,8 @@ i3status "$@" | {
     read -r line && printf '%s\n' "$line" || exit
     # Then a status line per second, each "[...]" or ",[...]": the dots go first in it.
     while read -r line; do
-        marks="$(mark '*.pid' '#e8913a' '#905a24')$(mark '*.busy' '#5f87d7' '#4765a1')$(claude_marks)"
+        claude_marks  # not in $( ), which would forget turn_since
+        marks="$(mark '*.pid' '#e8913a' '#905a24')$(mark '*.busy' '#5f87d7' '#4765a1')$claude"
         printf '%s\n' "${line%%\[*}[$marks${line#*\[}" || exit
     done
 }
