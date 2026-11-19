@@ -8,8 +8,6 @@ DRY_RUN="${WATCHDOG_DRY_RUN:-false}"
 COOLDOWN_FILE="${XDG_RUNTIME_DIR:-/tmp}/browser-watchdog-cooldown"
 COOLDOWN_SEC=60
 KILL_LOG="${WATCHDOG_KILL_LOG:-${HOME}/.local/share/browser-tab-watchdog/kills.jsonl}"
-# Optional tab-title lookup for Dev Chrome only.
-CDP_PORT="${WATCHDOG_CDP_PORT:-9222}"
 
 now=$(date +%s)
 mkdir -p "$(dirname "$KILL_LOG")"
@@ -78,27 +76,6 @@ process_age() {
     echo $(( uptime_sec - start_ticks / clk_tck ))
 }
 
-# Snapshot dev chrome tabs via CDP (returns JSON array or empty string)
-snapshot_tabs() {
-    command -v jq >/dev/null 2>&1 || { echo ""; return; }
-    curl -sf -m 1 "http://localhost:${CDP_PORT}/json/list" 2>/dev/null || echo ""
-}
-
-# Identify the title of a tab that was just crashed by diffing before/after snapshots.
-# A killed renderer leaves its tab on a sad-tab page: the id either disappears or the
-# url flips to chrome-error://. If no signal is found, fall back to empty.
-find_crashed_tab_title() {
-    local before=$1 after=$2
-    [[ -z "$before" ]] && return
-    jq -r --argjson after "${after:-[]}" '
-        [.[] | select(.type=="page")] as $bp |
-        $bp[] as $b |
-        ($after | map(select(.type=="page" and .id==$b.id)) | first) as $a |
-        select($a == null or ($a.url | startswith("chrome-error://")))
-        | $b.title
-    ' <<< "$before" 2>/dev/null | head -1
-}
-
 # Total memory for this browser (all of this user's processes) in MB.
 total_browser_mb() {
     local browser=$1
@@ -118,7 +95,7 @@ pids=()
 declare -A renderer_counts=([Chrome]=0 [Brave]=0)
 while read -r pid; do
     browser=$(browser_name "$pid") || continue
-    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    cmdline=$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline") || continue
     [[ "$cmdline" == *--extension-process* ]] && continue
     pids+=("$pid")
     renderer_counts[$browser]=$((renderer_counts[$browser] + 1))
@@ -129,13 +106,12 @@ if [[ ${#pids[@]} -eq 0 ]]; then
 fi
 
 killed=0
-tabs_before=$(snapshot_tabs)
 for pid in "${pids[@]}"; do
     [[ -d "/proc/$pid" ]] || continue
     browser=$(browser_name "$pid") || continue
 
     # Skip extension renderer processes
-    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    cmdline=$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline") || continue
     [[ " $cmdline " == *" --type=renderer "* ]] || continue
     [[ "$cmdline" == *--extension-process* ]] && continue
 
@@ -164,16 +140,7 @@ for pid in "${pids[@]}"; do
         echo "[browser-tab-watchdog] Killing PID $pid (${mem_mb}MB PSS) [$instance]"
         kill -TERM "$pid" 2>/dev/null || true
 
-        tab_title=""
-        if [[ -n "$tabs_before" && "$instance" == "Dev Chrome" ]]; then
-            sleep 0.3
-            tabs_after=$(snapshot_tabs)
-            tab_title=$(find_crashed_tab_title "$tabs_before" "$tabs_after")
-            tabs_before="$tabs_after"
-        fi
-
         body="PID $pid exceeded ${THRESHOLD_MB}MB limit.\nInstance: $instance"
-        [[ -n "$tab_title" ]] && body="${body}\nTab: $tab_title"
 
         case "$browser" in
             Chrome) browser_icon=/opt/google/chrome/product_logo_64.png ;;
@@ -186,10 +153,9 @@ for pid in "${pids[@]}"; do
             "$browser Tab Killed (${mem_mb}MB)" \
             "$body"
 
-        tab_title_json=$(jq -Rn --arg t "$tab_title" '$t')
         # Log kill to JSONL for analytics
-        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"browser":"%s","instance":"%s","age_seconds":%d,"renderer_count":%d,"total_browser_mb":%d,"tab_title":%s}\n' \
-            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$browser" "$instance" "$age" "${renderer_counts[$browser]}" "$browser_total" "$tab_title_json" \
+        printf '{"timestamp":"%s","pid":%d,"memory_mb":%d,"threshold_mb":%d,"browser":"%s","instance":"%s","age_seconds":%d,"renderer_count":%d,"total_browser_mb":%d}\n' \
+            "$(date -Iseconds)" "$pid" "$mem_mb" "$THRESHOLD_MB" "$browser" "$instance" "$age" "${renderer_counts[$browser]}" "$browser_total" \
             >> "$KILL_LOG"
 
         printf '%s:%s\n' "$pid" "$now" >> "$COOLDOWN_FILE"
