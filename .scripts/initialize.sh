@@ -155,7 +155,7 @@ fi
 # Install general packages
 packages=(
     gnome-themes-extra gnome-icon-theme
-    i3 xdotool xautomation x11-utils silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
+    i3 xss-lock xdotool xautomation x11-utils silversearcher-ag maim udiskie blueman ripgrep curl arandr tree jq gpick
     xpad dunst p7zip-full gnome-sound-recorder pulseaudio pulseaudio-utils pavucontrol zstd xdot yad audacity expect xterm ffmpeg
     valgrind kcachegrind heaptrack heaptrack-gui massif-visualizer hotspot
     stress-ng gnome-system-monitor ncdu
