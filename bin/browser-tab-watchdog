@@ -52,8 +52,12 @@ read_memory_kb() {
 
 # Match the browser executable, rather than browser names elsewhere in the arguments.
 browser_name() {
-    local executable
-    IFS= read -r -d '' executable < "/proc/$1/cmdline" 2>/dev/null || return 1
+    local executable=""
+    # The process may exit between pgrep and here; the braces silence the failed redirect.
+    { IFS= read -r -d '' executable < "/proc/$1/cmdline"; } 2>/dev/null || true
+    # Renderers rewrite their cmdline as one space-joined string, so take the first word.
+    executable=${executable%% *}
+    [[ -n "$executable" ]] || return 1
     case "$executable" in
         # Chrome's main process keeps its launcher path in argv[0].
         /opt/google/chrome/chrome|/opt/google/chrome/google-chrome|/usr/bin/google-chrome|/usr/bin/google-chrome-stable) echo "Chrome" ;;
