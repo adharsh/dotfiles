@@ -51,7 +51,8 @@ claude_marks() {
     [ -f "${files[0]}" ] || return 0
     # The blink flips about once a second: at most once per i3status line
     ((now - flipped >= 700)) && ((blink = !blink, flipped = now))
-    # Claude Code titles its terminal with a mark, a space, and the session's title
+    # Claude Code titles its terminal with a mark, a space, and the session's name if you gave
+    # it one with /rename, or else the title Claude gave it
     local focused=$(xdotool getactivewindow getwindowname 2>/dev/null)
     # A line per session: its state, its id, whether its window is focused, and its text as a
     # JSON string. Each file is a line of JSON; one that isn't is skipped, as is a session whose
@@ -71,10 +72,11 @@ claude_marks() {
         | (group_by(.label) | map(select(length > 1)[].sessionId)) as $shared
         | sort_by(.host != "local")[]
         | .sessionId as $id
+        | (if .nameSource == "user" then .name else .aiTitle end) as $window_title
         | ((.statusUpdatedAt // 0) - .startedAt < 10000) as $unchanged
         | ((.version // "0") | split(".") | map(tonumber? // 0)) as $version
         | (if any($shared[]; . == $id) then
-               if .nameSource == "user" then .name else .aiTitle end // ""
+               $window_title // ""
                | if length <= 20 then . elif .[20:21] == " " then .[:20] + "…"
                  else .[:20] | sub(" [^ ]*$"; "") + "…" end
            else "" end) as $title
@@ -82,7 +84,7 @@ claude_marks() {
           elif $unchanged and $version < [2, 1, 327] then "unknown"
           else "turn" end
           + " " + .sessionId
-          + " " + (if $unchanged or (.aiTitle and .aiTitle == $focused) then "yes" else "no" end)
+          + " " + (if $unchanged or ($window_title and $window_title == $focused) then "yes" else "no" end)
           + " " + (.label + if $title == "" then "" else " · \($title)" end | tojson)
     ' "${files[@]}" 2>/dev/null)
 }
