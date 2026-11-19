@@ -35,8 +35,9 @@ mark() {
 blink=1 flipped=0  # so the first line shows it
 
 # claude_marks: puts in $claude the Claude Code sessions that .scripts/claude_sessions.sh
-# collects: a ✻ and the folder for each, after its host if it's not this laptop, then its name
-# if you gave it one with /rename, or else the title Claude gave it. Green while
+# collects: a ✻ and the folder for each, after its host if it's not this laptop. Where that
+# leaves two the same, each also gets its name, if you gave it one with /rename, or else the
+# title Claude gave it, cut at a word to 20 characters, so the bar stays short. Green while
 # Claude works, and coral when it's your turn, blinking until Claude works again or you've
 # seen it: clicked it, or had its window focused. A session still waiting for its first prompt
 # is your turn too, but steady, since you just started it. Grey if it can't tell: a Claude Code
@@ -64,18 +65,24 @@ claude_marks() {
         claude+="{\"name\":\"claude\",\"instance\":\"$id\",\"full_text\":$text,\"color\":\"${color[$state]}\"},"
     done < <(jq -nrR --arg focused "${focused#* }" '
         [inputs | (fromjson? // [])[]? | objects | select(.sessionId | strings | test("^[0-9a-f-]{1,64}$"))
-            + {host: input_filename | split("/") | last | rtrimstr(".json")}]
+            + {host: input_filename | split("/") | last | rtrimstr(".json")}
+            | .label = "✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd // "?" | split("/") | last)"]
+        | (group_by(.label) | map(select(length > 1)[].sessionId)) as $shared
         | sort_by(.host != "local")[]
+        | .sessionId as $id
         | ((.statusUpdatedAt // 0) - .startedAt < 10000) as $unchanged
         | ((.version // "0") | split(".") | map(tonumber? // 0)) as $version
-        | (if .nameSource == "user" then .name else .aiTitle end // "") as $title
+        | (if any($shared[]; . == $id) then
+               if .nameSource == "user" then .name else .aiTitle end // ""
+               | if length <= 20 then . elif .[20:21] == " " then .[:20] + "…"
+                 else .[:20] | sub(" [^ ]*$"; "") + "…" end
+           else "" end) as $title
         | if .status == "busy" then "working"
           elif $unchanged and $version < [2, 1, 327] then "unknown"
           else "turn" end
           + " " + .sessionId
           + " " + (if $unchanged or (.aiTitle and .aiTitle == $focused) then "yes" else "no" end)
-          + " " + ("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)"
-                   + if $title == "" then "" else " · \($title)" end | tojson)
+          + " " + (.label + if $title == "" then "" else " · \($title)" end | tojson)
     ' "${files[@]}" 2>/dev/null)
 }
 
