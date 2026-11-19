@@ -305,3 +305,5 @@ bindsym $mod+Shift+d exec $HOME/bin/google-chrome-stable \
 bindsym $mod+t exec --no-startup-id /home/adharsh/workspace/stt/stt dictate --key t --mod $mod
 # stt meeting notes: tap $mod+Shift+t to start and again to stop (holding works like a tap).
 bindsym $mod+Shift+t exec --no-startup-id /home/adharsh/workspace/stt/stt meeting --key t --mod $mod
+# stt cancel: $mod+q throws away the dictation, or if there's none, the meeting being recorded.
+bindsym $mod+q exec --no-startup-id /home/adharsh/workspace/stt/stt cancel --key q --mod $mod
