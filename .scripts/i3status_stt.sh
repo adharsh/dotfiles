@@ -37,8 +37,10 @@ blink=1 flipped=0  # so the first line shows it
 # claude_marks: puts in $claude the Claude Code sessions that .scripts/claude_sessions.sh
 # collects: a ✻ and the folder for each, after its host if it's not this laptop. Green while
 # Claude works, and coral when it's your turn, blinking until Claude works again or you've
-# seen it: clicked it, or had its window focused. Grey if it can't tell: an older Claude Code
-# sets a session's status when it starts and never again.
+# seen it: clicked it, or had its window focused. A session still waiting for its first prompt
+# is your turn too, but steady, since you just started it. Grey if it can't tell: a Claude Code
+# before 2.1.327 may set a session's status when it starts and never again, so a status that
+# hasn't changed since then means nothing.
 claude_marks() {
     local files=("$claude_run"/*.json) now=$((${EPOCHREALTIME/[.,]/} / 1000)) state id seen text
     local -A color=([working]='#3fa66b' [turn]='#ff7a59' [off]='#000000' [unknown]='#6b6b6b')
@@ -61,11 +63,13 @@ claude_marks() {
     done < <(jq -nrR --arg focused "${focused#* }" '
         [inputs | (fromjson? // [])[] + {host: input_filename | split("/") | last | rtrimstr(".json")}]
         | sort_by(.host != "local")[]
+        | ((.statusUpdatedAt // 0) - .startedAt < 10000) as $unchanged
+        | ((.version // "0") | split(".") | map(tonumber? // 0)) as $version
         | if .status == "busy" then "working"
-          elif (.statusUpdatedAt // 0) - .startedAt < 10000 then "unknown"
+          elif $unchanged and $version < [2, 1, 327] then "unknown"
           else "turn" end
           + " " + .sessionId
-          + " " + (if .aiTitle and .aiTitle == $focused then "yes" else "no" end)
+          + " " + (if $unchanged or (.aiTitle and .aiTitle == $focused) then "yes" else "no" end)
           + " " + ("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)" | tojson)
     ' "${files[@]}" 2>/dev/null)
 }
