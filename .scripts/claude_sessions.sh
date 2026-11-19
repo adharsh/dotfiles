@@ -3,23 +3,28 @@
 # listed in ~/.config/claude-sessions/hosts (one per line, # for comments). That file stays out
 # of this public repo, as do any settings in ~/.config/claude-sessions/env.
 # For each, $XDG_RUNTIME_DIR/claude-sessions/<host>.json (local.json for this laptop) holds
-# `claude agents --json` from there, a few seconds old at most; .scripts/i3status_stt.sh draws them.
+# its sessions (see poll), a few seconds old at most; .scripts/i3status_stt.sh draws them.
 # Each host needs jq. Run by the claude-sessions user service.
 #
 # A host gets one ssh connection that runs the poll loop there. Nothing is left behind: once
-# the connection drops, the loop's next write fails and it ends. Then its sessions leave the
-# bar and it's tried again a minute later, except while its ssh certificate has expired,
-# since connecting then could start a browser login: that's left for you to do.
+# the host sees the connection is gone, which can take it a minute or two, the loop's next
+# write fails and it ends. When the connection drops, its sessions leave the bar and it's
+# tried again a minute later, except while its ssh certificate has expired, since connecting
+# then could start a browser login: that's left for you to do.
 
 run="${XDG_RUNTIME_DIR:-/run/user/$UID}/claude-sessions"
 hosts="$HOME/.config/claude-sessions/hosts"
-# Prints the sessions as a line of JSON every 3 seconds, here or on a host: Claude Code's own
-# file for each session claude agents lists, which also says when its status last changed.
+# Prints the sessions as a line of JSON every 3 seconds, here or on a host. For each session
+# claude agents lists: Claude Code's own file for it, which also says when its status last
+# changed, and the title Claude gave it (its aiTitle, which is also its terminal's title), the
+# last one in its log.
 read -r -d '' poll <<'EOF'
 PATH="$HOME/.local/bin:$PATH"
 while :; do
-    claude agents --json | jq -r '.[].pid' | while read -r pid; do cat ~/.claude/sessions/"$pid".json; echo; done |
-        jq -ncR '[inputs | fromjson?]' || exit
+    claude agents --json | jq -r '.[] | "\(.pid) \(.sessionId)"' | while read -r pid id; do
+        cat ~/.claude/sessions/"$pid".json; echo
+        tac ~/.claude/projects/*/"$id".jsonl 2>/dev/null | grep -m1 '"type":"ai-title"'
+    done | jq -ncR '[inputs | fromjson?] | group_by(.sessionId) | map(add | select(.pid))' || exit
     sleep 3
 done
 EOF
