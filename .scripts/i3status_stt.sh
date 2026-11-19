@@ -12,6 +12,7 @@
 
 run="${XDG_RUNTIME_DIR:-/run/user/$UID}/stt"
 claude_run="${XDG_RUNTIME_DIR:-/run/user/$UID}/claude-sessions"
+clicked="$claude_run/clicked"  # a file per session whose blinking a click stopped
 bright_us=1000000
 
 # mark GLOB BRIGHT DIM: a dot if a file matching GLOB holds a live pid, in BRIGHT for
@@ -34,34 +35,53 @@ mark() {
 blink=1 flipped=0  # so the first line shows it
 
 # claude_marks: puts in $claude the Claude Code sessions that .scripts/claude_sessions.sh
-# collects: a ✻ and the folder for each, after its host if it's not this laptop. Dim green
-# while Claude works, blinking coral when it's your turn, and grey if it can't tell: an older
-# Claude Code sets a session's status when it starts and never again.
+# collects: a ✻ and the folder for each, after its host if it's not this laptop. Green while
+# Claude works, and coral when it's your turn, blinking until Claude works again or you click
+# it. Grey if it can't tell: an older Claude Code sets a session's status when it starts and
+# never again.
 claude_marks() {
-    local files=("$claude_run"/*.json) now=$((${EPOCHREALTIME/[.,]/} / 1000)) state text
-    local -A color=([working]='#4f7a5f' [turn]='#ff7a59' [off]='#000000' [unknown]='#6b6b6b')
+    local files=("$claude_run"/*.json) now=$((${EPOCHREALTIME/[.,]/} / 1000)) state id text
+    local -A color=([working]='#3fa66b' [turn]='#ff7a59' [off]='#000000' [unknown]='#6b6b6b')
     claude=
     [ -f "${files[0]}" ] || return 0
     # The blink flips about once a second: at most once per i3status line
     ((now - flipped >= 700)) && ((blink = !blink, flipped = now))
-    # A line per session: its state, and its text as a JSON string. Each file is a line of
-    # JSON; one that isn't is skipped.
-    while read -r state text; do
-        [ "$state" = turn ] && ((blink)) && state=off
-        claude+="{\"name\":\"claude\",\"full_text\":$text,\"color\":\"${color[$state]}\"},"
+    # A line per session: its state, its id, and its text as a JSON string. Each file is a
+    # line of JSON; one that isn't is skipped.
+    while read -r state id text; do
+        if [ "$state" = working ]; then
+            [ -e "$clicked/$id" ] && rm -f "$clicked/$id"  # so its next turn blinks again
+        elif [ "$state" = turn ] && ((blink)) && [ ! -e "$clicked/$id" ]; then
+            state=off
+        fi
+        claude+="{\"name\":\"claude\",\"instance\":\"$id\",\"full_text\":$text,\"color\":\"${color[$state]}\"},"
     done < <(jq -nrR '
         [inputs | (fromjson? // [])[] + {host: input_filename | split("/") | last | rtrimstr(".json")}]
         | sort_by(.host != "local")[]
         | if .status == "busy" then "working"
           elif (.statusUpdatedAt // 0) - .startedAt < 10000 then "unknown"
           else "turn" end
+          + " " + .sessionId
           + " " + ("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)" | tojson)
     ' "${files[@]}" 2>/dev/null)
 }
 
-i3status "$@" | {
-    # The header and the opening bracket pass as they are.
-    read -r line && printf '%s\n' "$line" || exit
+# i3bar sends a line of JSON on stdin for each click, since the header asks for them. A click
+# on a Claude session stops its blinking, at once.
+read_clicks() {
+    local line
+    while read -r line; do
+        [[ $line == *'"name":"claude"'* && $line =~ \"instance\":\"([0-9a-f-]+)\" ]] || continue
+        touch "$clicked/${BASH_REMATCH[1]}"
+        pkill -USR1 -x i3status
+    done
+}
+mkdir -p "$clicked"
+read_clicks <&0 &
+
+i3status "$@" </dev/null | {
+    # The header, asking for clicks, and the opening bracket
+    read -r line && printf '%s\n' "${line%\}},\"click_events\":true}" || exit
     read -r line && printf '%s\n' "$line" || exit
     # Then a status line per second, each "[...]" or ",[...]": the dots go first in it.
     while read -r line; do
