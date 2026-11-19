@@ -294,6 +294,17 @@ if [ ! -x "$HOME/.local/share/uv/tools/nvitop/bin/python" ]; then
     uv tool install nvitop
 fi
 
+# Let your group read the CPU's energy counter, for nvitop's CPU POWER chart. Linux makes it
+# root-only since the PLATYPUS power side channel (2020): with it, a program running as you can
+# find where the kernel sits in memory, a step toward root. Little risk here, as such a program
+# could already get root by waiting for your next sudo.
+if [ ! -f /etc/udev/rules.d/90-rapl-energy.rules ]; then
+    sudo tee /etc/udev/rules.d/90-rapl-energy.rules >/dev/null <<EOF
+SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*", RUN+="/bin/chgrp $(id -gn) /sys%p/energy_uj", RUN+="/bin/chmod g+r /sys%p/energy_uj"
+EOF
+    sudo udevadm trigger --subsystem-match=powercap --action=add
+fi
+
 # Install sgpt
 if ! command -v sgpt >/dev/null 2>&1; then
     uv tool install shell-gpt --with litellm

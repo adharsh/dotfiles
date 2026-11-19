@@ -1,18 +1,56 @@
 #!/usr/bin/env python3
-"""nvitop with GPU charts in place of CPU ones.
+"""nvitop as two boxes of charts, the CPU's above the GPU's, with its tables gone.
 
-Under the GPU table, four full-width charts, one above the other, share a time axis at the bottom.
-Each chart's top is its limit. Its label gives the value, the limit when it isn't 100%, and the
-highest point in view, like  TEMP: 64°C / 96°C · peak 72°C
-  GPU MEM   magenta   % of GPU memory in use
-  GPU UTL   cyan      GPU utilization
-  POWER     yellow    out of the power limit (80 W here), which the GPU slows down to stay under;
-                      without one, no limit shown and scaled to what's been seen
-  TEMP      red       out of where the GPU starts slowing itself down to cool (96°C here, else
-                      100°C), from 20°C at the bottom
-Memory and utilization first, in the GPU table's order. Then what follows from utilization: load
-draws power, and power makes heat (temperature lags behind it). With several GPUs: memory and
-utilization averaged, total power, the hottest temperature. The process list stays below them.
+Under a clock line, a CPU box, then a GPU box that goes on into nvitop's GPU process list. Each
+box is a card: a heading above it (the section's name in bold, then, muted, what changes and has
+no chart, then a gray rule to the right edge), rounded corners, faint dotted lines between its
+charts so its border is the only strong line, and a time axis at the bottom of its charts. A blank
+line sets the GPU's heading apart:
+  CPU  load average, and the firmware's power mode (platform_profile: low-power, balanced, ...)
+       CPU POWER      yellow  the CPU package's draw, out of its sustained power limit, the lower
+                              one if the firmware sets two (109 W here). It can pass it briefly.
+       CPU TEMP       red     the CPU package's temperature, out of where it starts slowing itself
+                              down to cool (100°C here), from 20°C at the bottom
+       CPU THROTTLED  blue    the share of the time it slowed itself down to cool
+       FANS           green   the fastest fan's speed, scaled to what's been seen; the label has
+                              each fan's (unlabeled: which is which varies). They cool both chips.
+  GPU  its name, its performance state (P0 is the fastest), and its fan if the GPU reports one
+       GPU MEM        magenta GPU memory in use, out of the GPU's memory
+       GPU UTL        cyan    GPU utilization
+       GPU POWER      yellow  out of the power limit (80 W here), which the GPU slows down to stay
+                              under; without one, no limit shown and scaled to what's been seen
+       GPU TEMP       red     out of where the GPU starts slowing itself down to cool (96°C here),
+                              else 100°C, from 20°C at the bottom
+       GPU THROTTLED  blue    the share of the time its power limit or its temperature held it
+                              back, as NVML counts it
+GPU memory and utilization first, in nvitop's order. Then what follows from utilization: load
+draws power, power makes heat (temperature lags behind it), and heat makes a chip slow down. With
+several GPUs: memory and power summed, utilization and throttling averaged, the hottest
+temperature. A chart whose reading the machine doesn't have is left out. The CPU and GPU are
+sampled together, so their charts line up column for column.
+
+Throttling: while a chip slows down, a blue band runs down its box, across every chart, darker the
+more of the time it slowed; the throttling chart has the amount. Its label says what held it
+back (heat; for the GPU, its power limit or heat, each with its share), the clock it ran at
+against its fastest while it did (the CPU's fastest core), and the total since boot. The kernel
+counts a CPU slowdown when it ends: they last milliseconds here, but a long one shows when it's
+over. Bands take --colorful (below).
+
+The tables are gone: what they showed is in the charts and headings, or doesn't change
+(versions, bus, ECC: nvitop --once prints them), or is in gnome-system-monitor, beside nvitop on
+workspace 8 (CPU use, memory, swap). With several GPUs nvitop's GPU table stays, above the boxes,
+for a row per GPU.
+
+The charts take the height there is, leaving room for 3 processes: from 3 rows each up to 8, the
+throttling and fan charts half as tall (at least 2). More processes shrink them, and when even
+the shortest don't fit, the charts go, leaving the two headings. Each chart's top is its
+limit. Its label gives the value, the limit when it isn't 100%, in bold, then muted, the highest
+point in view and the rest, like  GPU TEMP: 64°C / 96°C · peak 72°C
+
+CPU power comes from the CPU's energy counter (Intel RAPL, at /sys/class/powercap), which Linux
+lets only root read since the PLATYPUS power side channel (2020). initialize.sh adds a udev rule
+that lets your group read it. Without it, CPU POWER shows N/A, and it starts once the counter
+can be read, without a restart.
 
 Charts glow when they near their limit. Below a chart's top 30% it's a muted shade of its color.
 In that 30%, a column turns more vivid the higher it is, up to the most vivid shade of its color
@@ -20,27 +58,23 @@ at the top, never white, so maxed-out charts keep their colors apart. The label 
 latest value, and at the limit becomes a badge: dark text on the chart's color. The glow takes
 nvitop's --colorful, on by default here, and a terminal that lets programs set colors, like GNOME
 Terminal. Otherwise the charts use the terminal palette's bright colors, and only the badge
-shows the limit.
+shows the limit. NVITOP_MONITOR_MODE=plain nvitop runs without --colorful. Everything else,
+arguments included, is plain nvitop, its process list titled GPU Processes.
 
-This replaces nvitop's CPU, RAM and swap charts, and its GPU charts, which go only on the right
-and not at all below 100 columns. When the terminal is too short for the charts, nvitop's short
-form of that panel, CPU and RAM bars, is dropped instead, as are those bars in nvitop --once.
-
---colorful also turns the GPU table's MEM and UTL bars into gradients, in place of green/yellow/red
-by load (yellow is brown-orange in GNOME Terminal's palette), as on the per-process screen.
-NVITOP_MONITOR_MODE=plain nvitop runs without it. Everything else, arguments included, is plain
-nvitop.
-
-Runs uv's install of nvitop (uv tool install nvitop) with its host panel patched. The patch uses
+Runs uv's install of nvitop (uv tool install nvitop) with its screen patched. The patch uses
 nvitop internals, written against nvitop 1.6.2: if an upgrade breaks it, ~/.local/bin/nvitop is
 the unpatched one.
 """
 
 import curses
 import dataclasses
+import glob
 import itertools
 import os
 import sys
+import threading
+import time
+import types
 from typing import Callable, Optional
 
 # --colorful by default, through nvitop's own setting, read when nvitop is imported. Kept as it is
@@ -58,6 +92,10 @@ try:
     from nvitop import cli
     from nvitop.api import libnvml
     from nvitop.tui.library import NA, BufferedHistoryGraph
+    from nvitop.tui.library.libcurses import CursesShortcuts
+    from nvitop.tui.screens.main import MainScreen
+    from nvitop.tui.screens.main.panels import DevicePanel, ProcessPanel
+    from nvitop.tui.screens.main.panels.base import BasePanel
     from nvitop.tui.screens.main.panels.host import HostPanel
 except ImportError:
     # Started by the system python3 (the shebang). Re-run under the python of uv's nvitop install.
@@ -68,24 +106,51 @@ except ImportError:
     except FileNotFoundError:
         sys.exit(f'nvitop is not installed (no {VENV_PYTHON}). Run: uv tool install nvitop')
 
-CHART_HEIGHT = 4  # rows per chart
+# Rows per chart: the most that fits, between these, with room for PROCESS_ROOM processes.
+MIN_CHART_HEIGHT, MAX_CHART_HEIGHT = 3, 8
+PROCESS_ROOM = 3
 # The charts are braille: 2 samples per column, and a sample is the average over 1 second.
 SECONDS_PER_COLUMN = 2
+GIB = 2**30
 
 # Palette indices of the bright colors. Each is its normal color + 8, used with only 8 colors.
 # --colorful defines its own colors from index 64 up, so it leaves these alone.
-RED, YELLOW, MAGENTA, CYAN = 9, 11, 13, 14
+RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN = 9, 10, 11, 12, 13, 14
 # Each chart's glow levels, from calm to at its limit: its hue, from muted to as vivid as the
-# screen shows it. Designed in OKLCH, so the steps look even. Hues from GNOME Terminal's palette.
+# screen shows it. Designed in OKLCH, so the steps look even. Hues from GNOME Terminal's palette;
+# blue's lightness is magenta's, as a lighter blue goes pale, not vivid.
 GLOW = {
     MAGENTA: ['#996f9e', '#ae6db6', '#c368ce', '#d862e6', '#ed58ff'],
     CYAN: ['#4a93a0', '#4ea7b7', '#52bcce', '#55d1e7', '#57e7ff'],
     YELLOW: ['#a3915c', '#b9a158', '#d0b251', '#e7c246', '#ffd335'],
     RED: ['#aa6960', '#c0665b', '#d56355', '#ea5d4e', '#ff5545'],
+    GREEN: ['#5d966d', '#5aad74', '#56c57c', '#4cdd83', '#39f78a'],
+    BLUE: ['#5e82b3', '#528bd5', '#4091f9', '#509bfe', '#62a6ff'],
 }
 GLOWS_FROM = 0.7  # how far up a chart its glow starts
 GLOW_STEPS = 4  # glow levels above calm
 READABLE = 2  # labels use at least this level, as the calm color is dim for text
+# Throttling bands' backgrounds: GNOME Terminal's background (#171421) tinted with the
+# throttling charts' blue, by how much of the time the chip slowed: under 25%, under 75%, more.
+BANDS = ['#1c233b', '#203051', '#253f6a']
+# nvitop's double-line box characters, and the rounded single-line ones the boxes use instead, so
+# a box reads as one card: its border the only strong line, the lines between charts faint dots.
+ROUNDED = str.maketrans('═╒╕╘╛╞╡╤╧╪', '─╭╮╰╯├┤┬┴┼')
+# A heading's rule, after its text, to the right edge: the gray of GNOME Terminal's bright black,
+# set apart from the boxes' white borders. Tried against a gray rule, a half-height bar or a
+# full-height one in the blank line between the boxes: those read as one more line, or crowd the
+# GPU's heading, or look like an empty title bar.
+RULE_GRAY = '#5e5c64'
+
+
+def rgb(hex_color):
+    """A #rrggbb color in curses' 0-1000 RGB."""
+    return tuple(round(int(hex_color[i : i + 2], 16) * 1000 / 255) for i in (1, 3, 5))
+
+
+def share(percent):
+    """A share of the time, like 12%, or <1% for a sliver."""
+    return '<1%' if 0 < percent < 0.5 else f'{percent:.0f}%'
 
 
 @dataclasses.dataclass
@@ -93,30 +158,43 @@ class Chart:
     """One chart: what it shows, its scale and label, its color, and its glow."""
 
     name: str
-    value_of: Callable  # the devices' snapshots -> the value, or NA
+    value_of: Callable  # a sample (the GPUs' snapshots, or the CPU's) -> the value, or NA
     show: Callable  # a value -> its text, like 64 -> '64°C'
     color: int  # palette index of its bright color
     limit: Optional[float]  # the chart's top; None: scaled to what's been seen, no glow
     limit_text: str = ''  # after the value in the label, like ' / 96°C'
     baseline: float = 0.0  # the chart's bottom
+    small: bool = False  # half as tall as the others
+    now_text: Optional[Callable] = None  # (its latest value) -> the label's value, for show's
+    suffix: Optional[Callable] = None  # (its latest value) -> the label's end, after the peak
 
     def __post_init__(self):
         if self.limit is None:
             scale = {'upperbound': 1000.0, 'dynamic_bound': True, 'min_bound': 10.0}
         else:
             scale = {'upperbound': self.limit}
-        # Width 77 for now: the panel sets the real one.
+        # Width 77 for now: the panels set the real width and height.
         self.history = BufferedHistoryGraph(
-            width=77, height=CHART_HEIGHT, baseline=self.baseline, interval=1.0, **scale
+            width=77, height=self.rows(MIN_CHART_HEIGHT), baseline=self.baseline, interval=1.0,
+            **scale,
         )
+
+    def rows(self, chart_height):
+        """Its height when the others are chart_height rows."""
+        return max(2, chart_height // 2) if self.small else chart_height
 
     def text(self, value):
         # The history holds values below the baseline where it has none.
         return 'N/A' if value is NA or value < self.baseline else self.show(value)
 
     def label(self):
-        now, peak = self.history.last_value, self.history.max_value
-        return f' {self.name}: {self.text(now)}{self.limit_text} · peak {self.text(peak)} '
+        """The label's head, its name and value, and its tail, the peak and the rest."""
+        value = self.history.last_value
+        known = value is not NA and value >= self.baseline
+        now = self.now_text(value) if self.now_text and known else self.text(value)
+        suffix = self.suffix(value if known else NA) if self.suffix else ''
+        return (f' {self.name}: {now}{self.limit_text} ',
+                f'· peak {self.text(self.history.max_value)}{suffix} ')
 
     def glow(self, value):
         """0 below where the glow starts, up to GLOW_STEPS at the limit."""
@@ -127,17 +205,274 @@ class Chart:
         return round(GLOW_STEPS * min(max(fraction, 0.0), 1.0))
 
 
+class Rate:
+    """How fast a counter grows, per second, from its change between two reads.
+
+    Reads closer together than SHORTEST give the last rate again: a counter that ticks every
+    millisecond, read twice a few microseconds apart, would look hundreds of times too fast (two
+    of nvitop's threads sample at once at the start). A read that fails gives NA, and the next
+    one tries again, so a counter that becomes readable starts to show.
+    """
+
+    SHORTEST = 0.25  # seconds
+
+    def __init__(self, read, wraps_at=None):
+        self.read = read  # () -> the counter, or None if it can't be read
+        self.wraps_at = wraps_at
+        self.last = None  # (counter, time) at the last read that worked
+        self.rate = NA
+        self.lock = threading.Lock()
+
+    def __call__(self):
+        with self.lock:
+            now = time.monotonic()
+            if self.last is not None and now - self.last[1] < self.SHORTEST:
+                return self.rate
+            counter = self.read()
+            last, self.last = self.last, None if counter is None else (counter, now)
+            self.rate = NA
+            if counter is not None and last is not None:
+                grown = counter - last[0]
+                if grown < 0 and self.wraps_at:  # it wrapped around
+                    grown += self.wraps_at
+                if grown >= 0:
+                    self.rate = grown / (now - last[1])
+            return self.rate
+
+    def total(self):
+        """The counter at the last read that worked, or None."""
+        last = self.last
+        return None if last is None else last[0]
+
+
+def percent_of_time(rate, per_second):
+    """A rate of time, counted in units per_second to a second, as a % of the time, at most 100."""
+    return NA if rate is NA else min(100.0, 100.0 * rate / per_second)
+
+
+def duration_text(milliseconds):
+    """Like 34m 05s, or 2h 03m, or N/A."""
+    if milliseconds is None:
+        return 'N/A'
+    minutes, seconds = divmod(int(milliseconds) // 1000, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f'{hours}h {minutes:02d}m'
+    return f'{minutes}m {seconds:02d}s' if minutes else f'{seconds}s'
+
+
+# The CPU's sensors, read from sysfs.
+
+THROTTLED_FILE = '/sys/devices/system/cpu/cpu0/thermal_throttle/package_throttle_total_time_ms'
+
+
+def read(path, default=None):
+    """A file's text, stripped, or default if it can't be read (missing, or root-only)."""
+    try:
+        with open(path) as file:
+            return file.read().strip()
+    except OSError:
+        return default
+
+
+def read_int(path):
+    try:
+        return int(read(path))
+    except (TypeError, ValueError):
+        return None
+
+
+def package_sensor():
+    """The CPU package's temperature file, and the temperature it slows down at (else 100°C)."""
+    for hwmon in sorted(glob.glob('/sys/class/hwmon/hwmon*')):
+        if read(f'{hwmon}/name') not in ('coretemp', 'k10temp'):
+            continue
+        for label in sorted(glob.glob(f'{hwmon}/temp*_label')):
+            if read(label) in ('Package id 0', 'Tctl'):
+                sensor = label.removesuffix('_label')
+                limit = read_int(f'{sensor}_crit') or read_int(f'{sensor}_max')
+                return f'{sensor}_input', limit / 1000 if limit else 100.0
+    return None, 100.0
+
+
+def fan_files():
+    """The fans' speed files, from the first hwmon driver that has any."""
+    for hwmon in sorted(glob.glob('/sys/class/hwmon/hwmon*')):
+        fans = sorted(glob.glob(f'{hwmon}/fan*_input'))
+        if fans:
+            return fans
+    return []
+
+
+def energy_rate():
+    """The CPU package's energy counter (Intel RAPL, AMD's too) in microjoules, as a Rate."""
+    for domain in sorted(glob.glob('/sys/class/powercap/intel-rapl:*')):
+        if read(f'{domain}/name') == 'package-0':
+            return Rate(lambda: read_int(f'{domain}/energy_uj'),
+                        wraps_at=read_int(f'{domain}/max_energy_range_uj'))
+    return None
+
+
+def power_limit():
+    """The CPU package's sustained power limit in watts: the lower one if the firmware sets two."""
+    limits = []
+    for domain in glob.glob('/sys/class/powercap/intel-rapl*:*'):
+        if read(f'{domain}/name') != 'package-0':
+            continue
+        for name in glob.glob(f'{domain}/constraint_*_name'):
+            if read(name) == 'long_term':
+                microwatts = read_int(name.removesuffix('_name') + '_power_limit_uw')
+                if microwatts:
+                    limits.append(microwatts / 1e6)
+    return min(limits) if limits else None
+
+
+def fastest_clock(kind):
+    """The fastest core's clock in kHz: kind scaling_cur_freq for now, cpuinfo_max_freq for most."""
+    clocks = [read_int(path) for path in glob.glob(f'/sys/devices/system/cpu/cpu*/cpufreq/{kind}')]
+    return max((clock for clock in clocks if clock), default=None)
+
+
+class Cpu:
+    """Where the CPU's readings are, found once at start; sample() reads them."""
+
+    def __init__(self):
+        self.temperature_file, self.temperature_limit = package_sensor()
+        self.fan_files = fan_files()
+        self.energy = energy_rate()
+        self.power_limit = power_limit()
+        self.throttled = Rate(lambda: read_int(THROTTLED_FILE))
+        self.has_throttled = read_int(THROTTLED_FILE) is not None
+        self.max_clock = fastest_clock('cpuinfo_max_freq')
+        self.fans = []  # each fan's speed at the last sample
+        self.clock = None  # the fastest core's clock in kHz, at the last sample that throttled
+
+    def sample(self):
+        throttled = percent_of_time(self.throttled(), 1000)  # milliseconds a second
+        if throttled is not NA and throttled > 0:
+            self.clock = fastest_clock('scaling_cur_freq')
+        milli_celsius = read_int(self.temperature_file) if self.temperature_file else None
+        self.fans = [speed for speed in map(read_int, self.fan_files) if speed is not None]
+        microwatts = self.energy() if self.energy else NA
+        return types.SimpleNamespace(
+            watts=NA if microwatts is NA else microwatts / 1e6,
+            temperature=NA if milli_celsius is None else milli_celsius / 1000,
+            throttled=throttled,
+            fastest_fan=max(self.fans) if self.fans else NA,
+            load_average=os.getloadavg(),
+            profile=read('/sys/firmware/acpi/platform_profile'),
+        )
+
+
+CPU = Cpu()
+
+
+def cpu_throttled_suffix(value):
+    clock = ''
+    if value is not NA and value > 0 and CPU.clock and CPU.max_clock:
+        clock = f' · fastest core at {CPU.clock / 1e6:.1f} of {CPU.max_clock / 1e6:.1f} GHz'
+    return f'{clock} · {duration_text(CPU.throttled.total())} since boot'
+
+
+def make_cpu_charts():
+    """The CPU's charts, leaving out those it has no reading for."""
+    charts = []
+    if CPU.energy:
+        limit = CPU.power_limit
+        charts.append(Chart('CPU POWER', lambda sample: sample.watts, '{:.1f} W'.format, YELLOW,
+                            limit=limit, limit_text='' if limit is None else f' / {limit:.0f} W'))
+    if CPU.temperature_file:
+        charts.append(Chart('CPU TEMP', lambda sample: sample.temperature, '{:.0f}°C'.format, RED,
+                            limit=CPU.temperature_limit, baseline=20.0,
+                            limit_text=f' / {CPU.temperature_limit:.0f}°C'))
+    if CPU.has_throttled:
+        charts.append(Chart(
+            'CPU THROTTLED', lambda sample: sample.throttled, share, BLUE, limit=100.0, small=True,
+            now_text=lambda value: f'{share(value)} of the time' + (' (heat)' if value > 0 else ''),
+            suffix=cpu_throttled_suffix,
+        ))
+    if CPU.fan_files:
+        charts.append(Chart(
+            'FANS', lambda sample: sample.fastest_fan, '{:.0f} RPM'.format, GREEN, limit=None,
+            small=True, now_text=lambda value: ' · '.join(map(str, CPU.fans)) + ' RPM',
+        ))
+    return charts
+
+
+# The GPUs' readings, from NVML.
+
+
 def nvml_ints(devices, query, *args):
     """The NVML query's value for each device, or None if any device doesn't report one."""
     values = [libnvml.nvmlQuery(query, device.handle, *args) for device in devices]
     return values if values and all(isinstance(value, int) for value in values) else None
 
 
-def make_charts(devices):
+def held_back_ns(devices, policy):
+    """Nanoseconds the GPUs' power limit or temperature (policy) has held them back, or None."""
+    total = 0
+    for device in devices:
+        status = libnvml.nvmlQuery('nvmlDeviceGetViolationStatus', device.handle, policy)
+        if not hasattr(status, 'violationTime'):  # NA: not supported
+            return None
+        total += status.violationTime
+    return total
+
+
+class GpuThrottling:
+    """How much of the time the GPUs' power limit and temperature hold them back."""
+
+    def __init__(self, devices):
+        self.devices = devices
+        self.power = Rate(lambda: held_back_ns(devices, libnvml.NVML_PERF_POLICY_POWER))
+        self.heat = Rate(lambda: held_back_ns(devices, libnvml.NVML_PERF_POLICY_THERMAL))
+        self.shares = (NA, NA)  # power's and heat's, at the last sample
+        self.clock = None  # (MHz, most MHz) of a single GPU, at the last sample that throttled
+
+    def supported(self):
+        return bool(self.devices) and None not in (
+            held_back_ns(self.devices, libnvml.NVML_PERF_POLICY_POWER),
+            held_back_ns(self.devices, libnvml.NVML_PERF_POLICY_THERMAL),
+        )
+
+    def sample(self, snapshots):
+        per_second = 1e9 * len(self.devices)  # nanoseconds a second, for each GPU
+        self.shares = power, heat = (percent_of_time(self.power(), per_second),
+                                     percent_of_time(self.heat(), per_second))
+        if NA in self.shares:
+            return NA
+        total = min(100.0, power + heat)
+        if total > 0 and len(self.devices) == 1:
+            handle = self.devices[0].handle
+            clocks = [libnvml.nvmlQuery(query, handle, libnvml.NVML_CLOCK_SM)
+                      for query in ('nvmlDeviceGetClockInfo', 'nvmlDeviceGetMaxClockInfo')]
+            self.clock = tuple(clocks) if all(isinstance(c, int) for c in clocks) else None
+        return total
+
+    def now_text(self, value):
+        names = ('power limit', 'heat')
+        reasons = [f'{name} {share(part)}' for name, part in zip(names, self.shares)
+                   if part is not NA and part > 0]
+        return f'{share(value)} of the time' + (f' ({", ".join(reasons)})' if reasons else '')
+
+    def suffix(self, value):
+        clock = ''
+        if value is not NA and value > 0 and self.clock:
+            clock = ' · at {} of {} MHz'.format(*self.clock)
+        totals = [self.power.total(), self.heat.total()]
+        total = None if None in totals else sum(totals) / 1e6  # milliseconds
+        return f'{clock} · {duration_text(total)} since boot'
+
+
+def make_gpu_charts(devices):
     def known(snapshots, field):
         return [getattr(s, field) for s in snapshots if getattr(s, field) is not NA]
 
-    def memory(snapshots):
+    def memory_gib(snapshots):
+        used = known(snapshots, 'memory_used')
+        return sum(used) / GIB if used else NA
+
+    def memory_percent(snapshots):
         used, total = known(snapshots, 'memory_used'), known(snapshots, 'memory_total')
         return 100.0 * sum(used) / sum(total) if used and total and sum(total) > 0 else NA
 
@@ -153,6 +488,14 @@ def make_charts(devices):
         values = known(snapshots, 'temperature')
         return max(values) if values else NA
 
+    totals = [device.memory_total() for device in devices]
+    if totals and all(isinstance(total, int) for total in totals):
+        total = sum(totals) / GIB
+        memory = Chart('GPU MEM', memory_gib, '{:.1f} GiB'.format, MAGENTA, limit=total,
+                       limit_text=f' / {total:.0f} GiB')
+    else:
+        memory = Chart('GPU MEM', memory_percent, '{:.1f}%'.format, MAGENTA, limit=100.0)
+
     # nvitop's own power limit query comes back N/A on this laptop GPU; the enforced limit doesn't.
     limits = nvml_ints(devices, 'nvmlDeviceGetEnforcedPowerLimit')
     power_limit = sum(limits) / 1000.0 if limits else None
@@ -163,105 +506,130 @@ def make_charts(devices):
     )
     slowdown = float(min(slowdowns)) if slowdowns else 100.0
 
-    percent = '{:.1f}%'.format
-    watts = '{:.1f} W'.format
-    return [
-        Chart('GPU MEM', memory, percent, MAGENTA, limit=100.0),
-        Chart('GPU UTL', utilization, percent, CYAN, limit=100.0),
-        Chart('POWER', power, watts, YELLOW, limit=power_limit, limit_text=(
+    charts = [
+        memory,
+        Chart('GPU UTL', utilization, '{:.1f}%'.format, CYAN, limit=100.0),
+        Chart('GPU POWER', power, '{:.1f} W'.format, YELLOW, limit=power_limit, limit_text=(
             '' if power_limit is None else f' / {power_limit:.0f} W'
         )),
-        Chart('TEMP', temperature, '{:.0f}°C'.format, RED, limit=slowdown, baseline=20.0,
+        Chart('GPU TEMP', temperature, '{:.0f}°C'.format, RED, limit=slowdown, baseline=20.0,
               limit_text=f' / {slowdown:.0f}°C'),
     ]
+    throttling = GpuThrottling(devices)
+    if throttling.supported():
+        charts.append(Chart('GPU THROTTLED', throttling.sample, share, BLUE, limit=100.0,
+                            small=True, now_text=throttling.now_text, suffix=throttling.suffix))
+    return charts
 
 
-def glow_rgb(color, level):
-    """A chart's color at a glow level, in curses' 0-1000 RGB."""
-    hex_color = GLOW[color][level]
-    return tuple(round(int(hex_color[i : i + 2], 16) * 1000 / 255) for i in (1, 3, 5))
+def throttling_chart(charts):
+    return next((chart for chart in charts if chart.name.endswith('THROTTLED')), None)
+
+
+# Drawing the boxes.
 
 
 def frame_width(panel):
-    """nvitop draws everything 79 columns wide below 100 columns, and full width from 100 up."""
-    return panel.width if panel.width >= 100 else 79
+    """The boxes' width: the terminal's, at least 79, as the process list's under them. (nvitop
+    draws its GPU table 79 wide below 100 columns.)"""
+    return panel.width
 
 
-def set_width(self, value):
-    width = max(79, value)
-    if self._width != width:
-        if self.visible:
-            self.need_redraw = True
-        # The original __init__ sets the width before init() below has made the charts.
-        for chart in getattr(self, 'charts', ()):
-            chart.history.width = (width if width >= 100 else 79) - 2
-    self._width = width
+def box_rows(charts, chart_height):
+    """The rows charts take, each with the line under it, when the tall ones are chart_height."""
+    return sum(chart.rows(chart_height) + 1 for chart in charts)
 
 
-def take_snapshots(self):
-    snapshots = [device.snapshot for device in self.devices]
-    for chart in self.charts:
-        chart.history.add(chart.value_of(snapshots))
+def box_top(width):
+    return '╭' + '─' * (width - 2) + '╮'
 
 
-def frame_lines(self, compact=None):
-    if compact is None:
-        compact = self.compact
-    if compact or self.no_unicode:
-        return []
-
-    width = frame_width(self)
-    # Top: the GPU table's bottom border with side joints, keeping the joints of its columns.
-    top = '╞═══════════════════════════════╧══════════════════════╧══════════════════════'
-    if width >= 100:
-        top += '╧' + '═' * (width - 80)
-    top += '╡'
+def chart_frame(width, charts, bottom):
+    """The sides of the charts, at their heights, a row under each (draw_charts dots the ones
+    between them), the last the bottom border, with corners bottom."""
     data_line = '│' + ' ' * (width - 2) + '│'
-    separator_line = '├' + '─' * (width - 2) + '┤'
-    lines = [top]
-    for _ in self.charts:
-        lines += [data_line] * CHART_HEIGHT + [separator_line]
-    lines[-1] = '╘' + '═' * (width - 2) + '╛'
+    lines = []
+    for chart in charts:
+        lines += [data_line] * (chart.history.height + 1)
+    lines[-1] = bottom[0] + '─' * (width - 2) + bottom[1]
     return lines
 
 
-def draw(self):
-    self.color_reset()
-    if self.compact:
-        return
+def draw_heading(panel, y, parts):
+    """A box's heading, above it, like  CPU  load 0.53 0.87 0.96 · power mode balanced  ━━━━━━.
 
-    bottom = self.y + self.height - 1
-    if self.need_redraw:
-        for y, line in enumerate(self.frame_lines(), start=self.y - 1):
-            self.addstr(y, self.x, line)
+    parts: the section's name, in bold, then what follows it, muted, then a gray rule to the right
+    edge. Parts that don't fit are left out, from the end.
+    """
+    width = frame_width(panel)
+    name, rest = parts[0], list(parts[1:])
+    while rest and len(f' {name}  ' + ' · '.join(rest)) > width:
+        rest.pop()
+    panel.addstr(y, panel.x, ' ' * width)
+    panel.addstr(y, panel.x + 1, name, panel.get_fg_bg_attr(attr='bold'))
+    panel.addstr(y, panel.x + len(name) + 3, ' · '.join(rest), panel.get_fg_bg_attr(attr='dim'))
+    end = len(f' {name}  ' + ' · '.join(rest)) + 2
+    if end < width:
+        true_color = panel.TERM_256COLOR and curses.can_change_color()
+        rule = panel.get_fg_bg_attr(fg=rgb(RULE_GRAY)) if true_color else panel.get_fg_bg_attr(
+            attr='dim')
+        panel.addstr(y, panel.x + end, '━' * (width - end), rule)
 
-        # Time marks along the bottom border: 30s, 60s, then every minute, newest on the right.
-        newest_column = self.x + frame_width(self) - 2
-        for seconds in itertools.chain((30, 60), itertools.count(120, 60)):
-            mark = f' {seconds}s╧'
-            start = newest_column - seconds // SECONDS_PER_COLUMN - len(mark) + 1
-            if start <= self.x:
-                break
-            self.addstr(bottom, start, mark)
-            self.color_at(bottom, start + 1, width=len(mark) - 2, attr='dim')
 
-    # Glowing takes colors of our own: --colorful, and a terminal that lets curses set colors.
-    rgb = self.TERM_256COLOR and curses.can_change_color()
+def draw_time_marks(panel, bottom):
+    """Time marks along a bottom border: 30s, 60s, then every minute, newest on the right."""
+    newest_column = panel.x + frame_width(panel) - 2
+    for seconds in itertools.chain((30, 60), itertools.count(120, 60)):
+        mark = f' {seconds}s┴'
+        start = newest_column - seconds // SECONDS_PER_COLUMN - len(mark) + 1
+        if start <= panel.x:
+            break
+        panel.addstr(bottom, start, mark)
+        panel.color_at(bottom, start + 1, width=len(mark) - 2, attr='dim')
+
+
+def band_levels(chart, columns):
+    """For each column, left to right: 0, or 1 to 3 by how much of the time the chip throttled."""
+    with chart.history.write_lock:
+        history = list(chart.history.reversed_history)
+    levels = []
+    for k in reversed(range(columns)):  # column j from the left holds samples 2k and 2k + 1
+        value = max(history[2 * k : 2 * k + 2], default=0)
+        levels.append(0 if value <= 0 else 1 if value < 25 else 2 if value < 75 else 3)
+    return levels
+
+
+def draw_charts(panel, charts, top):
+    """Each chart's line and label, the first at row top, each under the one before it, and the
+    throttling bands down them and the separators between them."""
+    # Glowing and bands take colors of our own: --colorful, and a terminal that lets curses set
+    # colors.
+    true_color = panel.TERM_256COLOR and curses.can_change_color()
     bright = getattr(curses, 'COLORS', 0) >= 16
+    band_chart = throttling_chart(charts) if true_color else None
 
-    for i, chart in enumerate(self.charts):
+    def background(band):
+        return rgb(BANDS[band - 1]) if band else -1
+
+    chart_top = top
+    for index, chart in enumerate(charts):
         attrs = {}
 
-        def attr(level, label=False):
-            """Bars glow by level. A label is bold, and at the limit, a badge: dark on its color."""
-            if (level, label) not in attrs:
-                if rgb:
-                    fg = glow_rgb(chart.color, max(level, READABLE) if label else level)
+        def attr(level, band=0, label=None):
+            """Bars glow by level. A label's head is bold, and at the limit, a badge: dark on its
+            color. Its tail is muted."""
+            if (level, band, label) not in attrs:
+                if true_color:
+                    shade = {'head': max(level, READABLE), 'tail': 1}.get(label, level)
+                    fg = rgb(GLOW[chart.color][shade])
                 else:  # flat colors; at the limit only the badge shows it
                     fg = chart.color if bright else chart.color - 8
-                style = ('bold | reverse' if level == GLOW_STEPS else 'bold') if label else 0
-                attrs[level, label] = self.get_fg_bg_attr(fg=fg, attr=style)
-            return attrs[level, label]
+                style = {'head': 'bold | reverse' if level == GLOW_STEPS else 'bold',
+                         'tail': 0 if true_color else 'dim'}.get(label, 0)
+                attrs[level, band, label] = panel.get_fg_bg_attr(
+                    fg=fg, bg=background(band), attr=style
+                )
+            return attrs[level, band, label]
 
         with chart.history.write_lock:  # taken while the snapshot thread adds a sample
             lines = list(chart.history.graph)
@@ -272,18 +640,93 @@ def draw(self):
             chart.glow(max(history[2 * k], history[2 * k + 1]))
             for k in reversed(range(width))
         ]
-        runs = [(level, len(list(run))) for level, run in itertools.groupby(levels)]
+        bands = band_levels(band_chart, width) if band_chart else [0] * width
+        runs = [(key, len(list(run))) for key, run in itertools.groupby(zip(levels, bands))]
 
-        top = self.y + i * (CHART_HEIGHT + 1)
         for row, line in enumerate(lines):
             line = line[-width:] if width else ''
             column = 0
-            for level, length in runs:
+            for (level, band), length in runs:
                 text = line[column : column + length]
-                self.addstr(top + row, self.x + 1 + column, text, attr(level))
+                panel.addstr(chart_top + row, panel.x + 1 + column, text, attr(level, band))
                 column += length
-        latest = chart.glow(chart.history.last_value)
-        self.addstr(top, self.x + 1, chart.label(), attr(latest, label=True))
+        head, tail = chart.label()
+        room = frame_width(panel) - 2
+        panel.addstr(chart_top, panel.x + 1, head[:room],
+                     attr(chart.glow(chart.history.last_value), label='head'))
+        if len(head) < room:
+            panel.addstr(chart_top, panel.x + 1 + len(head), tail[: room - len(head)],
+                         attr(0, label='tail'))
+        chart_top += len(lines)
+
+        if index < len(charts) - 1:  # the faint line under it, banded too
+            column = 0
+            for band, run in itertools.groupby(bands):
+                length = len(list(run))
+                panel.addstr(chart_top, panel.x + 1 + column, '┈' * length,
+                             panel.get_fg_bg_attr(bg=background(band), attr='dim'))
+                column += length
+        chart_top += 1
+
+
+def gpu_title(host_panel):
+    """The GPU box's title: the GPU, its performance state, and its fan if it reports one."""
+    if len(host_panel.devices) != 1:
+        return ['GPU', f'{len(host_panel.devices)} GPUs']
+    snapshot = host_panel.devices[0].snapshot
+    parts = ['GPU', host_panel.gpu_name, f'performance state {snapshot.performance_state}']
+    if 'N/A' not in str(snapshot.fan_speed_string):
+        parts.append(f'fan {snapshot.fan_speed_string}')
+    return parts
+
+
+# The GPU box: nvitop's host panel, its CPU, RAM and swap charts replaced: its heading, the box's
+# top, the charts. It also samples the CPU, in the same thread, so the CPU and GPU charts line up.
+# Its bottom line goes on into the process list's frame below. Without charts, it's the heading and
+# the top of the process list's frame.
+
+
+def set_width(self, value):
+    width = max(79, value)
+    if self._width != width:
+        if self.visible:
+            self.need_redraw = True
+        # The original __init__ sets the width before init() below has made the charts.
+        for chart in getattr(self, 'charts', ()):
+            chart.history.width = width - 2
+    self._width = width
+
+
+def take_snapshots(self):
+    snapshots = [device.snapshot for device in self.devices]
+    for chart in self.charts:
+        chart.history.add(chart.value_of(snapshots))
+    self.cpu_sample = sample = CPU.sample()
+    for chart in self.cpu_charts:
+        chart.history.add(chart.value_of(sample))
+
+
+def frame_lines(self, compact=None):
+    if compact is None:
+        compact = self.compact
+    if compact or self.no_unicode:
+        return []
+    width = frame_width(self)
+    return [box_top(width), *chart_frame(width, self.charts, '├┤')]  # under the heading
+
+
+def draw(self):
+    self.color_reset()
+    boxed = not self.compact
+    if self.need_redraw:
+        for y, line in enumerate(self.frame_lines() or [box_top(frame_width(self))],
+                                 start=self.y + 1):
+            self.addstr(y, self.x, line)
+        if boxed:
+            draw_time_marks(self, self.y + self.height - 1)
+    draw_heading(self, self.y, gpu_title(self))
+    if boxed:
+        draw_charts(self, self.charts, self.y + 2)
     self.color_reset()
 
 
@@ -292,12 +735,18 @@ original_init = HostPanel.__init__
 
 def init(self, *args, **kwargs):
     original_init(self, *args, **kwargs)
-    self.charts = make_charts(self.devices)
+    self.charts = make_gpu_charts(self.devices)
     for chart in self.charts:
         chart.history.width = frame_width(self) - 2
-    self.full_height = len(self.charts) * (CHART_HEIGHT + 1)
-    # The short version of the panel is CPU and RAM bars only: take no lines instead.
-    self.compact_height = 0
+    self.gpu_name = str(self.devices[0].name()).removeprefix('NVIDIA ') if self.devices else ''
+    self.cpu_charts = make_cpu_charts()  # drawn by the CPU panel
+    # One clock for every chart's seconds, so a band's columns are every chart's.
+    start = time.monotonic()
+    for chart in self.charts + self.cpu_charts:
+        chart.history.last_update_time = start
+    self.cpu_sample = CPU.sample()
+    self.full_height = 2 + box_rows(self.charts, MIN_CHART_HEIGHT)  # and the heading and top
+    self.compact_height = 2  # the heading, and the top of the process list's frame
     self.height = self.compact_height if self.compact else self.full_height
 
 
@@ -307,6 +756,303 @@ HostPanel.take_snapshots = take_snapshots
 HostPanel.frame_lines = frame_lines
 HostPanel.draw = draw
 HostPanel.print = lambda self: None  # nvitop --once: no CPU and RAM bars
+
+
+class CpuPanel(BasePanel):
+    """The clock line, the CPU box's heading, the box, and a blank line under it.
+
+    Without charts, there's the heading only, and no blank line.
+    """
+
+    NAME = 'cpu'
+
+    def __init__(self, host_panel, device_panel, *, win, root):
+        super().__init__(win, root)
+        self.host_panel = host_panel  # it samples the CPU
+        self.device_panel = device_panel  # when it shows, it has the clock line
+        self.charts = host_panel.cpu_charts
+        self.no_unicode = False
+        self._show_charts = True
+        self.chart_height = MIN_CHART_HEIGHT
+        self.width = max(79, root.width)
+        self.height = self.height_for(True, self.chart_height)
+
+    @property
+    def width(self):
+        return self._width
+
+    @width.setter
+    def width(self, value):
+        width = max(79, value)
+        if self._width != width:
+            if self.visible:
+                self.need_redraw = True
+            for chart in self.charts:
+                chart.history.width = width - 2
+        self._width = width
+
+    def boxed(self, show_charts=None):
+        show_charts = self._show_charts if show_charts is None else show_charts
+        return show_charts and bool(self.charts) and not self.no_unicode
+
+    def height_for(self, show_charts, chart_height):
+        if not self.boxed(show_charts):
+            return 2  # the clock line and the heading
+        # and the box's top, the charts, and a blank line
+        return 3 + box_rows(self.charts, chart_height) + 1
+
+    @property
+    def show_charts(self):
+        return self.boxed()
+
+    @show_charts.setter
+    def show_charts(self, value):
+        if self._show_charts != value:
+            self._show_charts = value
+            self.need_redraw = True
+        self.height = self.height_for(value, self.chart_height)
+
+    def draw(self):
+        self.color_reset()
+        width = frame_width(self)
+        boxed = self.boxed()
+
+        if self.need_redraw:
+            for y in (self.y, self.y + self.height - 1):  # the clock line, the blank line
+                self.addstr(y, self.x, ' ' * width)
+            if boxed:
+                lines = [box_top(width), *chart_frame(width, self.charts, '╰╯')]
+                for y, line in enumerate(lines, start=self.y + 2):
+                    self.addstr(y, self.x, line)
+                draw_time_marks(self, self.y + self.height - 2)
+        self.draw_clock_line(width)
+
+        sample = self.host_panel.cpu_sample
+        load_average = ' '.join(f'{value:.2f}' for value in sample.load_average)
+        parts = ['CPU', f'load {load_average}']
+        if sample.profile:
+            parts.append(f'power mode {sample.profile}')
+        draw_heading(self, self.y + 1, parts)
+        if boxed:
+            draw_charts(self, self.charts, self.y + 3)
+        self.color_reset()
+
+    def draw_clock_line(self, width):
+        """nvitop's clock and help hint, or its hint for signalling a selected process.
+
+        With nvitop's GPU table above, which has the clock and help hint, the line is blank but for
+        the signal hint.
+        """
+        signalling = getattr(self.parent.process_panel, 'signal_hint', False)
+        if signalling:
+            hint = SIGNAL_HINT
+            keys = [(7, 2, 'magenta'), (10, 3, 'red'), (15, 1, 'magenta'), (17, 4, 'red'),
+                    (23, 1, 'magenta'), (25, 4, 'red')]
+        else:
+            hint = '(Press h for help or q to quit)'
+            keys = [(7, 1, 'magenta'), (21, 1, 'magenta')]
+        clock = time.strftime('%a %b %d %H:%M:%S %Y')
+        if self.device_panel.height:
+            clock = ''
+            if not signalling:
+                self.addstr(self.y, self.x, ' ' * width)
+                return
+        start = max(width - len(hint), len(clock) + 2)
+        self.addstr(self.y, self.x, clock.ljust(start) + hint)
+        for offset, length, color in keys:
+            attr = 'bold | italic' if color == 'magenta' else 'bold'
+            self.color_at(self.y, self.x + start + offset, width=length, fg=color, attr=attr)
+
+    def print_width(self):
+        return self.width if self.width >= 100 else 79
+
+    def print(self):  # nvitop --once: nvitop's own output only
+        pass
+
+
+# nvitop's GPU table: with one GPU, it takes no lines, and the CPU panel has the clock line.
+
+original_device_init = DevicePanel.__init__
+original_device_draw = DevicePanel.draw
+
+
+def shows_gpu_table(panel):
+    return panel.device_count != 1 or panel.mig_device_count > 0
+
+
+def device_init(self, *args, **kwargs):
+    original_device_init(self, *args, **kwargs)
+    if not shows_gpu_table(self):
+        self.full_height = self.compact_height = self.height = 0
+
+
+def device_draw(self):
+    if self.height:
+        original_device_draw(self)
+
+
+DevicePanel.__init__ = device_init
+DevicePanel.draw = device_draw
+
+# nvitop's process list, titled GPU Processes. On screen, it goes on from the GPU box: the box's
+# bottom line is its top border (its own is left out), the box's last chart row is its first line,
+# and its frame is rounded like the boxes. nvitop writes its hint for signalling a selected process
+# on that first line (and blanks it otherwise): that goes to the clock line instead.
+original_process_header_lines = ProcessPanel.header_lines
+original_process_draw = ProcessPanel.draw
+SIGNAL_HINT = '(Press ^C(INT)/T(TERM)/K(KILL) to send signals)'
+
+
+def process_header_lines(self):
+    lines = original_process_header_lines(self)
+    lines[1] = lines[1].replace('Processes:    ', 'GPU Processes:', 1)
+    if getattr(self, 'in_gpu_box', False):
+        lines[0] = ''
+    return lines
+
+
+def process_draw(self):
+    hint_row, written = self.y, []
+
+    def addstr(*args, **kwargs):
+        if args and args[0] == hint_row:
+            written.append(str(args[2]) if len(args) > 2 else '')
+            return
+        if len(args) > 2 and isinstance(args[2], str):  # its frame, rounded like the boxes
+            args = (*args[:2], args[2].translate(ROUNDED), *args[3:])
+        CursesShortcuts.addstr(self, *args, **kwargs)
+
+    def color_at(y, *args, **kwargs):
+        if y != hint_row:
+            CursesShortcuts.color_at(self, y, *args, **kwargs)
+
+    self.in_gpu_box = True  # drawing on screen, not printing for nvitop --once
+    self.addstr, self.color_at = addstr, color_at
+    try:
+        original_process_draw(self)
+    finally:
+        del self.addstr, self.color_at
+        self.in_gpu_box = False
+    self.signal_hint = SIGNAL_HINT in written
+
+
+ProcessPanel.header_lines = process_header_lines
+ProcessPanel.draw = process_draw
+JOINED_ROWS = 2  # the GPU box's and the process list's rows that are the same
+
+
+# nvitop's main screen: the GPU table (with several GPUs), the CPU box (the CPU panel), the GPU box
+# (the host panel), and the processes in it.
+
+
+def panels(self):
+    return self.device_panel, self.cpu_panel, self.host_panel, self.process_panel
+
+
+def stack_panels(self):
+    """Each panel under the one before it, the processes in the GPU box. Returns their height."""
+    y = self.y
+    for panel in panels(self):
+        panel.y = y
+        y += panel.height
+    self.process_panel.y -= JOINED_ROWS
+    return y - JOINED_ROWS - self.y
+
+
+original_main_init = MainScreen.__init__
+
+
+def main_init(self, *args, **kwargs):
+    original_main_init(self, *args, **kwargs)
+    self.cpu_panel = CpuPanel(self.host_panel, self.device_panel, win=self.win, root=self.root)
+    self.cpu_panel.focused = False
+    self.cpu_panel.no_unicode = self.no_unicode
+    self.cpu_panel.x = self.x
+    self.add_child(self.cpu_panel)
+    self.height = stack_panels(self)
+
+
+def set_chart_height(self, chart_height):
+    cpu, host = self.cpu_panel, self.host_panel
+    for chart in cpu.charts + host.charts:
+        if chart.history.height != chart.rows(chart_height):
+            chart.history.height = chart.rows(chart_height)
+            cpu.need_redraw = host.need_redraw = True
+    cpu.chart_height = chart_height
+    if not self.no_unicode:
+        host.full_height = 2 + box_rows(host.charts, chart_height)
+        host.height = host.compact_height if host.compact else host.full_height
+
+
+def update_size(self, termsize=None):
+    """nvitop's, with the CPU panel, and the charts as tall as fits."""
+    n_term_lines, n_term_cols = termsize = super(MainScreen, self).update_size(termsize=termsize)
+
+    self.width = n_term_cols - self.x
+    for panel in panels(self):
+        panel.width = self.width
+
+    self.y = min(self.y, self.root.y)
+    height = n_term_lines - self.y
+    device, cpu, host, process = panels(self)
+
+    def boxes(chart_height):  # the CPU box, and the GPU box without the processes
+        return cpu.height_for(True, chart_height) + 2 + box_rows(host.charts, chart_height)
+
+    # The tallest charts that leave room for PROCESS_ROOM processes (the list's frame, and a blank
+    # line above it, take 6 lines), at least the shortest.
+    room = max(process.full_height, 6 + PROCESS_ROOM) - JOINED_ROWS
+    chart_height = next(
+        (h for h in range(MAX_CHART_HEIGHT, MIN_CHART_HEIGHT, -1)
+         if device.full_height + boxes(h) + room <= height),
+        MIN_CHART_HEIGHT,
+    )
+    set_chart_height(self, chart_height)
+
+    processes = process.full_height - JOINED_ROWS
+    heights = [
+        device.full_height + boxes(chart_height) + processes,
+        device.compact_height + boxes(chart_height) + processes,
+        device.compact_height + cpu.height_for(False, chart_height) + host.compact_height
+        + processes,
+    ]
+    if self.mode == 'auto':
+        self.compact = height < heights[0]
+        host.compact = height < heights[1]
+        process.compact = height < heights[-1]
+    else:
+        self.compact = self.mode == 'compact'
+        host.compact = self.compact
+        process.compact = self.compact
+    device.compact = self.compact
+    cpu.show_charts = not host.compact
+
+    height = stack_panels(self)
+
+    if self.y < self.root.y and self.y + height < n_term_lines:
+        self.y = min(self.root.y + self.root.height - height, self.root.y)
+        self.update_size(termsize)
+        self.need_redraw = True
+
+    if self.height != height:
+        self.height = height
+        self.need_redraw = True
+
+    return termsize
+
+
+def main_poke(self):
+    super(MainScreen, self).poke()
+
+    height = sum(panel.height for panel in panels(self)) - JOINED_ROWS
+    if self.height != height:
+        self.update_size()
+        self.need_redraw = True
+
+
+MainScreen.__init__ = main_init
+MainScreen.update_size = update_size
+MainScreen.poke = main_poke
 
 if __name__ == '__main__':
     sys.exit(cli.main())
