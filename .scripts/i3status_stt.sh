@@ -35,7 +35,8 @@ mark() {
 blink=1 flipped=0  # so the first line shows it
 
 # claude_marks: puts in $claude the Claude Code sessions that .scripts/claude_sessions.sh
-# collects: a ✻ and the folder for each, after its host if it's not this laptop. Green while
+# collects: a ✻ and the folder for each, after its host if it's not this laptop, then its name
+# if you gave it one with /rename, or else the title Claude gave it, cut short. Green while
 # Claude works, and coral when it's your turn, blinking until Claude works again or you've
 # seen it: clicked it, or had its window focused. A session still waiting for its first prompt
 # is your turn too, but steady, since you just started it. Grey if it can't tell: a Claude Code
@@ -65,12 +66,15 @@ claude_marks() {
         | sort_by(.host != "local")[]
         | ((.statusUpdatedAt // 0) - .startedAt < 10000) as $unchanged
         | ((.version // "0") | split(".") | map(tonumber? // 0)) as $version
+        | (if .nameSource == "user" then .name else .aiTitle end // ""
+           | if length > 24 then .[:24] | sub(" [^ ]*$"; "") + "…" else . end) as $title
         | if .status == "busy" then "working"
           elif $unchanged and $version < [2, 1, 327] then "unknown"
           else "turn" end
           + " " + .sessionId
           + " " + (if $unchanged or (.aiTitle and .aiTitle == $focused) then "yes" else "no" end)
-          + " " + ("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)" | tojson)
+          + " " + ("✻ \(if .host == "local" then "" else "\(.host):" end)\(.cwd | split("/") | last)"
+                   + if $title == "" then "" else " · \($title)" end | tojson)
     ' "${files[@]}" 2>/dev/null)
 }
 
