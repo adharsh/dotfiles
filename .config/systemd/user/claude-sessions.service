@@ -1,0 +1,12 @@
+[Unit]
+Description=Collect Claude Code sessions, here and over ssh, for the i3 bar
+OnFailure=notify-failure@%n.service
+
+[Service]
+ExecStart=%h/dotfiles/.scripts/claude_sessions.sh
+# Settings kept out of the repo, like what stops ssh from starting a login on its own
+EnvironmentFile=-%h/.config/claude-sessions/env
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
