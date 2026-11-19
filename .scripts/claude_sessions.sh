@@ -14,15 +14,55 @@
 
 run="${XDG_RUNTIME_DIR:-/run/user/$UID}/claude-sessions"
 hosts="$HOME/.config/claude-sessions/hosts"
-# Prints the sessions as a line of JSON every 3 seconds, here or on a host. For each session
-# claude agents lists: Claude Code's own file for it, which also says when its status last
-# changed, and the title Claude gave it (its aiTitle, which is also its terminal's title), the
-# last one in its log.
+# Prints the sessions as a line of JSON every 3 seconds, here or on a host. For each live
+# session: Claude Code's own file for it, which also says when its status last changed, and
+# the title Claude gave it (its aiTitle, which is also its terminal's title), the last one in
+# its log. Those are only read, which is light.
+# Which sessions are live comes from claude agents, which takes a fifth of a second of CPU, so
+# it runs only when a session's file comes or goes, and once a minute for one that crashed.
+# A session in one of your Slurm jobs has its file in the shared home, but runs on the job's
+# node, which claude agents here can't see, so it's asked there, over ssh: the cluster lets you
+# in while your job runs there. Which nodes those are, squeue tells, only when a file comes
+# that no session here owns, so Slurm is barely asked. A node is dropped once it has no
+# sessions, or stops answering.
 read -r -d '' poll <<'EOF'
 PATH="$HOME/.local/bin:$PATH"
+# agents [NODE]: "pid id" for each session claude agents lists, here or on NODE
+agents() {
+    if [ -z "$1" ]; then
+        out=$(claude agents --json)
+    else
+        out=$(timeout 20 ssh -n -o BatchMode=yes -o ConnectTimeout=5 "$1" \
+            'PATH="$HOME/.local/bin:$PATH" claude agents --json') || return
+    fi
+    printf '%s\n' "$out" | jq -r '.[] | "\(.pid) \(.sessionId)"'
+}
+seen= checked=0 nodes= live=
 while :; do
-    claude agents --json | jq -r '.[] | "\(.pid) \(.sessionId)"' | while read -r pid id; do
-        cat ~/.claude/sessions/"$pid".json; echo
+    files=$(ls ~/.claude/sessions 2>/dev/null)
+    if [ "$files" != "$seen" ] || [ $(($(date +%s) - checked)) -ge 60 ]; then
+        live=$(agents)
+        if [ "$files" != "$seen" ] && command -v squeue >/dev/null; then
+            for f in $files; do  # a new session file that no session here owns
+                case $f in *.json) ;; *) continue ;; esac
+                printf '%s\n' "$seen" | grep -qxF "$f" && continue
+                printf '%s\n' "$live" | grep -q "^${f%.json} " && continue
+                nodes=$(timeout 20 squeue -h -u "$(id -un)" -t RUNNING -o %N | paste -sd, |
+                    xargs -r scontrol show hostnames | sort -u)
+                break
+            done
+        fi
+        alive=
+        for node in $nodes; do
+            out=$(agents "$node") && [ -n "$out" ] || continue
+            alive="$alive $node" live="$live
+$out"
+        done
+        nodes=$alive seen=$files checked=$(date +%s)
+    fi
+    printf '%s\n' "$live" | while read -r pid id; do
+        [ -n "$id" ] || continue
+        cat ~/.claude/sessions/"$pid".json 2>/dev/null; echo
         tac ~/.claude/projects/*/"$id".jsonl 2>/dev/null | grep -m1 '"type":"ai-title"'
     done | jq -ncR '[inputs | fromjson?] | group_by(.sessionId) | map(add | select(.pid))' || exit
     sleep 3
