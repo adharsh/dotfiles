@@ -4,7 +4,7 @@
 # Each is in full color for its first second, so you see it start, then dims, so it doesn't
 # catch the eye on a shared screen. Being at the left, it never moves the rest of the bar.
 # After the dot come the Claude Code sessions (see claude_marks); click one to stop its blinking,
-# or right-click it to go to its window (see read_clicks).
+# or two-finger tap it (right click) to go to its window (see read_clicks).
 # The i3 config's status_command runs this instead of i3status.
 #
 # stt writes $XDG_RUNTIME_DIR/stt/<kind>.pid while it records and <pid>.busy while it
@@ -90,8 +90,8 @@ claude_marks() {
 }
 
 # i3bar sends a line of JSON on stdin for each click, since the header asks for them. A click
-# on a Claude session stops its blinking, at once, and leaves you where you are, except a right
-# click, which also takes you to its window (see focus_session).
+# on a Claude session stops its blinking, at once, and leaves you where you are, except a
+# two-finger tap (right click), which also takes you to its window (see focus_session).
 read_clicks() {
     local line id
     while read -r line; do

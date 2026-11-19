@@ -221,9 +221,10 @@ for_window [instance="swap-prompt"] floating enable, border pixel 2, move positi
 #        coral flashing  your turn, and you haven't seen it yet
 #        coral steady    your turn, and you've seen it
 #        grey            can't tell (an old Claude Code)
-#      Click a session to stop the flashing and stay where you are. Right-click it to
-#      go to its window, if one on this laptop shows it (not a background tab or tmux
-#      pane), or else just stop the flashing. Looking at its window stops it too.
+#      Click a session to stop the flashing and stay where you are. Two-finger tap it
+#      (right click) to go to its window, if one on this laptop shows it (not a
+#      background tab or tmux pane), or else just stop the flashing. Looking at its
+#      window stops it too.
 bar {
         status_command $HOME/dotfiles/.scripts/i3status_stt.sh
 }
