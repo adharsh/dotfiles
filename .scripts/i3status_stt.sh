@@ -52,7 +52,8 @@ claude_marks() {
     # Claude Code titles its terminal with a mark, a space, and the session's title
     local focused=$(xdotool getactivewindow getwindowname 2>/dev/null)
     # A line per session: its state, its id, whether its window is focused, and its text as a
-    # JSON string. Each file is a line of JSON; one that isn't is skipped.
+    # JSON string. Each file is a line of JSON; one that isn't is skipped, as is a session whose
+    # id isn't a plain one, since a host sends it and the id becomes a file name in $clicked.
     while read -r state id seen text; do
         if [ "$state" = working ]; then
             [ -e "$clicked/$id" ] && rm -f "$clicked/$id"  # so its next turn blinks again
@@ -62,7 +63,8 @@ claude_marks() {
         fi
         claude+="{\"name\":\"claude\",\"instance\":\"$id\",\"full_text\":$text,\"color\":\"${color[$state]}\"},"
     done < <(jq -nrR --arg focused "${focused#* }" '
-        [inputs | (fromjson? // [])[] + {host: input_filename | split("/") | last | rtrimstr(".json")}]
+        [inputs | (fromjson? // [])[]? | objects | select(.sessionId | strings | test("^[0-9a-f-]{1,64}$"))
+            + {host: input_filename | split("/") | last | rtrimstr(".json")}]
         | sort_by(.host != "local")[]
         | ((.statusUpdatedAt // 0) - .startedAt < 10000) as $unchanged
         | ((.version // "0") | split(".") | map(tonumber? // 0)) as $version
