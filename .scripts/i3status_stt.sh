@@ -39,14 +39,14 @@ blink=1 flipped=0  # so the first line shows it
 # collects: a ✻ and the folder for each, after its host if it's not this laptop. Where that
 # leaves two the same, each also gets its name, if you gave it one with /rename, or else the
 # title Claude gave it, cut at a word to 20 characters, so the bar stays short. Green while
-# Claude works, and coral when it's your turn, blinking until Claude works again or you've
-# seen it: clicked it, or had its window focused. A session still waiting for its first prompt
-# is your turn too, but steady, since you just started it. Grey if it can't tell: a Claude Code
-# before 2.1.327 may set a session's status when it starts and never again, so a status that
-# hasn't changed since then means nothing.
+# Claude works, and coral when it's your turn, blinking to a dim coral, so you can still read
+# it, until Claude works again or you've seen it: clicked it, or had its window focused. A
+# session still waiting for its first prompt is your turn too, but steady, since you just
+# started it. Grey if it can't tell: a Claude Code before 2.1.327 may set a session's status
+# when it starts and never again, so a status that hasn't changed since then means nothing.
 claude_marks() {
     local files=("$claude_run"/*.json) now=$((${EPOCHREALTIME/[.,]/} / 1000)) state id seen text
-    local -A color=([working]='#3fa66b' [turn]='#ff7a59' [off]='#000000' [unknown]='#6b6b6b')
+    local -A color=([working]='#3fa66b' [turn]='#ff7a59' [dim]='#92432f' [unknown]='#6b6b6b')
     claude=
     [ -f "${files[0]}" ] || return 0
     # The blink flips about once a second: at most once per i3status line
@@ -62,7 +62,7 @@ claude_marks() {
             [ -e "$clicked/$id" ] && rm -f "$clicked/$id"  # so its next turn blinks again
         elif [ "$state" = turn ]; then
             [ "$seen" = yes ] && [ ! -e "$clicked/$id" ] && touch "$clicked/$id"  # like a click
-            ((blink)) && [ ! -e "$clicked/$id" ] && state=off
+            ((blink)) && [ ! -e "$clicked/$id" ] && state=dim
         fi
         claude+="{\"name\":\"claude\",\"instance\":\"$id\",\"full_text\":$text,\"color\":\"${color[$state]}\"},"
     done < <(jq -nrR --arg focused "${focused#* }" '

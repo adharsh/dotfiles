@@ -218,7 +218,7 @@ for_window [instance="swap-prompt"] floating enable, border pixel 2, move positi
 #   ●  stt: orange while it records, blue while it transcribes or writes meeting notes
 #   ✻  a Claude Code session, by folder (host:folder for one on an ssh host):
 #        green           Claude is working
-#        coral flashing  your turn, and you haven't seen it yet
+#        coral flashing  your turn, and you haven't seen it yet (to dim, not off)
 #        coral steady    your turn, and you've seen it
 #        grey            can't tell (an old Claude Code)
 #      Click a session to stop the flashing and stay where you are. Two-finger tap it
