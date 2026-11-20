@@ -223,8 +223,9 @@ for_window [instance="swap-prompt"] floating enable, border pixel 2, move positi
 #        grey            can't tell (an old Claude Code)
 #      Click a session to stop the flashing and stay where you are. Two-finger tap it
 #      (right click) to go to its window, if one on this laptop shows it (not a
-#      background tab or tmux pane), or else just stop the flashing. Looking at its
-#      window stops it too.
+#      background tab or tmux pane), or else just stop the flashing. Two-finger tap it
+#      again once you're there to go back to the window you came from. Looking at its
+#      window stops the flashing too.
 bar {
         status_command $HOME/dotfiles/.scripts/i3status_stt.sh
 }

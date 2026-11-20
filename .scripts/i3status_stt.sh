@@ -4,7 +4,7 @@
 # Each is in full color for its first second, so you see it start, then dims, so it doesn't
 # catch the eye on a shared screen. Being at the left, it never moves the rest of the bar.
 # After the dot come the Claude Code sessions (see claude_marks); click one to stop its blinking,
-# or two-finger tap it (right click) to go to its window (see read_clicks).
+# or two-finger tap it (right click) to go to its window, and again to go back (see read_clicks).
 # The i3 config's status_command runs this instead of i3status.
 #
 # stt writes $XDG_RUNTIME_DIR/stt/<kind>.pid while it records and <pid>.busy while it
@@ -91,9 +91,10 @@ claude_marks() {
 
 # i3bar sends a line of JSON on stdin for each click, since the header asks for them. A click
 # on a Claude session stops its blinking, at once, and leaves you where you are, except a
-# two-finger tap (right click), which also takes you to its window (see focus_session).
+# two-finger tap (right click), which also takes you to its window, or back where you were if
+# you're already there (see focus_session).
 read_clicks() {
-    local line id
+    local line id jumped_to  # the session focus_session last took you to
     while read -r line; do
         [[ $line == *'"name":"claude"'* && $line =~ \"instance\":\"([0-9a-f-]+)\" ]] || continue
         id=${BASH_REMATCH[1]}
@@ -107,15 +108,26 @@ read_clicks() {
 # one titled with a mark and the session's title, the way Claude Code titles its terminal (its
 # name if you gave it one with /rename, or else the title Claude gave it). That's a terminal
 # here, or one ssh'd into the session's host. Nothing reads stdin here, which is i3bar's clicks.
+# If that window is already focused, it goes back to the window you jumped from, so a second
+# tap undoes the first, but only if your last jump was to this session. An i3 mark holds the
+# window you left (its _ hides it from titles, and it goes if the window closes), and
+# read_clicks's $jumped_to the session.
 focus_session() {
     local title con
     title=$(jq -r --arg id "$1" '.[]? | select(.sessionId == $id)
         | if .nameSource == "user" then .name else .aiTitle end // empty
     ' "$claude_run"/*.json </dev/null 2>/dev/null | head -n1)
     [ -n "$title" ] || return 0  # no title yet: its window can't be told apart
-    con=$(i3-msg -t get_tree </dev/null | jq --arg title "$title" '
-        first(.. | objects | select(.window and (.name // "" | sub("^[^ ]* "; "")) == $title) | .id) // empty')
-    [ -n "$con" ] && i3-msg -q "[con_id=$con] focus" </dev/null
+    # Its window's id, or "here" if one showing it is focused
+    con=$(i3-msg -t get_tree </dev/null | jq -r --arg title "$title" '
+        [.. | objects | select(.window and (.name // "" | sub("^[^ ]* "; "")) == $title)]
+        | if any(.focused) then "here" else .[0].id // empty end')
+    if [ "$con" = here ]; then
+        [ "$jumped_to" = "$1" ] && i3-msg -q '[con_mark="^_claude_back$"] focus' </dev/null >/dev/null 2>&1
+    elif [ -n "$con" ]; then
+        i3-msg -q "mark --add _claude_back; [con_id=$con] focus" </dev/null
+        jumped_to=$1
+    fi
 }
 mkdir -p "$clicked"
 read_clicks <&0 &
