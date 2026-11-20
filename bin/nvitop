@@ -10,7 +10,8 @@ line sets the GPU's heading apart:
        CPU POWER      yellow  the CPU package's draw, out of its sustained power limit, the lower
                               one if the firmware sets two (109 W here). It can pass it briefly.
        CPU TEMP       red     the CPU package's temperature, out of where it starts slowing itself
-                              down to cool (100°C here), from 20°C at the bottom
+                              down to cool (97°C here: 100°C, less the firmware's 3°C offset), from
+                              20°C at the bottom
        CPU THROTTLED  blue    the share of the time it slowed itself down: to cool, or because
                               the laptop told it to (a weak charger does); the count doesn't say
        FANS           green   the fastest fan's speed, scaled to what's been seen; the label has
@@ -35,8 +36,9 @@ more of the time it slowed; the throttling chart has the amount. Its label has t
 throttled in all since boot, and for the GPU, what held it back: its power limit or heat, each
 with its share. (The CPU's counter doesn't say why; nor what the clock was: read after a slowdown,
 it's only the clock now.) The kernel counts a CPU slowdown when it ends: they last milliseconds
-here, but a long one shows when it's over. A band is on a column exactly where its throttling chart has a bar: any throttling at all,
-even a few milliseconds of a second. Bands take --colorful (below).
+here, but a long one shows when it's over. A band is on a column exactly where its throttling
+chart has a bar: from a quarter of the time on, as less is a chip backing off for milliseconds
+after speeding up, which it does all the time. Bands take --colorful (below).
 
 A column is 2 seconds, on the same grid for every chart: the newest fills its left half, then its
 right half, then everything moves a column, bands and all. (nvitop's own charts move half a column
@@ -139,10 +141,11 @@ GLOW_STEPS = 4  # glow levels above calm
 READABLE = 2  # labels use at least this level, as the calm color is dim for text
 # Throttling bands' backgrounds: GNOME Terminal's background (#171421) tinted with the
 # throttling charts' blue, by how much of the time the chip slowed: from each of BAND_STEPS (%).
-# The first is any throttling at all. The throttling charts draw no bar below it, so their bars
-# and the bands agree.
+# Below the first, a CPU only backs off for milliseconds after speeding up. Here, at light load,
+# its hottest cores did so in nearly every second, up to 23% of it; with a core busy, 40-54%.
+# The throttling charts draw no bar below it, so their bars and the bands agree.
 BANDS = ['#1c233b', '#203051', '#253f6a']
-BAND_STEPS = (1e-9, 25.0, 75.0)
+BAND_STEPS = (25.0, 50.0, 75.0)
 # Held while the snapshot thread adds a sample to every chart, and while a box copies its charts
 # to draw them, so each box draws all its charts, and its band, as of the same sample.
 SAMPLES = threading.Lock()
@@ -336,8 +339,19 @@ def read_int(path):
         return None
 
 
+def tcc_offset():
+    """How many °C below its critical temperature an Intel CPU starts slowing itself down, as the
+    firmware set it (Linux's proc_thermal driver shows it), else 0."""
+    for path in glob.glob('/sys/bus/pci/devices/*/tcc_offset_degree_celsius'):
+        offset = read_int(path)
+        if offset is not None:
+            return offset
+    return 0
+
+
 def package_sensor():
-    """The CPU package's temperature file, and the temperature it slows down at (else 100°C)."""
+    """The CPU package's temperature file, and the temperature it slows down at (else 100°C):
+    its critical temperature, less the firmware's offset."""
     for hwmon in sorted(glob.glob('/sys/class/hwmon/hwmon*')):
         if read(f'{hwmon}/name') not in ('coretemp', 'k10temp'):
             continue
@@ -345,7 +359,7 @@ def package_sensor():
             if read(label) in ('Package id 0', 'Tctl'):
                 sensor = label.removesuffix('_label')
                 limit = read_int(f'{sensor}_crit') or read_int(f'{sensor}_max')
-                return f'{sensor}_input', limit / 1000 if limit else 100.0
+                return f'{sensor}_input', limit / 1000 - tcc_offset() if limit else 100.0
     return None, 100.0
 
 
