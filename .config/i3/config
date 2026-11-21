@@ -277,6 +277,8 @@ bindsym $mod+m exec --no-startup-id "$HOME/dotfiles/.scripts/dynamic_monitors.sh
 # Chrome: https://superuser.com/a/377195
 bindsym $mod+g exec $HOME/bin/brave --profile-directory=Default
 bindsym $mod+Shift+g exec $HOME/bin/brave --profile-directory=Default --incognito
+# A window in the Work profile (its folder is "Profile 1")
+bindsym $mod+Ctrl+g exec $HOME/bin/brave "--profile-directory=Profile 1"
 
 # Chrome for development (with sign-in)
 bindsym $mod+Shift+n exec $HOME/bin/google-chrome-stable \
