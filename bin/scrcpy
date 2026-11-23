@@ -1,2 +1,11 @@
 #!/bin/bash
-exec "$HOME/.scrcpy/scrcpy" --keep-active -S "$@"
+# Mirror the USB phone by default, so a running emulator doesn't make scrcpy ask which device.
+# Any device choice given on the command line or in ANDROID_SERIAL still wins (scrcpy allows only one).
+select=(-d)
+[ -n "$ANDROID_SERIAL" ] && select=()
+for arg in "$@"; do
+    case "$arg" in
+        -s* | --serial | --serial=* | -d | --select-usb | -e | --select-tcpip | --tcpip=*) select=() ;;
+    esac
+done
+exec "$HOME/.scrcpy/scrcpy" --keep-active -S "${select[@]}" "$@"
