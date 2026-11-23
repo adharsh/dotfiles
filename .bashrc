@@ -185,6 +185,29 @@ done
 export NODE_PATH
 unset pnpm_global_dir
 
+# When a global pnpm command changes REA's version, recopy REA's skill for
+# Claude Code and Codex, since setup saved it from the old version. Their MCP
+# registrations already follow pnpm's per-package link, so they stay as they are.
+pnpm() {
+  local rea_before= rea_after
+  case " $* " in
+    *" -g "*|*" --global "*) rea_before=$(command rea --version 2>/dev/null) ;;
+  esac
+  command pnpm "$@"
+  local status=$?
+  if [ -n "$rea_before" ]; then
+    rea_after=$(command rea --version 2>/dev/null)
+    if [ -n "$rea_after" ] && [ "$rea_after" != "$rea_before" ]; then
+      if command rea setup --skill-client claude_code --skill-client codex --yes --json >/dev/null 2>&1; then
+        echo "REA $rea_before -> $rea_after: refreshed its skill for Claude and Codex; restart their sessions"
+      else
+        echo "REA $rea_before -> $rea_after: skill refresh failed; run: rea setup --skill-client claude_code --skill-client codex --yes" >&2
+      fi
+    fi
+  fi
+  return $status
+}
+
 # uv
 export PATH="$HOME/.local/bin:$PATH"
 
