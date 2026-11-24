@@ -309,9 +309,11 @@ if [ ! -x "$HOME/.local/share/uv/tools/nvitop/bin/python" ]; then
     uv tool install nvitop
 fi
 
-# Install yt-dlp
-if [ ! -x "$HOME/.local/share/uv/tools/yt-dlp/bin/python" ]; then
-    uv tool install yt-dlp
+# Install yt-dlp with its extras: default adds the optional packages yt-dlp recommends (YouTube's
+# challenge solver among them), curl-cffi lets it pass as a browser on sites that block scripts.
+# Checks uv's record of the install, so a plain install without the extras gets replaced.
+if ! grep -qs 'curl-cffi' "$HOME/.local/share/uv/tools/yt-dlp/uv-receipt.toml"; then
+    uv tool install --force "yt-dlp[default,curl-cffi]"
 fi
 
 # Let your group read the CPU's energy counter, for nvitop's CPU POWER chart. Linux makes it
