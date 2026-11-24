@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# rf: research-feed's command (~/workspace/research-feed), from any folder.
+exec uv run --project "$HOME/workspace/research-feed" rf "$@"
