@@ -309,6 +309,11 @@ if [ ! -x "$HOME/.local/share/uv/tools/nvitop/bin/python" ]; then
     uv tool install nvitop
 fi
 
+# Install yt-dlp
+if [ ! -x "$HOME/.local/share/uv/tools/yt-dlp/bin/python" ]; then
+    uv tool install yt-dlp
+fi
+
 # Let your group read the CPU's energy counter, for nvitop's CPU POWER chart. Linux makes it
 # root-only since the PLATYPUS power side channel (2020): with it, a program running as you can
 # find where the kernel sits in memory, a step toward root. Little risk here, as such a program
