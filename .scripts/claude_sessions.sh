@@ -17,7 +17,10 @@ hosts="$HOME/.config/claude-sessions/hosts"
 # Prints the sessions as a line of JSON every 3 seconds, here or on a host. For each live
 # session: Claude Code's own file for it, which also says when its status last changed, and
 # the title Claude gave it (its aiTitle, which is also its terminal's title), the last one in
-# its log. Those are only read, which is light.
+# its log. Those are only read, which is light. Only sessions you work in count: a claude -p
+# run, or another program's through the Agent SDK, is left out. claude agents calls those
+# interactive too, but their file's entrypoint starts with sdk (sdk-cli for claude -p), where
+# a terminal's is cli. A file with no entrypoint, from an older Claude Code, counts.
 # Which sessions are live comes from claude agents, which takes a fifth of a second of CPU, so
 # it runs only when a session's file comes or goes, and once a minute for one that crashed.
 # A session in one of your Slurm jobs has its file in the shared home, but runs on the job's
@@ -74,7 +77,7 @@ while :; do
         [ -n "$id" ] || continue
         cat ~/.claude/sessions/"$pid".json 2>/dev/null; echo
         tac ~/.claude/projects/*/"$id".jsonl 2>/dev/null | grep -m1 '"type":"ai-title"'
-    done | jq -ncR '[inputs | fromjson?] | group_by(.sessionId) | map(add | select(.pid))' || exit
+    done | jq -ncR '[inputs | fromjson?] | group_by(.sessionId) | map(add | select(.pid and (.entrypoint // "cli" | tostring | startswith("sdk") | not)))' || exit
     sleep 3
 done
 EOF
