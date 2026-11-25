@@ -1,9 +1,9 @@
 [Unit]
-Description=Run research-feed every morning
+Description=Run research-feed every night
 
 [Timer]
-OnCalendar=*-*-* 07:00
-# If the laptop was asleep or off at 07:00, run as soon as it's back.
+OnCalendar=*-*-* 00:00
+# If the laptop was asleep or off at midnight, run as soon as it's back.
 Persistent=true
 
 [Install]
