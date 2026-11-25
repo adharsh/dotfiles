@@ -1,0 +1,15 @@
+[Unit]
+Description=research-feed: collect, summarize and connect new notes, then rebuild the views
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/workspace/research-feed
+# systemd starts with a bare PATH; uv, claude and yt-dlp live in ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Print each step's line as it happens, so the journal shows them in order.
+Environment=PYTHONUNBUFFERED=1
+# Right after the laptop wakes or boots, Wi-Fi may not be up yet. Wait until GitHub answers,
+# for at most five minutes; then run anyway (the leading "-" ignores the timeout), so a
+# failure still shows in the app instead of the run silently not happening.
+ExecStartPre=-/usr/bin/timeout 300 /bin/sh -c 'until curl -s --max-time 5 -o /dev/null https://api.github.com; do sleep 5; done'
+ExecStart=%h/.local/bin/uv run rf daily
