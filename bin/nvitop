@@ -44,6 +44,16 @@ A column is 2 seconds, on the same grid for every chart: the newest fills its le
 right half, then everything moves a column, bands and all. (nvitop's own charts move half a column
 every second; a band, a cell's background, can't.)
 
+Pointing at a chart: with the mouse pointer on a column of either box, that column turns gray down
+both boxes (their columns line up), with a tick on their time axes, and every label has what was
+read there instead of the latest: the column's two samples, older first, or one if they read the
+same, and how long ago, like  CPU TEMP: 87°C → 88°C / 97°C · 26s ago. What there's only a value
+for now is left out: the time throttled since boot, what held the GPU back, each fan's speed (the
+fans chart is the fastest fan's). Off the charts, or out of the window (i3 moves the focus with
+the pointer), the labels are the latest again. nvitop has the terminal report clicks and the
+wheel; this has it report the pointer's moves and the focus too, and takes them before nvitop,
+which would take a move for the wheel and scroll its process list.
+
 The tables are gone: what they showed is in the charts and headings, or doesn't change
 (versions, bus, ECC: nvitop --once prints them), or is in gnome-system-monitor, beside nvitop on
 workspace 8 (CPU use, memory, swap). With several GPUs nvitop's GPU table stays, above the boxes,
@@ -79,6 +89,7 @@ import dataclasses
 import glob
 import itertools
 import os
+import select
 import sys
 import threading
 import time
@@ -99,10 +110,11 @@ VENV_PYTHON = os.path.join(
 try:
     from nvitop import cli
     from nvitop.api import libnvml
-    from nvitop.tui.library import NA, BufferedHistoryGraph
+    from nvitop.tui.library import NA, BufferedHistoryGraph, MouseEvent
     from nvitop.tui.library.history import HistoryGraph
     from nvitop.tui.library.libcurses import CursesShortcuts
-    from nvitop.tui.screens.main import MainScreen
+    from nvitop.tui.screens.main import BreakLoop, MainScreen
+    from nvitop.tui.tui import TUI
     from nvitop.tui.screens.main.panels import DevicePanel, ProcessPanel
     from nvitop.tui.screens.main.panels.base import BasePanel
     from nvitop.tui.screens.main.panels.host import HostPanel
@@ -157,6 +169,10 @@ ROUNDED = str.maketrans('═╒╕╘╛╞╡╤╧╪', '─╭╮╰╯├┤
 # full-height one in the blank line between the boxes: those read as one more line, or crowd the
 # GPU's heading, or look like an empty title bar.
 RULE_GRAY = '#5e5c64'
+# The column the mouse pointer is on, down both boxes, behind the charts' dots: a gray lighter than
+# GNOME Terminal's background, with no hue, set apart from the blue bands it covers.
+POINTED_BG = '#3d3a4b'
+POINTED = 'pointed'  # a column's background: the pointer's, instead of a band's level (0 to 3)
 
 
 def rgb(hex_color):
@@ -172,6 +188,36 @@ def share(percent):
 def band_level(value):
     """0, or 1 to 3 by how much of the time (a %) the chip throttled."""
     return sum(value >= step for step in BAND_STEPS)
+
+
+def ago(column, columns):
+    """How long before the newest column a column's samples were read, as the time marks count:
+    2 s a column, like 38s ago."""
+    seconds = (columns - 1 - column) * SECONDS_PER_COLUMN
+    return f'{seconds}s ago' if seconds else 'now'
+
+
+class Pointer:
+    """Where the mouse pointer is, as the terminal last reported it, and where each box's charts
+    are on the screen, as last drawn, so the box under the pointer can be found."""
+
+    def __init__(self):
+        self.at = None  # (x, y), or None: not on the window
+        self.boxes = {}  # a box's panel -> its charts' rows (first, last) and columns (first, count)
+
+    def column(self):
+        """The charts' column the pointer is on, counted from the left, or None. The boxes'
+        columns line up, so it's both boxes' column, wherever the pointer is on them."""
+        if self.at is None:
+            return None
+        x, y = self.at
+        for top, bottom, left, count in self.boxes.values():
+            if top <= y <= bottom and left <= x < left + count:
+                return x - left
+        return None
+
+
+POINTER = Pointer()
 
 
 class ChartHistory(BufferedHistoryGraph):
@@ -224,6 +270,7 @@ class Chart:
     now_text: Optional[Callable] = None  # (its latest value) -> the label's value, for show's
     suffix: Optional[Callable] = None  # (its latest value) -> the label's end, after the peak
     throttling: bool = False  # a share of the time throttled: its box's bands follow it
+    past_text: Optional[Callable] = None  # (a pointed column's values) -> the label's value
 
     def __post_init__(self):
         if self.limit is None:
@@ -252,6 +299,16 @@ class Chart:
         suffix = self.suffix(value if known else NA) if self.suffix else ''
         return (f' {self.name}: {now}{self.limit_text} ',
                 f'· peak {self.text(self.history.max_value)}{suffix} ')
+
+    def label_at(self, pair, ago):
+        """The label while the pointer is on a column: the column's two samples, older first, or
+        one if they read the same (N/A where none was read), and how long ago, like
+        GPU TEMP: 58°C → 59°C / 96°C · 38s ago. It leaves out what there's only a value for now:
+        the time throttled since boot, what held the GPU back, each fan."""
+        values = ' → '.join(dict.fromkeys(self.text(value) for value in pair if value is not None))
+        if self.past_text and values != 'N/A':
+            values = self.past_text(values)
+        return f' {self.name}: {values}{self.limit_text} ', f'· {ago} '
 
     def glow(self, value):
         """0 below where the glow starts, up to GLOW_STEPS at the limit."""
@@ -430,6 +487,11 @@ def throttled_since_boot(milliseconds):
     return f' · {duration_text(milliseconds)} throttled since boot'
 
 
+def of_the_time(values):
+    """A throttling label's value for a pointed column, like  31% → 12% of the time"""
+    return f'{values} of the time'
+
+
 def make_cpu_charts():
     """The CPU's charts, leaving out those it has no reading for."""
     charts = []
@@ -446,11 +508,13 @@ def make_cpu_charts():
             'CPU THROTTLED', lambda sample: sample.throttled, share, BLUE, limit=100.0, small=True,
             now_text=lambda value: f'{share(value)} of the time',
             suffix=lambda value: throttled_since_boot(CPU.throttled.total()), throttling=True,
+            past_text=of_the_time,
         ))
     if CPU.fan_files:
         charts.append(Chart(
             'FANS', lambda sample: sample.fastest_fan, '{:.0f} RPM'.format, GREEN, limit=None,
             small=True, now_text=lambda value: ' · '.join(map(str, CPU.fans)) + ' RPM',
+            past_text=lambda values: f'fastest {values}',
         ))
     return charts
 
@@ -564,7 +628,7 @@ def make_gpu_charts(devices):
     if throttling.supported():
         charts.append(Chart('GPU THROTTLED', throttling.sample, share, BLUE, limit=100.0,
                             small=True, now_text=throttling.now_text, suffix=throttling.suffix,
-                            throttling=True))
+                            throttling=True, past_text=of_the_time))
     return charts
 
 
@@ -649,6 +713,25 @@ def draw_time_marks(panel, bottom):
         panel.color_at(bottom, start + 1, width=len(mark) - 2, attr='dim')
 
 
+def draw_axis(panel, bottom, corners, column):
+    """A box's bottom border, with corners, its time marks, and a tick on the pointer's column, in
+    its gray, ending the gray column above it."""
+    panel.addstr(bottom, panel.x, corners[0] + '─' * (frame_width(panel) - 2) + corners[1])
+    draw_time_marks(panel, bottom)
+    if column is not None:
+        true_color = panel.TERM_256COLOR and curses.can_change_color()
+        attr = panel.get_fg_bg_attr(bg=rgb(POINTED_BG)) if true_color else panel.get_fg_bg_attr(
+            attr='reverse')
+        panel.addstr(bottom, panel.x + 1 + column, '┴', attr)
+
+
+def redraw_axis(panel, bottom, corners, column):
+    """The bottom border again if the pointer's column changed, or the box was drawn again."""
+    if panel.need_redraw or getattr(panel, 'axis_column', None) != column:
+        draw_axis(panel, bottom, corners, column)
+    panel.axis_column = column
+
+
 def column_samples(history, width):
     """A chart's columns, left to right, each its (older, newer) sample, None for one not in yet.
 
@@ -702,7 +785,10 @@ def copy_charts(charts):
 
 def draw_charts(panel, charts, top):
     """Each chart's line and label, the first at row top, each under the one before it, and the
-    throttling bands down them, but for their labels, and across the separators between them."""
+    throttling bands down them, but for their labels, and across the separators between them.
+
+    With the mouse pointer on a column of either box's charts, that column is gray down them
+    instead, and each label has its values there. Returns the pointer's column, or None."""
     # Glowing and bands take colors of our own: --colorful, and a terminal that lets curses set
     # colors.
     true_color = panel.TERM_256COLOR and curses.can_change_color()
@@ -714,8 +800,25 @@ def draw_charts(panel, charts, top):
     if band_chart:
         bands = [band_level(known_max(pair)) for pair in copies[charts.index(band_chart)].columns]
 
+    # Where the charts are, down to the bottom border, for finding the pointer's column.
+    count = len(copies[0].columns) if copies else 0
+    rows = sum(copy.height + 1 for copy in copies)  # each chart, and the line under it
+    POINTER.boxes[panel] = (top, top + rows - 1, panel.x + 1, count)
+    pointed = POINTER.column()
+    if pointed is not None:
+        bands = (bands + [0] * count)[:count]
+        bands[pointed] = POINTED
+
     def background(band):
+        if band == POINTED:
+            return rgb(POINTED_BG) if true_color else -1
         return rgb(BANDS[band - 1]) if band else -1
+
+    def emphasis(band, style):
+        """style, reversed on the pointer's column without colors of our own to gray it."""
+        if band != POINTED or true_color:
+            return style
+        return f'{style} | reverse' if style else 'reverse'
 
     def banded(row, column, text, attr_of, bands):
         """text from column on, each run of columns on its band's background."""
@@ -743,7 +846,7 @@ def draw_charts(panel, charts, top):
                 style = {'head': 'bold | reverse' if level == GLOW_STEPS else 'bold',
                          'tail': 0 if true_color else 'dim'}.get(label, 0)
                 attrs[level, band, label] = panel.get_fg_bg_attr(
-                    fg=fg, bg=background(band), attr=style
+                    fg=fg, bg=background(band), attr=emphasis(band, style)
                 )
             return attrs[level, band, label]
 
@@ -759,18 +862,24 @@ def draw_charts(panel, charts, top):
                 panel.addstr(chart_top + row, panel.x + 1 + column, text, attr(level, band))
                 column += length
         head, tail = copy.label
+        glow = copy.glow
+        if pointed is not None and pointed < width:  # the pointer's column's, not the latest
+            pair = copy.columns[pointed]
+            (head, tail), glow = chart.label_at(pair, ago(pointed, width)), chart.glow(
+                known_max(pair))
         room = frame_width(panel) - 2
         # Labels stay on the plain background: on a band's, its edge ran through the text.
-        panel.addstr(chart_top, panel.x + 1, head[:room], attr(copy.glow, label='head'))
+        panel.addstr(chart_top, panel.x + 1, head[:room], attr(glow, label='head'))
         if len(head) < room:
             panel.addstr(chart_top, panel.x + 1 + len(head), tail[: room - len(head)],
                          attr(0, label='tail'))
         chart_top += copy.height
 
         if index < len(charts) - 1:  # the faint line under it, banded too
-            banded(chart_top, 0, '┈' * width,
-                   lambda band: panel.get_fg_bg_attr(bg=background(band), attr='dim'), bands)
+            banded(chart_top, 0, '┈' * width, lambda band: panel.get_fg_bg_attr(
+                bg=background(band), attr=emphasis(band, 'dim')), bands)
         chart_top += 1
+    return pointed
 
 
 def gpu_title(host_panel):
@@ -830,11 +939,12 @@ def draw(self):
         for y, line in enumerate(self.frame_lines() or [box_top(frame_width(self))],
                                  start=self.y + 1):
             self.addstr(y, self.x, line)
-        if boxed:
-            draw_time_marks(self, self.y + self.height - 1)
     draw_heading(self, self.y, gpu_title(self))
     if boxed:
-        draw_charts(self, self.charts, self.y + 2)
+        column = draw_charts(self, self.charts, self.y + 2)
+        redraw_axis(self, self.y + self.height - 1, '├┤', column)
+    else:
+        POINTER.boxes.pop(self, None)
     self.color_reset()
 
 
@@ -932,7 +1042,6 @@ class CpuPanel(BasePanel):
                 lines = [box_top(width), *chart_frame(width, self.charts, '╰╯')]
                 for y, line in enumerate(lines, start=self.y + 2):
                     self.addstr(y, self.x, line)
-                draw_time_marks(self, self.y + self.height - 2)
         self.draw_clock_line(width)
 
         sample = self.host_panel.cpu_sample
@@ -942,7 +1051,10 @@ class CpuPanel(BasePanel):
             parts.append(f'power mode {sample.profile}')
         draw_heading(self, self.y + 1, parts)
         if boxed:
-            draw_charts(self, self.charts, self.y + 3)
+            column = draw_charts(self, self.charts, self.y + 3)
+            redraw_axis(self, self.y + self.height - 2, '╰╯', column)
+        else:
+            POINTER.boxes.pop(self, None)
         self.color_reset()
 
     def draw_clock_line(self, width):
@@ -1161,6 +1273,95 @@ def main_poke(self):
 MainScreen.__init__ = main_init
 MainScreen.update_size = update_size
 MainScreen.poke = main_poke
+
+
+# The mouse pointer. nvitop has the terminal report clicks and the wheel only; this has it report
+# the pointer's moves too (any-event tracking), and when the window gains or loses the focus,
+# which in i3 goes with the pointer, so losing it is the pointer leaving.
+POINTER_REPORTS_ON = b'\033[?1003h\033[?1004h'
+POINTER_REPORTS_OFF = b'\033[?1004l\033[?1003l'
+FOCUS_IN, FOCUS_OUT = ord('I'), ord('O')  # what follows ESC [ when the window gains or loses it
+original_handle_input = TUI.handle_input
+
+
+def tell_terminal(sequence):
+    try:
+        os.write(sys.stdout.fileno(), sequence)
+    except OSError:  # the terminal is gone
+        pass
+
+
+def wait_for_input(terminal, seconds):
+    """Until there's input from the terminal (a poll of its input), at most seconds. (When the
+    terminal has closed, there always is: then it sleeps, as nvitop did.)"""
+    events = terminal.poll(seconds * 1000)
+    if any(flags & ~select.POLLIN for _, flags in events):
+        time.sleep(seconds)
+
+
+def loop(self):
+    """nvitop's main loop: it redraws every 0.2 s, and without stopping for a second after a key.
+    But it takes input while it waits, instead of sleeping through it, and redraws at once when
+    the pointer goes to another column of the charts, so the labels follow it. Other moves wait
+    for the next redraw, and don't count as keys."""
+    if self.win is None:
+        return
+    terminal = select.poll()
+    terminal.register(sys.stdin.fileno(), select.POLLIN)  # where curses reads
+    tell_terminal(POINTER_REPORTS_ON)
+    try:
+        while True:
+            self.redraw()
+            redraw_at = time.monotonic() + 0.2
+            while not self.handle_input():  # the pointer on the same column
+                now = time.monotonic()
+                if now - self.last_input_time <= 1.0 or now >= redraw_at:
+                    break
+                wait_for_input(terminal, redraw_at - now)
+    except BreakLoop:
+        pass
+    finally:
+        tell_terminal(POINTER_REPORTS_OFF)
+
+
+def handle_input(self):
+    """nvitop's, after taking out of the input every move of the pointer waiting there, and the
+    focus going: nvitop would take a move for the wheel, scrolling the process list, and ESC [ O
+    for keys. (It also drops the input after a key, which could leave the pointer behind.)
+    Returns whether the pointer went to another column of the charts, or off them."""
+    column = POINTER.column()
+    while True:
+        key = self.win.getch()
+        if key == curses.KEY_MOUSE:
+            try:
+                state = curses.getmouse()
+            except curses.error:
+                continue
+            if state[4] & curses.REPORT_MOUSE_POSITION:
+                event = MouseEvent(state)
+                POINTER.at = (event.x, event.y)
+                continue
+            curses.ungetmouse(*state)  # a click or the wheel: nvitop's
+        elif key == 27:
+            follow = self.win.getch()
+            final = self.win.getch() if follow == ord('[') else curses.ERR
+            if follow == ord('[') and final in (FOCUS_IN, FOCUS_OUT):
+                if final == FOCUS_OUT:
+                    POINTER.at = None
+                continue
+            for back in (final, follow, key):  # back for nvitop, in the order they came
+                if back != curses.ERR:
+                    curses.ungetch(back)
+        elif key != curses.ERR:
+            curses.ungetch(key)
+        break
+    if key != curses.ERR:
+        original_handle_input(self)
+    return POINTER.column() != column
+
+
+TUI.loop = loop
+TUI.handle_input = handle_input
 
 if __name__ == '__main__':
     sys.exit(cli.main())
