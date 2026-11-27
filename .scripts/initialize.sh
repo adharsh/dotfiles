@@ -551,6 +551,12 @@ if ! command -v codex >/dev/null 2>&1; then
     yes | pnpm add -g @openai/codex
 fi
 
+# Install Antigravity CLI (agy). Checks the path, since ~/.local/bin may not be on this script's PATH.
+# Its installer appends a ~/.local/bin PATH line to ~/.bashrc (the dotfiles copy), though .bashrc already adds it.
+if [ ! -x "$HOME/.local/bin/agy" ]; then
+    curl -fsSL https://antigravity.google/cli/install.sh | bash
+fi
+
 # Check if passwords are being synced in chrome
 read -rp "If password sync is not working (check chrome://sync-internals), then run bash \$HOME/dotfiles/.scripts/restart_chrome_password_sync.sh"
 
